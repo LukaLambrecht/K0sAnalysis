@@ -1,0 +1,2 @@
+# 2016 simulation
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/crab_MiniAOD2016v3_ext2-v1_sim_RunIISummer16_DYJetsToLL/

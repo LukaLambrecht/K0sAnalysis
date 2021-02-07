@@ -1,0 +1,21 @@
+# 2016 data
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016B-17Jul2018_ver2-v1_data_Run2016B_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016C-17Jul2018-v1_data_Run2016C_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016D-17Jul2018-v1_data_Run2016D_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016E-17Jul2018-v1_data_Run2016E_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016F-17Jul2018-v1_data_Run2016F_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016G-17Jul2018-v1_data_Run2016G_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2016H-17Jul2018-v1_data_Run2016H_DoubleMuon/
+
+# 2017 data
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2017B-31Mar2018-v1_data_Run2017_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2017C-31Mar2018-v1_data_Run2017_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2017D-31Mar2018-v1_data_Run2017_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2017E-31Mar2018-v1_data_Run2017_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2017F-31Mar2018-v1_data_Run2017_DoubleMuon/
+
+# 2018 data
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2018A-17Sep2018-v2_data_Run2018A_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2018B-17Sep2018-v1_data_Run2018B_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2018C-17Sep2018-v1_data_Run2018C_DoubleMuon/
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrino/DoubleMuon/crab_Run2018D-PromptReco-v2_data_Run2018D_DoubleMuon/

@@ -1,0 +1,15 @@
+### ignore root files
+*.root
+
+### ignore images and similar types
+*.png
+*.jpeg
+*.jpg
+*.pdf
+
+### ignore compiled pythomn
+*.pyc
+
+### ignore specific directories altogether
+files
+oldplots

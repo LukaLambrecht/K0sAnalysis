@@ -1,0 +1,12 @@
+CC=g++ -Wall -Wextra -O3
+CFLAGS= -Wl,--no-as-needed,-lGenVector
+LDFLAGS=`root-config --glibs --cflags`
+SOURCES= skim_ztomumu.cc
+OBJECTS=$(SOURCES:.cc=.o)
+EXECUTABLE=skim_ztomumu
+
+all:
+	$(CC) $(CFLAGS) $(SOURCES) $(LDFLAGS) -o $(EXECUTABLE) 
+
+clean:
+	rm -rf *o $(EXECUTABLE)
