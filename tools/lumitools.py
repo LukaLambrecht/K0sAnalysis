@@ -29,5 +29,7 @@ def getlumi( era ):
     elif era=='2018D': return 31.93
     elif era=='2018': return 59.7
 
+    elif era=='run2': return 137
+
     else: print('### WARNING ###: cannot find luminosity for era '+era)
     return 0.

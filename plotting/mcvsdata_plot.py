@@ -17,10 +17,11 @@ def loadobjects(histfile):
     if(normalization==3):
         normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
         res['normrange'] = normrange
-    if(normalization==1):
-        lumi = f.Get("lumi")[0]
-        res['lumi'] = lumi
-    else:
+    try:
+	lumi = f.Get("lumi")[0]
+	res['lumi'] = lumi
+    except:
+	print('WARNING: could not find luminosity value...')
         lumi = 0
         res['lumi'] = 0
     # load histograms
@@ -50,6 +51,52 @@ def loadobjects(histfile):
 	res['bins'] = bins
     return res
 
+def loadobjects_old(histfile):
+    ### same as above, but for older files
+    # WARNING: only implemented to quickly make work for one specific file type,
+    #          not guaranteed to work on all older files
+    print('loading histograms')
+    f = ROOT.TFile.Open(histfile)
+    res = {}
+    # load normalization and related paramters
+    normalization = int(f.Get("normalization")[0])
+    res['normalization'] = normalization
+    if(normalization==3):
+        normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
+        res['normrange'] = normrange
+    if(normalization==1):
+        lumi = f.Get("lumi")[0]
+        res['lumi'] = lumi
+    else:
+        lumi = 0
+        res['lumi'] = 0
+    # load histograms
+    histlist = plottools.loadallhistograms(histfile)
+    mchistlist = []
+    datahistlist = []
+    for hist in histlist:
+        if 'mc' in hist.GetName():
+            mchistlist.append(hist)
+        elif 'data' in hist.GetName():
+            datahistlist.append(hist)
+        else:
+            print('### WARNING ###: histogram type not recognized: '+hist.GetName())
+            print('                 skipping it...')
+    print('found '+str(len(datahistlist))+' data files and '
+            +str(len(mchistlist))+' simulation files.')
+    res['mchistlist'] = mchistlist
+    res['datahistlist'] = datahistlist
+    # get bins
+    testhist = None
+    if len(mchistlist)>0:
+        testhist = mchistlist[0]
+    elif len(datahistlist)>0:
+        testhist = datahistlist[0]
+    if testhist is not None:
+        bins = testhist.GetXaxis().GetXbins()
+        res['bins'] = bins
+    return res
+
 def ratiototxt(histnum,histdenom,outfilename):
     ### calculate ratio hist1/hist2 and write result to txt file
     outtxtfile = open(outfilename,'w')
@@ -62,14 +109,15 @@ def ratiototxt(histnum,histdenom,outfilename):
     outtxtfile.close()
 
 def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',title='',
-		logy=False,drawrange=None,lumi=0.,dotxt=False):
+		logy=False,drawrange=None,lumistr='',dotxt=False):
     # optional input args:
     # - logy is a boolean whether to set y axis to log scale
     # - drawrange is a tuple of x-values  where dotted vertical lines will be drawn
-    # - lumi is the luminosity value to display (ignored if zero)
+    # - lumistr is the luminosity string to display (ignored if zero)
     # - dotxt is a boolean whether to write the ratio to a txt file
 
     ### Create canvas and set parameters
+    plottools.setTDRstyle() 
     ROOT.gROOT.SetBatch(ROOT.kTRUE)
     c1 = ROOT.TCanvas("c1","c1")
     c1.SetCanvasSize(600,600)
@@ -77,11 +125,11 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     pad1.Draw()
     pad2 = ROOT.TPad("pad2","",0.,0.,1.,0.3)
     pad2.Draw()
-    titlefont = 6; titlesize = 30
-    labelfont = 5; labelsize = 20
-    axtitlefont = 5; axtitlesize = 25
-    infofont = 6; infosize = 30
-    legendfont = 4; legendsize = 15
+    titlefont = 4; titlesize = 22
+    labelfont = 4; labelsize = 20
+    axtitlefont = 4; axtitlesize = 25
+    infofont = 4; infosize = 30
+    legendfont = 4; legendsize = 20
     xlow = datahistlist[0].GetBinLowEdge(1)
     xhigh = (datahistlist[0].GetBinLowEdge(datahistlist[0].GetNbinsX())
 		+ datahistlist[0].GetBinWidth(datahistlist[0].GetNbinsX()))
@@ -90,15 +138,17 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     pad1.cd()
     pad1.SetBottomMargin(0.03)
     pad1.SetLeftMargin(0.15)
-    pad1.SetTopMargin(0.18)
+    pad1.SetTopMargin(0.12)
     pad1.SetTicks(1,1)
+    pad1.SetFrameLineWidth(2)
+    pad1.Draw()
     mcstack = ROOT.THStack("mcstack","")
     mchistsum = mchistlist[0].Clone()
     mchistsum.Reset()
     mchistsum.SetStats(False)
 
     ### Declare legend
-    leg = ROOT.TLegend(0.2,0.7,0.85,0.8)
+    leg = ROOT.TLegend(0.4,0.65,0.9,0.85)
     leg.SetTextFont(10*legendfont+3)
     leg.SetTextSize(legendsize)
     leg.SetNColumns(2)
@@ -121,6 +171,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
 	hist.SetFillColor(clist[i])
 	hist.SetFillStyle(1001)
 	leg.AddEntry(hist,hist.GetTitle(),"f")
+	#leg.AddEntry(hist,"Simulation","f")
 	mcstack.Add(hist)
 	mchistsum.Add(hist)
 
@@ -157,7 +208,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     mchistsum.SetFillColor(ROOT.kOrange)
     mchistsum.SetFillStyle(3001)
     mchistsum.Draw("SAME E2")
-    leg.AddEntry(mchistsum,"simulation stat. uncertainty","f")
+    leg.AddEntry(mchistsum,"Stat. uncertainty","f")
 
     ### Add data histograms
     # sum of all data
@@ -167,7 +218,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
 	    hist0.Add(hist)
 	hist0.SetMarkerStyle(20)
 	hist0.SetMarkerSize(0.9)
-	leg.AddEntry(hist0,"observed","ep")
+	leg.AddEntry(hist0,"Observed","ep")
 	hist0.Draw("SAME E1")
     else:
 	hist0 = mchistlist[0].Clone()
@@ -189,13 +240,8 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     ttitle.SetTextFont(10*titlefont+3)
     ttitle.SetTextSize(titlesize)
     ttitle.DrawLatexNDC(0.15,0.92,title)
-    if lumi>0:
-	# additional info
-	tinfo = ROOT.TLatex()
-	tinfo.SetTextFont(10*infofont+3)
-	tinfo.SetTextSize(infosize)
-	info = 'luminosity: {0:.1f}'.format(lumi/1000.)+r' fb^{-1} (13 TeV)'
-	tinfo.DrawLatexNDC(0.55,0.86,info)
+    plottools.drawLumi(pad1,cmstext_size_factor=0.4,extratext="",
+			lumitext=lumistr,lumitext_size_factor=0.4,lumitext_offset=0.02)
 
     # temp for testing:
     #for i in range(1,mchistsum.GetNbinsX()):
@@ -242,6 +288,8 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     pad2.SetBottomMargin(0.4)
     pad2.SetTopMargin(0.05)
     pad2.SetTicks(1,1)
+    pad2.SetFrameLineWidth(2)
+    pad2.Draw()
 
     ### Divide simulation by itself to obtain expected uncertainty
     histratio2 = mchistsum.Clone()
@@ -309,6 +357,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
 
     c1.Update()
     c1.SaveAs(outfile.split('.')[0]+'.png')
+    c1.SaveAs(outfile.split('.')[0]+'.pdf')
 
     ### write ratio to txt file if requested
     if dotxt:
@@ -319,10 +368,11 @@ if __name__=='__main__':
 
     sys.stderr.write('### starting ###\n')
     # configure input parameters (hard-coded)
-    histfile = '/storage_mnt/storage/user/llambrec/Kshort/files/skim_ztomumu/selected_legacy/'
-    histfile += 'histograms/2016/kshort/rpv/bcksideband/norm3small/defaultbins/histograms.root'
+    histfile = '/storage_mnt/storage/user/llambrec/K0sAnalysis/histograms/'
+    histfile += 'test.root'
     # (file to read histograms)
-    outfile = 'test.png'
+    outfile = '/storage_mnt/storage/user/llambrec/K0sAnalysis/histograms/'
+    outfile += 'test.png'
     # (file to save figure to)
     title = r'K^{0}_{S} vertex radial distance'
     xaxistitle = 'radial distance (cm)' # set x axis title
@@ -347,11 +397,18 @@ if __name__=='__main__':
             sys.exit()
 
     indict = loadobjects(histfile)
+    #indict = loadobjects_old(histfile) # WARNING: temporarily changed to loadobjects_old!
+    
+    # configure other parameters based on input
     normrange = None
     if indict['normalization'] == 3: normrange = indict['normrange']
+    lumistr = ''
+    if indict['lumi'] > 0: 
+	lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
     
     plotmcvsdata(indict['mchistlist'],indict['datahistlist'],outfile,
 		    xaxistitle=xaxistitle,yaxistitle=yaxistitle,title=title,
-		    logy=True,drawrange=normrange,lumi=indict['lumi'],dotxt=False)
+		    logy=True,drawrange=normrange,
+		    lumistr=lumistr,dotxt=False)
 
     sys.stderr.write('### done ###\n')

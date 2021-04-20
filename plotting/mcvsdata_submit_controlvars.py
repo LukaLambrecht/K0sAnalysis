@@ -13,24 +13,50 @@ filllist = []
 plotlist = []
 
 ### global settings
-basedir = '/storage_mnt/storage/user/llambrec/Kshort/files'
-filedir = os.path.join(basedir,'skim_ztomumu/selected_legacy_nonhits')
+basedir = '/storage_mnt/storage/user/llambrec/K0sAnalysis/files'
+#filedir = os.path.join(basedir,'skim_ztomumu/selected_legacy_nonhits')
+filedir = os.path.join(basedir,'oldfiles')
 fillscript = 'mcvsdata_fill.py'
 plotscript = 'mcvsdata_plot.py'
-testing = False
+testing = True
 includelist = []
-for era in ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']: includelist.append(era)
+#for era in ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']: includelist.append(era)
+#for era in ['2017B','2017C','2017D','2017E','2017F']: includelist.append(era)
+#for era in ['2018A','2018B','2018C','2018D']: includelist.append(era)
 includelist.append('2016')
+includelist.append('2017')
+includelist.append('2018')
+includelist.append('run2')
 
 ### fill eralist with files to run on and related properties
 eralist = []
 for era in includelist:
-    mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
-    datadir = 'DoubleMuon_Run'+era
-    mcin = ([{ 'file':os.path.join(filedir,mcdir,'selected.root'), 'label':'simulation', 'xsection':6077.22}])
-    datain = ([{'file':os.path.join(filedir,datadir,'selected.root'), 'label':era+' data'}])
+    if era=='run2': continue
+    #mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
+    mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
+    if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
+    if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
+    #datadir = 'DoubleMuon_Run'+era
+    datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
+    mcin = ([{ 'file':os.path.join(filedir,mcdir,'skim_ztomumu_all.root'), 'label':'simulation', 'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000}])
+    datain = ([{'file':os.path.join(filedir,datadir,'skim_ztomumu_all.root'), 'label':era+' data','luminosity':lumitools.getlumi(era)*1000}])
     label = era
-    eralist.append({'mcin':mcin,'datain':datain,'label':label,'lumi':lumitools.getlumi(era)*1000})
+    eralist.append({'mcin':mcin,'datain':datain,'label':label})
+# special cases:
+if 'run2' in includelist:
+    mcin = []
+    datain = []
+    # 2016
+    mcin.append({ 'file':os.path.join(filedir,'RunIISummer16_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
+    datain.append({'file':os.path.join(filedir,'Run2016_DoubleMuon','skim_ztomumu_all.root'), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
+    # 2017
+    mcin.append({ 'file':os.path.join(filedir,'RunIIFall17_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2017')*1000})
+    datain.append({'file':os.path.join(filedir,'Run2017_DoubleMuon','skim_ztomumu_all.root'), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
+    # 2018
+    mcin.append({ 'file':os.path.join(filedir,'RunIIAutumn18_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2018')*1000})
+    datain.append({'file':os.path.join(filedir,'Run2018_DoubleMuon','skim_ztomumu_all.root'), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
+    label = 'Run-II'
+    eralist.append({'mcin':mcin,'datain':datain,'label':label})
 
 ### check if all files exist
 allexist = True
@@ -47,11 +73,12 @@ if not allexist: sys.exit()
 
 ### fill varlist with variables to run on and related properties
 varlist = []
-varnamelist = ['_nimloth_Mll','_celeborn_lPt']
+#varnamelist = ['_nimloth_Mll','_celeborn_lPt']
+varnamelist = ['_event_mll','_lPt'] # temp for running on old files
 
 for varname in varnamelist:
 
-    if varname=='_nimloth_Mll':
+    if( varname=='_nimloth_Mll' or varname=='_event_mll' ):
 	varlist.append({    'varname': varname,
 			    'treename': 'nimloth',
 			    'bck_mode': 'default',
@@ -64,7 +91,7 @@ for varname in varnamelist:
 			    'histtitle': 'dilepton invariant mass',
 			})
 
-    elif varname=='_celeborn_lPt':
+    elif( varname=='_celeborn_lPt' or varname=='_lPt' ):
 	varlist.append({    'varname': varname,
                             'treename': 'celeborn',
                             'bck_mode': 'default',
@@ -76,16 +103,13 @@ for varname in varnamelist:
 					separators=(',',':')),
                             'histtitle': 'lepton transverse momentum',
                         })
-    
     else:
 	print('### WARNING ###: variable name '+varname+' not recognized, skipping...')
 
-
-testing = False
 if testing:
-    eralist = [eralist[0]]
-    varlist = [varlist[0]]
-    varlist[0]['reductionfactor'] = 100
+    #eralist = [eralist[0]]
+    #varlist = [varlist[0]]
+    for i in range(len(varlist)): varlist[i]['reductionfactor'] = 100
 
 for era in eralist:
 
@@ -94,17 +118,20 @@ for era in eralist:
 	os.makedirs(thishistdir)
     thismcin = era['mcin']
     thisdatain = era['datain']
-    thislumi = era['lumi']
 
     for var in varlist:
+
+	thistitle = var['histtitle']+' ({})'.format(era['label'])
+
 	optionstring = " 'histfile="+os.path.join(thishistdir,var['varname']+'.root')+"'"
 	optionstring += " 'helpdir="+os.path.join(thishistdir,var['varname']+'_temp')+"'"
 	optionstring += " 'mcin="+json.dumps(thismcin,separators=(",",":"))+"'"
 	optionstring += " 'datain="+json.dumps(thisdatain,separators=(",",":"))+"'"
-	optionstring += " 'lumi="+str(thislumi)+"'"
 	optionstring += " 'outfile="+os.path.join(thishistdir,var['varname']+'.png')+"'"
 	for option in var.keys():
+	    if option=='histtitle': continue
 	    optionstring += " '"+option+"="+str(var[option])+"'"
+	optionstring += " 'histtitle="+thistitle+"'"
 
 	scriptname = 'mcvsdata_submit.sh'
 	with open(scriptname,'w') as script:

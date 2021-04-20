@@ -213,3 +213,36 @@ def printhistograms( histfile, mustcontainall=[], mustcontainone=[],
 					maynotcontainall=maynotcontainall)[1]
     for hist in selhists:
 	printhistogram(hist,naninfo=naninfo)
+
+### transforming axis binning ###
+
+def make_equal_width( hist ):
+    raise Exception('not yet implemented')
+
+def make_equal_width_2d( hist, keeplabels=True ):
+    
+    nxbins = hist.GetNbinsX()
+    nybins = hist.GetNbinsY()
+    origxax = hist.GetXaxis()
+    origyax = hist.GetYaxis()
+    newxbins = array('f',list(range(nxbins+1)))
+    newybins = array('f',list(range(nybins+1)))
+    newhist = ROOT.TH2F('newhist','newhist',nxbins,newxbins,nybins,newybins)
+    newhist.SetName(hist.GetName())
+    newhist.SetTitle(hist.GetTitle())
+    for i in range(nxbins+2):
+	for j in range(nybins+2):
+	    newhist.SetBinContent(i,j,hist.GetBinContent(i,j))
+	    newhist.SetBinError(i,j,hist.GetBinError(i,j))
+    if keeplabels:
+	for i in range(nxbins+2):
+	    newhist.GetXaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origxax.GetBinLowEdge(i)))
+	for i in range(nybins+2):
+	    newhist.GetYaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origyax.GetBinLowEdge(i)))
+    return (newhist,newxbins,newybins)
+
+def transform_to_equal_width( value, origax ):
+    binnb = origax.FindBin(value)
+    frac = (value-origax.GetBinLowEdge(binnb))
+    frac /= (origax.GetBinUpEdge(binnb)-origax.GetBinLowEdge(binnb))
+    return (binnb-1)+frac

@@ -4,12 +4,14 @@
 import ROOT
 import os
 import sys
+import copy
 import numpy as np
 from array import array
 import json
-sys.path.append(os.path.abspath('../tools'))
-import fittools as ft
-import plotfit as pft
+sys.path.append(os.path.abspath('../fitting'))
+from count_peak import count_peak
+sys.path.append(os.path.abspath('../pureweighting'))
+import addpuscale as pu
 
 sys.stderr.write('### starting ###\n')
 
@@ -23,7 +25,7 @@ def parse_arguments():
     coreargs = {'histfile':None,'helpdir':None,'bck_mode':None,'varname':None,
 		    'treename':None,'bins':None,'normalization':None,
 		    'mcin':None,'datain':None}
-    otherargs = {'extracut':'','lumi':1.,'normrange':[0,0],'eventtreename':'',
+    otherargs = {'extracut':'','normrange':[0,0],'eventtreename':'',
 		'sidebandvarname':'','sidexlow':0,'sidexhigh':1,'sidenbins':1}
     i = 0
     while(i<len(cmdargs)):
@@ -47,7 +49,6 @@ def parse_arguments():
 	for key in coreargs.keys():
 	    if(coreargs[key] is None): print(key)
 	return {}
-    checknorm1 = {'lumi':False} 
     checknorm3={'normrange':False} 
     checknorm4 = {'eventtreename':False}
     checkbck = {'sidevarname':False,'sidexlow':False,'sidexhigh':False,'sidenbins':False}
@@ -58,8 +59,6 @@ def parse_arguments():
         # (note: extra option 1 should allow to use '=' in extracut)
 	if(argname=='reductionfactor'): otherargs['reductionfactor'] = argval
 	# specific options:
-	if(coreargs['normalization']==1):
-	    if argname=='lumi': otherargs['lumi'] = float(argval); checknorm1['lumi']=True
 	elif(coreargs['normalization']==3 or coreargs['normalization']==5):
 	    if argname=='normrange': 
 		otherargs['normrange'] = json.loads(argval); checknorm3['normrange']=True
@@ -75,11 +74,6 @@ def parse_arguments():
 		otherargs['sidexhigh'] = float(argval); checkbck['sidexhigh']=True
 	    if argname=='sidenbins': 
 		otherargs['sidenbins'] = int(argval); checkbck['sidenbins']=True
-    if(coreargs['normalization']==1 and False in checknorm1.values()):
-	print('ERROR: requested normalization to xsection and lumi but missing arguments.')
-	for arg in checknorm1.keys(): 
-	    if not checknorm1[arg]: print('  '+arg)
-	return {}
     if((coreargs['normalization']==3 or coreargs['normalization']==5) 
 	and False in checknorm3.values()):
 	print('ERROR: requested normalization in range but missing arguments.')
@@ -111,7 +105,7 @@ else:
     args['bck_mode'] = 'sideband'
     # (bck_mode parameter:  default = count all instances of varname)
     #                       sidebands = subtract background based on sidebands in another variable)
-    args['varname'] = '_RPV'
+    args['varname'] = '_KsRPV'
     args['treename'] = 'laurelin'
     args['extracut'] = '' # default: empty string (no additional selection)
     args['bins'] = array('f',[0.,0.5,1.5,4.,20.])
@@ -124,21 +118,20 @@ else:
     # (                             4 = normalize number of events to data, not number of instances)
     # (                             5 = normalize first histogram to unit surface area 
     #                                   and remaining ones to first one within given range)
-    args['lumi'] = 35900. # automatically set to 1 if normalization != 1
     args['normrange'] = [0.,0.5] # ignored if normalization != 3 or 5
     args['eventtreename'] = 'nimloth' # ignored if normalization != 4
     # settings for sideband histograms (ignored if bck_mode != 2)
-    args['sidevarname'] = '_mass'
+    args['sidevarname'] = '_KsInvMass'
     args['sidexlow'] = 0.44
     args['sidexhigh'] = 0.56
     args['sidenbins'] = 30
     # comfigure mc input files
     args['mcin'] = []
-    args['mcin'].append({'file':'/storage_mnt/storage/user/llambrec/Kshort/files/skim_ztomumu/selected/DYJetsToLL_2016/selected.root','label':r'2016 sim','xsection':6077.22})
+    args['mcin'].append({'file':'/user/llambrec/K0sAnalysis/files/oldfiles/RunIISummer16_DYJetsToLL/skim_ztomumu_all.root','label':r'2016 sim','xsection':6077.22,'luminosity':35900.})
     # remark: apparently used cross section 6529 or 6225 previously, not sure where it came from...
-    # configure data inputfiles
+    # configure data input files
     args['datain'] = []
-    args['datain'].append({'file':'/storage_mnt/storage/user/llambrec/Kshort/files/skim_ztomumu/selected/DoubleMuon_Run2016/selected.root','label':'data'})
+    args['datain'].append({'file':'/user/llambrec/K0sAnalysis/files/oldfiles/Run2016_DoubleMuon/skim_ztomumu_all.root','label':'data','luminosity':35900.})
     # special optional argument for testing
     args['reductionfactor'] = 30.
 
@@ -154,11 +147,15 @@ for f in args['datain']:
 	allexist=False
 if not allexist: sys.exit()
 
+### Check luminosity
+args['lumi'] = sum([args['mcin'][i]['luminosity'] for i in range(len(args['mcin']))])
+lumitest = sum([args['datain'][i]['luminosity'] for i in range(len(args['datain']))])
+if( abs(lumitest-args['lumi'])/float(args['lumi'])>0.001 ):
+    print('WARNING: total luminosity for data and simulation do not agree!')
+    print('(luminosity values for data are only used for plot labels;')
+    print(' the values for simulations are used in event weighting and to calculate the sum)')
+
 ### Initializations based on input parameters defined above
-# setting lumi to 1 unless normalization requests otherwise
-if(args['normalization'] != 1):
-    print('WARNING: lumi set to 1. because of normalization settings.')
-    args['lumi'] = 1.
 # bin operations
 args['sidebinwidth'] = float(args['sidexhigh']-args['sidexlow'])/args['sidenbins'] 
 # (ignored if bck_mode != 2)
@@ -240,7 +237,7 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	    print('### WARNING ###: no valid PUScale in file!')
 	    puscale = None
 	xsection = inlist[index]['xsection']
-	lumi = gargs['lumi']
+	lumi = inlist[index]['luminosity']
     # in case normalization of number of events is requested, get number of events
     if(args['normalization']==4):
 	eventtree = f.Get(gargs['eventtreename'])
@@ -250,7 +247,7 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	    for j in range(int(eventtree.GetEntries())):
 		eventtree.GetEntry(j)
 		weight = getattr(eventtree,'_weight')
-		if puscale is not None: weight *= getpuscale(getattr(eventtree,'_nTrueInt'),puscale)
+		if puscale is not None: weight *= pu.getpuscale(getattr(eventtree,'_nTrueInt'),puscale)
 		eventsumweights += weight/sumweights*xsection*lumi
     # loop over V0 instances 
     tree = f.Get(gargs['treename'])
@@ -267,7 +264,7 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	weight = 1.
 	if(not isdata and not gargs['normalization']==0):
 	    weight = getattr(tree,'_weight')
-	    if puscale is not None: weight *= getpuscale(getattr(tree,'_nTrueInt'),puscale)
+	    if puscale is not None: weight *= pu.getpuscale(getattr(tree,'_nTrueInt'),puscale)
 	# determine the variable value
 	varvalue = getattr(tree,gargs['varname'])
 	# evaluate an extra selection condition if needed
@@ -283,7 +280,7 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	elif(gargs['bck_mode']=='sideband'):
 	    histindex = varhist.FindBin(varvalue)-1
 	    sidevarvalue = getattr(tree,gargs['sidevarname'])
-	    sidehistlist[histindex].Fill(sidevarvalue,weight*lumi*xsection/sumweights)	
+	    sidehistlist[index][histindex].Fill(sidevarvalue,weight*lumi*xsection/sumweights)	
     f.Close()
     sys.stdout.write("\r"+'100%'+"\n")
     sys.stdout.flush()
@@ -293,112 +290,39 @@ print('adding simulation files...')
 for i in range(len(args['mcin'])):
     print('file '+str(i+1)+' of '+str(len(args['mcin'])))
     mchist = mchistlist[i]
-    mcsidehist = mcsidehistlist[i] if args['bck_mode']=='sideband' else None
-    temp = addinputfile(args['mcin'],i,False,mchist,mcsidehist,gargs=args)
+    temp = addinputfile(args['mcin'],i,False,mchist,
+			sidehistlist=mcsidehistlist,gargs=args)
     mceventweights += temp[0]
     mcwinrange += temp[1]
 print('adding data files...')
 for i in range(len(args['datain'])):
     print('file '+str(i+1)+' of '+str(len(args['datain'])))
     datahist = datahistlist[i]
-    datasidehist = datasidehistlist[i] if args['bck_mode']=='sideband' else None
-    temp = addinputfile(args['datain'],i,True,datahist,datasidehist,gargs=args)
+    temp = addinputfile(args['datain'],i,True,datahist,
+			sidehistlist=datasidehistlist,gargs=args)
     dataeventweights += temp[0]
     datawinrange += temp[1]
-
-### Help functions to perform background fit and subtract it 
-# (only needed if bck_mode == 'sideband')
-
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
-def count_peak(hist,label,extrainfo,gargs,mode='subtract'):
-    ### return the integral (and error estimate) under a peak in a histogram, 
-    ### subtracting the background contribution from sidebands
-    # input arguments:
-    # - hist = histogram to perform fitting on (left unmodified)
-    # - label = only for plotting
-    # - extrainfo = only for plotting
-    # - gargs = dict containgin global program parameters
-    # - mode = 'gfit' or 'subtract'
-    #		or 'hybrid', which returns subtract results but makes fancy 'gfit' plot anyway
-
-    histclone = hist.Clone()
-    binlow = histclone.FindBin(gargs['sidexcenter']-gargs['sidexwidth'])
-    binhigh = histclone.FindBin(gargs['sidexcenter']+gargs['sidexwidth'])
-    # take into account only sidebands, not peak
-    for i in range(binlow+1,binhigh+1):
-	histclone.SetBinContent(i,0)
-	histclone.SetBinError(i,0)
-    # make background-only fit
-    guess = [0.,0.]
-    backfit,paramdict = ft.poly_fit(histclone,gargs['fitrange'],guess,"Q0")
-    pft.plot_fit(hist,None,backfit,label,paramdict,'invariant mass (GeV)',
-		    'number of reconstructed vertices',
-		    os.path.join(gargs['helpdir'],hist.GetName().replace(' ','_')+'_bck.png'),
-		    extrainfo=extrainfo,lumi=gargs['lumi'])
-    # make signal peak fit if requested
-    if(mode=='gfit' or mode=='hybrid'):
-	avgbck = paramdict['a0']+0.5*gargs['sidexcenter']*paramdict['a1']
-        sidexbinwidth = (gargs['sidexhigh']-gargs['sidexlow'])/gargs['sidenbins']
-        guess = [
-                gargs['sidexcenter'], # peak position
-                avgbck*10, # peak 1 height
-                (gargs['sidexhigh']-gargs['sidexlow'])/45., # peak 1 width
-                avgbck*10, # peak 2 height
-                (gargs['sidexhigh']-gargs['sidexlow'])/15. # peak 2 width
-                ]
-        guess += [paramdict['a0'],paramdict['a1']] # background estimate
-        globfit,paramdict = ft.poly_plus_doublegauss_fit(hist,gargs['fitrange'],guess)
-	pft.plot_fit(hist,globfit,backfit,label,paramdict,'invariant mass (GeV)',
-                    'number of reconstructed vertices',
-                    os.path.join(gargs['helpdir'],hist.GetName().replace(' ','_')+'_sig.png'),
-                    extrainfo=extrainfo,lumi=gargs['lumi'])
-
-    # METHOD 1: subtract background from peak and count remaining instances
-    if(mode=='subtract' or mode=='hybrid'):
-	histclone2 = hist.Clone()
-	histclone2.Add(backfit,-1)
-	npeak = 0.
-	npeak_error2 = 0.
-	for i in range(binlow+1,binhigh+1):
-            npeak += histclone2.GetBinContent(i)
-            npeak_error2 += np.power(histclone2.GetBinError(i),2)
-	return (npeak,np.sqrt(npeak_error2))
-
-    # METHOD 2: do global fit and determine integral of peak with error
-    elif mode=='gfit':
-	intpeak = np.sqrt(2*np.pi)*(paramdict['A_{1}']*paramdict['#sigma_{1}']
-					+ paramdict['A_{2}']*paramdict['#sigma_{2}'])
-	npeak = intpeak/sidexbinwidth # calculate number of instances instead of integral
-	npeak_error = globfit.IntegralError(gargs['fitrange'][0],gargs['fitrange'][1])
-	npeak_error /= sidexbinwidth
-	return (npeak,npeak_error)
-    
-    else:
-	print('### WARNING ###: peak counting mode not regognized!')
-	return (0,0)
 
 ### Fill main variable histograms if running in background subtraction mode
 
 if(args['bck_mode'] == 'sideband'):
     print('performing fits to background in all bins...')
-    #if '_Ks' in sidevarname: info = 'HACK_KS'
-    #elif '_La' in sidevarname: info = 'HACK_LA'
-    #elif '_JP' in sidevarname: info = 'HACK_JP'
-    #else: info = ''
-    info = ''
+    # define common arguments
+    gargs = copy.copy(args)
     for i in range(len(args['bins'])-1):
 	extrainfo = '{0:.2f} < '.format(args['bins'][i])
 	extrainfo += args['varname']
 	extrainfo += ' < {0:.2f}'.format(args['bins'][i+1])
-	extrainfo += '<< <<'+info
 	for j in range(len(args['mcin'])):
+	    gargs['lumi'] = args['mcin'][j]['luminosity']
 	    (npeak,nerror) = count_peak(mcsidehistlist[j][i],'simulation',
-					extrainfo,args,mode='hybrid')
+					extrainfo,gargs,mode='hybrid')
 	    mchistlist[j].SetBinContent(i+1,npeak)
 	    mchistlist[j].SetBinError(i+1,nerror)
 	for j in range(len(args['datain'])):
+	    gargs['lumi'] = args['datain'][j]['luminosity']
 	    (npeak,nerror) = count_peak(datasidehistlist[j][i],'data',
-					extrainfo,args,mode='hybrid')
+					extrainfo,gargs,mode='hybrid')
 	    datahistlist[j].SetBinContent(i+1,npeak)
 	    datahistlist[j].SetBinError(i+1,nerror)
 
@@ -467,13 +391,12 @@ for hist in mchistlist+datahistlist:
 normalization_st = ROOT.TVectorD(1); normalization_st[0] = args['normalization']
 normalization_st.Write("normalization")
 if(args['normalization']==3 or args['normalization']==5):
-	normrange_st = ROOT.TVectorD(2)
-	normrange_st[0] = args['normrange'][0]; normrange_st[1] = args['normrange'][1]
-	normrange_st.Write("normrange")
-if(args['normalization']==1):
-	lumi_st = ROOT.TVectorD(1)
-	lumi_st[0] = args['lumi']
-	lumi_st.Write("lumi")
+    normrange_st = ROOT.TVectorD(2)
+    normrange_st[0] = args['normrange'][0]; normrange_st[1] = args['normrange'][1]
+    normrange_st.Write("normrange")
+lumi_st = ROOT.TVectorD(1)
+lumi_st[0] = args['lumi']
+lumi_st.Write("lumi")
 f.Close()
 
 sys.stderr.write('### done ###\n')

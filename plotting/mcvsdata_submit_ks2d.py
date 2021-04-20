@@ -1,6 +1,6 @@
-###########################################
-# Submit mcvsdata fillrd and plot methods #
-###########################################
+############################################
+# Submit mcvsdata 2d fill and plot methods #
+############################################
 import json
 import os
 import sys
@@ -16,16 +16,16 @@ plotlist = []
 basedir = '/storage_mnt/storage/user/llambrec/K0sAnalysis/files'
 #filedir = os.path.join(basedir,'skim_ztomumu/selected_legacy_nonhits')
 filedir = os.path.join(basedir,'oldfiles') # temp for running on old files
-fillscript = 'mcvsdata_fill.py'
-plotscript = 'mcvsdata_plot.py'
+fillscript = 'mcvsdata_fill2d.py'
+plotscript = 'mcvsdata_plot2d.py'
 testing = True
 includelist = []
 #for era in ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']: includelist.append(era)
 #for era in ['2017B','2017C','2017D','2017E','2017F']: includelist.append(era)
 #for era in ['2018A','2018B','2018C','2018D']: includelist.append(era)
-includelist.append('2016')
-includelist.append('2017')
-includelist.append('2018')
+#includelist.append('2016')
+#includelist.append('2017')
+#includelist.append('2018')
 includelist.append('run2')
 
 ### fill eralist with files to run on and related properties
@@ -74,46 +74,48 @@ if not allexist: sys.exit()
 ### fill plotlist with properties of plots to make
 plotlist = []
 varnamedict = ({
-	    'rpv':{'variablename':'_KsRPV','xaxtitle':'radial displacement (cm)','histtitle':'K^{0}_{S} vertex radial distance'}
+	    'RPVvsSumPt':{'xvarname':'_KsRPV','xaxtitle':'radial displacement (cm)',
+		    'yvarname':'_KsSumPt','yaxtitle':'ditrack p_{T} sum (GeV)',
+		    'histtitle':'K^{0}_{S} scale factors'}
 		})
 bckmodedict = ({
-	    #'bckdefault':'default',
-	    'bcksideband':'sideband'
+	    'bckdefault':'default',
+	    #'bcksideband':'sideband'
 		})
 extracut = 'bool(abs(getattr(tree,"_KsInvMass")-0.49761)<0.01)'
 # note: extracut will only be applied in case of no background subtraction and mainly for testing,
 #	not recommended to be used.
 binsdict = ({
-	#'finebins':json.dumps(list(np.linspace(0,20,num=50,endpoint=True)),separators=(',',':')),
-	'defaultbins':json.dumps([0.,0.5,1.5,4.5,20.],separators=(',',':'))
+	'defaultbins':{'xbins':json.dumps([0.,0.5,1.5,4.5,20.],separators=(',',':')),
+			'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))}
 	    })
 normdict = ({
-	#'norm1':{'type':1,'normrange':''},
-	#'norm4':{'type':4,'normrange':''},
-	'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
-	#'norm3med':{'type':3,'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
+	'norm3small':{'type':3,'xnormrange':json.dumps([0.,0.5],separators=(',',':')),
+				'ynormrange':json.dumps([0.,20.],separators=(',',':'))}
 	    })
 
 for varname in varnamedict:
     for bckmode in bckmodedict:
 	for norm in normdict:
 	    for bins in binsdict:
-		#subfolder = os.path.join(varname,bckmode,norm,bins)
 		subfolder = '{}_{}_{}_{}'.format(varname,bckmode,norm,bins)
-		optionsdict = ({ 'varname': varnamedict[varname]['variablename'],
+		optionsdict = ({ 'xvarname': varnamedict[varname]['xvarname'],
+			    'yvarname': varnamedict[varname]['yvarname'],
                             'treename': 'laurelin',
                             'bck_mode': bckmodedict[bckmode],
                             'extracut': '',
                             'normalization': normdict[norm]['type'],
                             'xaxistitle': varnamedict[varname]['xaxtitle'],
-                            'yaxistitle': 'number of events',
-                            'bins': binsdict[bins],
+                            'yaxistitle': varnamedict[varname]['yaxtitle'],
+                            'xbins': binsdict[bins]['xbins'],
+			    'ybins': binsdict[bins]['ybins'],
                             'histtitle': varnamedict[varname]['histtitle'],
 			    'sidevarname': '_KsInvMass',
 			    'sidexlow': 0.44,
 			    'sidexhigh': 0.56,
 			    'sidenbins': 30,
-			    'normrange': normdict[norm]['normrange'],
+			    'xnormrange': normdict[norm]['xnormrange'],
+			    'ynormrange': normdict[norm]['ynormrange'],
 			    'eventtreename': 'nimloth'
 			    })
 		if bckmodedict[bckmode]=='default':

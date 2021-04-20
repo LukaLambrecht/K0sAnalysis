@@ -9,13 +9,17 @@ filllist = []
 plotlist = []
 
 ### global settings
-histdir = '/storage_mnt/storage/user/llambrec/Kshort/histograms2D'
-fillscript = 'mcvsdata_fillrdpt.py' # choose from mcvsdata_fillrd.py or mcvsdata_fillrdpt.py
-plotscript = 'mcvsdata_plot2d.py'
+histdir = '/storage_mnt/storage/user/llambrec/K0sAnalysis/oldplots/histograms_20210322'
+fillscript = 'mcvsdata_fillrd.py' # choose from mcvsdata_fillrd.py or mcvsdata_fillrdpt.py
+plotscript = 'mcvsdata_plot.py'
 scriptloc = os.path.abspath(os.getcwd()) # location where the scripts are
-includelist = (['2016B','2016C','2016D','2016E','2016F','2016G','2016H','2016',
-		'2017B','2017C','2017D','2017E','2017F','2017',
-		'2018A','2018B','2018C','2018D','2018'
+includelist = ([
+		#'2016B','2016C','2016D','2016E','2016F','2016G','2016H',
+		'2016',
+		#'2017B','2017C','2017D','2017E','2017F',
+		'2017',
+		#'2018A','2018B','2018C','2018D',
+		'2018'
 		])
 
 ### fill eralist with files to run on and related properties
@@ -28,9 +32,9 @@ for era in includelist:
     elif '2018' in era:
 	mcdir = 'RunIIAutumn18_DYJetsToLL'
     datadir = 'Run'+era+'_DoubleMuon'
-    mcin = ([{	'file':'/storage_mnt/storage/user/llambrec/Kshort/files/'+mcdir+'/skim_ztomumu_all.root',
+    mcin = ([{	'file':'/storage_mnt/storage/user/llambrec/Kshort/files/oldfiles/'+mcdir+'/skim_ztomumu_all.root',
 		'label':'simulation','xsection':1.,'luminosity':1.}])
-    datain = ([{'file':'/storage_mnt/storage/user/llambrec/Kshort/files/'+datadir+'/skim_ztomumu_all.root',
+    datain = ([{'file':'/storage_mnt/storage/user/llambrec/Kshort/files/oldfiles/'+datadir+'/skim_ztomumu_all.root',
 		'label':era+' data'}])
     label = era
     eralist.append({'mcin':mcin,'datain':datain,'label':label})

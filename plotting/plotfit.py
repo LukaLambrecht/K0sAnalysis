@@ -24,12 +24,12 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
 
 	# initialization of canvas
 	c1 = ROOT.TCanvas("c1","c1")
-	c1.SetCanvasSize(1200,1200)
-	titlefont = 6; titlesize = 60
-	labelfont = 5; labelsize = 45
-	axtitlefont = 5; axtitlesize = 45
-	infofont = 4; infosize = 30
-	legendfont = 4; legendsize = 35
+	c1.SetCanvasSize(800,800)
+	titlefont = 4; titlesize = 30
+	labelfont = 4; labelsize = 30
+	axtitlefont = 4; axtitlesize = 35
+	infofont = 4; infosize = 25
+	legendfont = 4; legendsize = 25
 	c1.SetBottomMargin(0.1)
 	c1.SetTopMargin(0.05)
 	c1.SetLeftMargin(0.15)
@@ -112,10 +112,10 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
 	extrainfo = extrainfo.replace('HACK_JP','PDG J/#Psi mass:<<    3096.900 #pm 0.006 MeV')
 	infolist = extrainfo.split('<<')
 	for i,info in enumerate(infolist):
-		tinfo.DrawLatexNDC(0.2,0.9-i*0.035,info)
+		tinfo.DrawLatexNDC(0.2,0.8-i*0.035,info)
 
 	# title
-	lumitext = '' if lumi==0 else '{0:.1f} '.format(lumi/1000) + 'fb^{-1} (13 TeV)'
+	lumitext = '' if lumi==0 else '{0:.1f} '.format(float(lumi)/1000) + 'fb^{-1} (13 TeV)'
 	pt.drawLumi(c1,extratext="Preliminary", lumitext=lumitext)
 
 	c1.Update()
