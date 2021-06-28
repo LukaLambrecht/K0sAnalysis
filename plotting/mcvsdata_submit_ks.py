@@ -18,7 +18,7 @@ basedir = '/storage_mnt/storage/user/llambrec/K0sAnalysis/files'
 filedir = os.path.join(basedir,'oldfiles') # temp for running on old files
 fillscript = 'mcvsdata_fill.py'
 plotscript = 'mcvsdata_plot.py'
-testing = True
+testing = False
 includelist = []
 #for era in ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']: includelist.append(era)
 #for era in ['2017B','2017C','2017D','2017E','2017F']: includelist.append(era)
@@ -38,7 +38,7 @@ for era in includelist:
     if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
     #datadir = 'DoubleMuon_Run'+era
     datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
-    mcin = ([{ 'file':os.path.join(filedir,mcdir,'skim_ztomumu_all.root'), 'label':'simulation', 'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000}])
+    mcin = ([{ 'file':os.path.join(filedir,mcdir,'skim_ztomumu_all.root'), 'label':'Simulation', 'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000}])
     datain = ([{'file':os.path.join(filedir,datadir,'skim_ztomumu_all.root'), 'label':era+' data','luminosity':lumitools.getlumi(era)*1000}])
     label = era
     eralist.append({'mcin':mcin,'datain':datain,'label':label})
@@ -74,7 +74,7 @@ if not allexist: sys.exit()
 ### fill plotlist with properties of plots to make
 plotlist = []
 varnamedict = ({
-	    'rpv':{'variablename':'_KsRPV','xaxtitle':'radial displacement (cm)','histtitle':'K^{0}_{S} vertex radial distance'}
+	    'rpv':{'variablename':'_KsRPV','xaxtitle':'#Delta(PV-SV)_{2D} [cm]','histtitle':'K^{0}_{S} vertex radial distance'}
 		})
 bckmodedict = ({
 	    #'bckdefault':'default',
@@ -85,7 +85,7 @@ extracut = 'bool(abs(getattr(tree,"_KsInvMass")-0.49761)<0.01)'
 #	not recommended to be used.
 binsdict = ({
 	#'finebins':json.dumps(list(np.linspace(0,20,num=50,endpoint=True)),separators=(',',':')),
-	'defaultbins':json.dumps([0.,0.5,1.5,4.5,20.],separators=(',',':'))
+	'defaultbins':json.dumps([0.,0.5,1.5,4.5,10.,20.],separators=(',',':'))
 	    })
 normdict = ({
 	#'norm1':{'type':1,'normrange':''},
@@ -106,7 +106,7 @@ for varname in varnamedict:
                             'extracut': '',
                             'normalization': normdict[norm]['type'],
                             'xaxistitle': varnamedict[varname]['xaxtitle'],
-                            'yaxistitle': 'number of events',
+                            'yaxistitle': 'Number of events',
                             'bins': binsdict[bins],
                             'histtitle': varnamedict[varname]['histtitle'],
 			    'sidevarname': '_KsInvMass',
@@ -131,7 +131,9 @@ for varname in varnamedict:
 		    thismcin = era['mcin']
 		    thisdatain = era['datain']
 		    
-		    optionsdict['histtitle'] = varnamedict[varname]['histtitle']+' ({})'.format(era['label'])
+		    #optionsdict['histtitle'] = varnamedict[varname]['histtitle']+' ({})'.format(era['label'])
+		    # asked to remove title for plot in paper
+		    optionsdict['histtitle'] = ''
 
 		    optionstring = " 'histfile="+os.path.join(thishistdir,'histograms.root')+"'"
 		    optionstring += " 'helpdir="+os.path.join(thishistdir,'temp')+"'"
@@ -142,7 +144,7 @@ for varname in varnamedict:
 			optionstring += " '"+option+"="+str(optionsdict[option])+"'"
 		    
 
-		    scriptname = 'mcvsdata_submit.sh'
+		    scriptname = 'qsub_mcvsdata_submit.sh'
 		    with open(scriptname,'w') as script:
 			jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_16_patch1')
 			script.write('python '+fillscript+optionstring+'\n')

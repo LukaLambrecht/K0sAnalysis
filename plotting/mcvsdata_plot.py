@@ -29,9 +29,9 @@ def loadobjects(histfile):
     mchistlist = []
     datahistlist = []
     for hist in histlist:
-        if 'sim' in hist.GetName():
+        if 'sim' in hist.GetName() or 'Sim' in hist.GetName():
             mchistlist.append(hist)
-        elif 'data' in hist.GetName():
+        elif 'data' in hist.GetName() or 'Data' in hist.GetName():
             datahistlist.append(hist)
         else:
             print('### WARNING ###: histogram type not recognized: '+hist.GetName())
@@ -136,7 +136,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
 
     ### Create pad and containers for stacked and summed histograms
     pad1.cd()
-    pad1.SetBottomMargin(0.03)
+    pad1.SetBottomMargin(0.0)
     pad1.SetLeftMargin(0.15)
     pad1.SetTopMargin(0.12)
     pad1.SetTicks(1,1)
@@ -240,7 +240,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     ttitle.SetTextFont(10*titlefont+3)
     ttitle.SetTextSize(titlesize)
     ttitle.DrawLatexNDC(0.15,0.92,title)
-    plottools.drawLumi(pad1,cmstext_size_factor=0.4,extratext="",
+    plottools.drawLumi(pad1,cmstext_size_factor=0.5,extratext="",
 			lumitext=lumistr,lumitext_size_factor=0.4,lumitext_offset=0.02)
 
     # temp for testing:
@@ -286,7 +286,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     pad2.cd()
     pad2.SetLeftMargin(0.15)
     pad2.SetBottomMargin(0.4)
-    pad2.SetTopMargin(0.05)
+    pad2.SetTopMargin(0.01)
     pad2.SetTicks(1,1)
     pad2.SetFrameLineWidth(2)
     pad2.Draw()
@@ -314,15 +314,15 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     xax.SetTitleSize(axtitlesize)
     xax.SetTitleOffset(3.)
     # Y-axis layout
-    histratio2.SetMinimum(0.5)
-    histratio2.SetMaximum(1.5)
+    histratio2.SetMinimum(0.75)
+    histratio2.SetMaximum(1.25)
     #histratio2.SetMinimum(0.)
     #histratio2.SetMaximum(2.)
     yax = histratio2.GetYaxis()
-    yax.SetNdivisions(4,5,0,ROOT.kFALSE)
+    yax.SetNdivisions(4,5,0,ROOT.kTRUE)
     yax.SetLabelFont(10*labelfont+3)
     yax.SetLabelSize(labelsize)
-    yax.SetTitle('obs./pred.')
+    yax.SetTitle('Obs./Pred.')
     yax.SetTitleFont(10*axtitlefont+3)
     yax.SetTitleSize(axtitlesize)
     yax.SetTitleOffset(1.5)
