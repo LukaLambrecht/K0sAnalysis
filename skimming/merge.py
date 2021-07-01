@@ -17,6 +17,15 @@ import mergetools as mt
 
 if __name__=='__main__':
 
+    if len(sys.argv)==1:
+	info = 'Use with following options (in sequence):\n'
+	info += 'OPTION 1: merge .root files in input directory and put result in output file\n'
+	info += ' - input directory\n'
+	info += ' - output file name\n'
+	info += 'OPTION 2: loop over subdirs in input directory and replace files by merged copy\n'
+	info += ' - (top-level) input directory'
+	print(info)
+
     if len(sys.argv) == 3:
 	input_directory = os.path.abspath( sys.argv[1] )
 	output_file_name = os.path.abspath( sys.argv[2] )
@@ -40,4 +49,4 @@ if __name__=='__main__':
 	for indir in indirs:
 	    print('--------------------')
 	    print(indir)
-	    mt.mergeallfiles(indir,os.path.join(indir,'merged.root'),removeinput=True)
+	    mt.mergeallfiles(indir,os.path.join(indir,'merged.root'),removeinput=False)

@@ -7,28 +7,39 @@ sys.path.append('../tools')
 import jobsubmission as jobsub
 import listtools as lt
 import sampletools as st
+import optiontools as opt
 
 # input parameters
-samplelist = os.path.abspath('../samplelists/samplelist_2016_sim.txt')
-skimmer = 'skim_ztomumu'
-nfilesperjob = 5
-outputdir = '/user/llambrec/Kshort/files/'+skimmer
+options = []
+options.append( opt.Option('samplelist', vtype='path') )
+options.append( opt.Option('skimmer',default='skim_ztomumu') )
+options.append( opt.Option('nfilesperjob',default=5, vtype='int') )
+options.append( opt.Option('outputdir', vtype='path') )
+options = opt.OptionCollection( options )
+if len(sys.argv)==1:
+    print('Use with following options:')
+    print(options)
+    sys.exit()
+else:
+    options.parse_options( sys.argv[1:] )
+    print('Found following configuration:')
+    print(options)
 
 # check if samplelist exists
-if not os.path.exists(samplelist):
-    print('### ERROR ###: sample list '+samplelist+' does not seem to exist')
+if not os.path.exists(options.samplelist):
+    print('### ERROR ###: sample list '+options.samplelist+' does not seem to exist')
     sys.exit()
 
 # check if executable exists
-if not os.path.exists('./'+skimmer):
-    print('### ERROR ###: skimmer '+skimmer+' does not seem to exist')
+if not os.path.exists('./'+options.skimmer):
+    print('### ERROR ###: skimmer '+options.skimmer+' does not seem to exist')
     sys.exit()
 
 # load input files
 inputfiles = []
 ninputfiles = 0
 ndirs = 0
-samples_info = st.readsamplelist(samplelist)
+samples_info = st.readsamplelist(options.samplelist)
 for i,sampleinfo in enumerate(samples_info):
     line = sampleinfo['line']
     # check if line corresponds to a valid input directory
@@ -69,10 +80,10 @@ for i,sampleinfo in enumerate(samples_info):
 
 print('found a total of {} input files in {} directories'.format(ninputfiles,ndirs))
 print('Summary of skimming job:')
-print('- samplelist: '+samplelist)
-print('- output folder: '+outputdir)
-print('- skimmer: '+skimmer)
-print('- expected number of jobs: '+str(int(ninputfiles/nfilesperjob)))
+print('- samplelist: '+options.samplelist)
+print('- output folder: '+options.outputdir)
+print('- skimmer: '+options.skimmer)
+print('- expected number of jobs: '+str(int(ninputfiles/options.nfilesperjob)))
 print('Continue (y/n)?')
 go = raw_input()
 if not go=='y':
@@ -82,21 +93,21 @@ if not go=='y':
 workdir = os.getcwd()
 for inputstruct in inputfiles:
     thisinputdir = inputstruct['inputdir']
-    thisoutputdir = os.path.join(outputdir,inputstruct['outputdir'])
+    thisoutputdir = os.path.join(options.outputdir,inputstruct['outputdir'])
     # check if output path exists; if so, clean it
     if os.path.exists(thisoutputdir):
 	os.system('rm -r '+thisoutputdir)
     os.makedirs(thisoutputdir)
     thisinputfiles = [os.path.join(thisinputdir,f) for f in inputstruct['files']]
-    thisinputfiles = lt.split(thisinputfiles,nfilesperjob)
+    thisinputfiles = lt.split(thisinputfiles,options.nfilesperjob)
     counter = 0
     for partlist in thisinputfiles:
-	scriptname = skimmer+'.sh'
+	scriptname = 'qjob_'+options.skimmer+'.sh'
 	with open(scriptname,'w') as script: 
-	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_16_patch1')
+	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_20')
 	    for input_file_path in partlist:
 		output_file_path = os.path.join(thisoutputdir,input_file_path.split('/')[-1])
-		command = './'+skimmer+' '+input_file_path+' '+output_file_path+' -1'
+		command = './'+options.skimmer+' '+input_file_path+' '+output_file_path+' -1'
 		script.write(command+'\n')
 	    command = 'hadd '+os.path.join(thisoutputdir,'skimmed_'+str(counter)+'.root')
 	    counter += 1

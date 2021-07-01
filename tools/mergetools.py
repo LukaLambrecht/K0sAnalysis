@@ -16,9 +16,9 @@ def mergefiles(input_file_list,output_file_name,removeinput=False):
     command = 'hadd '+output_file_name
     for f in input_file_list:
         command += ' '+f
-    scriptname = 'merge.sh'
+    scriptname = 'qjob_merge.sh'
     with open(scriptname,'w') as script:
-        jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_16_patch1')
+        jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_20')
 	script.write('1>&2 echo "### starting ###"\n')
         script.write(command+'\n')
         if removeinput:
@@ -38,12 +38,12 @@ def mergeallfiles(input_directory,output_file_name,removeinput=False):
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     command = 'hadd '+output_file_name+' '+os.path.join(input_directory,'*.root')
-    scriptname = 'merge.sh'
+    scriptname = 'qjob_merge.sh'
     with open(scriptname,'w') as script:
-        jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_16_patch1')
-	script.write('1>&2 echo "### starting ###"')
+        jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_20')
+	script.write('1>&2 echo "### starting ###"\n')
         script.write(command+'\n')
         if removeinput:
             for f in input_file_list: script.write('rm '+f+'\n')
-	script.write('1>&2 echo "### done ###"')
+	script.write('1>&2 echo "### done ###"\n')
     jobsub.submitQsubJob(scriptname)

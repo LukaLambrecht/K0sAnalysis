@@ -7,6 +7,7 @@ sys.path.append('../tools')
 import jobsubmission as jobsub
 import listtools as lt
 import sampletools as st
+import optiontools as opt
 
 def reducedfoldername(foldername):
     # return a simplified folder name for the output to allow easier access in later stages
@@ -30,37 +31,43 @@ def reducedfoldername(foldername):
     return os.path.join(basename,reducedname)
 
 # parse input arguments
-if len(sys.argv)!=4:
-    print('### ERROR ###: wrong number of command line arguments')
-    print('		  normal usage: python v0builder_submit <input_directory> <output_directory>')
-    print('                             <selection_name>')
+options = []
+options.append( opt.Option('inputdir', vtype='path') )
+options.append( opt.Option('outputdir', vtype='path') )
+options.append( opt.Option('selection_name', default='legacy') )
+options = opt.OptionCollection( options )
+if len(sys.argv)==1:
+    print('Use with following options:')
+    print(options)
     sys.exit()
-inputdir = os.path.abspath(sys.argv[1])
-outputdir = os.path.abspath(sys.argv[2])
-# the entire folder structure in inputdir will be copied to output dir
-# (apart from renaming of sample folders)
-selection_name = sys.argv[3]
+else:
+    options.parse_options( sys.argv[1:] )
+    print('Found following configuration:')
+    print(options)
+# note: the entire folder structure in inputdir will be copied to output dir
+#	(apart from renaming of sample folders)
 
 # check selection_name
-if selection_name not in ['legacy','legacy_loosenhits','legacy_nonhits']:
-    print('### ERROR ###: selection '+selection_name+' not recognized')
+if options.selection_name not in (['legacy','legacy_loosenhits','legacy_nonhits',
+				    'ivf']):
+    print('### ERROR ###: selection '+options.selection_name+' not recognized')
     sys.exit()
 
 # check if input directory exists
-if not os.path.exists(inputdir):
-    print('### ERROR ###: input directory '+inputdir+' does not seem to exist')
+if not os.path.exists(options.inputdir):
+    print('### ERROR ###: input directory '+options.inputdir+' does not seem to exist')
     sys.exit()
 
 inputfiles = {}
 ninputfiles = 0
 # loop over input files
-for root,dirs,files in os.walk(inputdir):
+for root,dirs,files in os.walk(options.inputdir):
     for dirname in dirs:
 	dirname = os.path.join(root,dirname)
 	#if 'MiniAOD' in dirname: continue # temp to do only sim or only data
 	flist = [f for f in os.listdir(dirname) if f[-5:]=='.root']
 	if len(flist)>0: 
-	    inputfiles[os.path.relpath(dirname,inputdir)] = flist
+	    inputfiles[os.path.relpath(dirname,options.inputdir)] = flist
 	    ninputfiles += len(flist)
 
 print('found following input files:')
@@ -77,16 +84,16 @@ if not go=='y':
 # loop over input files and submit jobs
 workdir = os.getcwd()
 for indirname in inputfiles.keys():
-    outdirname = os.path.join(outputdir,reducedfoldername(indirname))
+    outdirname = os.path.join(options.outputdir,reducedfoldername(indirname))
     if os.path.exists(outdirname):
 	os.system('rm -r '+outdirname)
     os.makedirs(outdirname)
     for inputfile in inputfiles[indirname]:
 	outputfile = os.path.join(outdirname,inputfile.replace('.root','_selected.root'))
-	inputfile = os.path.join(inputdir,indirname,inputfile)
-	scriptname = 'v0builder.sh'
+	inputfile = os.path.join(options.inputdir,indirname,inputfile)
+	scriptname = 'qjob_v0builder.sh'
 	with open(scriptname,'w') as script: 
-	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_16_patch1')
-	    command = 'python v0builder.py '+inputfile+' '+outputfile+' -1 '+selection_name
+	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_20')
+	    command = 'python v0builder.py '+inputfile+' '+outputfile+' -1 '+options.selection_name
 	    script.write(command+'\n')
 	jobsub.submitQsubJob(scriptname)

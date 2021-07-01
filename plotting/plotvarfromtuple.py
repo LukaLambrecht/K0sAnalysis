@@ -5,8 +5,10 @@ import ROOT
 import sys
 sys.path.append('../tools')
 import plottools as pt
+import optiontools as opt
 
-def fillvarfromtuple(tree,varname,xlow,xhigh,nbins,varsize='',weightvar='',nprocess=-1,label=''):
+def fillvarfromtuple(tree, varname, xlow, xhigh, nbins, 
+		    varsize='', weightvar='', nprocess=-1, label=''):
     # filling histogram from a given tree
     
     # make output histogram
@@ -40,7 +42,7 @@ def fillvarfromtuple(tree,varname,xlow,xhigh,nbins,varsize='',weightvar='',nproc
     else: hist.SetTitle(label)
     return hist
 
-def plotsinglehistogram(hist,figname,title='',xaxtitle='',yaxtitle='',logy=False):
+def plotsinglehistogram(hist, figname, title='', xaxtitle='', yaxtitle='', logy=False):
     # drawing a single histogram
 
     pt.setTDRstyle()
@@ -141,17 +143,46 @@ def plotsinglehistogram(hist,figname,title='',xaxtitle='',yaxtitle='',logy=False
 
 if __name__=='__main__':
 
-    # initialization
-    finloc = '/storage_mnt/storage/user/llambrec/Kshort/files/test/noskim.root'
+    options = []
+    options.append( opt.Option('finloc', vtype='path') )
+    options.append( opt.Option('treename', default='blackJackAndHookers/blackJackAndHookersTree') )
+    options.append( opt.Option('nprocess', vtype='int', default=-1) )
+    options.append( opt.Option('varname', explanation='name of the variable to plot' ) )
+    options.append( opt.Option('sizevarname', 
+			explanation='length of the variable array in tuple,'
+				    +' e.g. _nL for _lPt,'
+				    +' use default (empty string) for scalar variables',
+			default='') )
+    options.append( opt.Option('weightvarname',
+			explanation='weight of each event,'
+				    +' e.g. _weight in standard ntuples,'
+				    +' use default (empty string) for equal weighting'
+				    +' (entries instead of events)',
+			default='') )
+    options.append( opt.Option('xaxtitle', default='') )
+    options.append( opt.Option('yaxtitle', default='') )
+    options.append( opt.Option('title', default='') )
+    options.append( opt.Option('xlow', vtype='float', default=0.) )
+    options.append( opt.Option('xhigh', vtype='float', default=100.) )
+    options.append( opt.Option('nbins', vtype='int', default=10) )
+    options.append( opt.Option('outfilename', default='figure.png') )
+    options = opt.OptionCollection( options )
+    if len(sys.argv)==1:
+        print('Use with following options:')
+	print(options)
+	sys.exit()
+    else:
+	options.parse_options( sys.argv[1:] )
+	print('Found following configuration:')
+	print(options)
 
-    fin = ROOT.TFile.Open(finloc)
-    tree = fin.Get("blackJackAndHookers/blackJackAndHookersTree")
-    nprocess = -1
-    xaxtitle = r'a unit'
-    yaxtitle = r'another unit'
-    varname = '_V0VtxNormChi2'
-    varsize = '_nV0s'
-    title = r'a title'
+    fin = ROOT.TFile.Open(options.finloc)
+    tree = fin.Get(options.treename)
 
-    hist = fillvarfromtuple(tree,varname,0,15,30,varsize=varsize,weightvar='_weight',nprocess=nprocess)
-    plotsinglehistogram(hist,'figure.png',xaxtitle=xaxtitle,yaxtitle=yaxtitle,title=title)
+    hist = fillvarfromtuple(tree, options.varname, 
+			    options.xlow, options.xhigh, options.nbins, 
+			    varsize=options.sizevarname, weightvar=options.weightvarname, 
+			    nprocess=options.nprocess)
+    plotsinglehistogram(hist, options.outfilename, 
+			xaxtitle=options.xaxtitle, yaxtitle=options.yaxtitle, 
+			title=options.title)

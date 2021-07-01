@@ -1,0 +1,2 @@
+# 2016 test data
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoIVF/DoubleMuon/crab_Run2016B-17Jul2018_ver2-v1_data_Run2016B_DoubleMuon

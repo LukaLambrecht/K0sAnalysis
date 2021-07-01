@@ -87,11 +87,18 @@ if __name__=='__main__':
 	print('Fitted parameters:')
 	for el in paramdict:
 	    print('    '+el+': '+str(paramdict[el]))
+	# also get uncertainty on best-fit value for mass
+	# not very clean version here, needed to do quickly
+	idx = 0
+	for i,k in enumerate(paramdict.keys()):
+	    if k=='#mu': idx = i
+	mu_central = totfit.GetParameter(idx)
+	mu_unc = totfit.GetParError(idx)
 	# step 3: plot
 	lumitext = '' if lumi==0 else '{0:.3g} '.format(float(lumi)/1000.) + 'fb^{-1} (13 TeV)'
 	extrainfo = str(divbins[j])+' < '+str(divvarlabel)+'  < '+str(divbins[j+1])
 	extrainfo += ' << <<Fitted K_{S}^{0} mass: <<  '
-	extrainfo += '{:.3f} MeV'.format(paramdict['#mu']*1000)
+	extrainfo += '{:.3f} #pm {:.3f} MeV'.format(paramdict['#mu']*1000,mu_unc*1000)
 	#extrainfo += ' << <<HACK_KS'
 	thisoutfile = outfile
 	if len(datahistlist)>1:

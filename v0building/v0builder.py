@@ -27,7 +27,8 @@ nevents = int(sys.argv[3])
 selection_name = sys.argv[4]
 
 # check selection_name
-if selection_name not in ['legacy','legacy_loosenhits','legacy_nonhits']:
+if selection_name not in (['legacy','legacy_loosenhits','legacy_nonhits',
+			    'ivf']):
     print('### ERROR ###: selection '+selection_name+' not recognized.')
     sys.exit()
 

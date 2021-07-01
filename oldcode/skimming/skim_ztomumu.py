@@ -21,11 +21,11 @@ containsbuiltin = False # temporarily hard-coded
 # as the change from containsbuiltin to isdata was apparently begun but not finished
 
 # overwrite default arguments using command line 
-if len(sys.argv)==4:
+if len(sys.argv)==5:
     finloc = sys.argv[1]
     foutloc = sys.argv[2]
     isdata = (sys.argv[3]=='True')
-    neventsmax = 1e10
+    neventsmax = sys.argv[4]
 elif len(sys.argv)==1:
     print('### WARNING ###: no command line arguments given. Use default? (y/n)')
     go = raw_input()
@@ -177,7 +177,7 @@ for j in range(nprocess):
     # skim condition 4: pass trigger
     if(int(getattr(tree,'_passTrigger_mm'))==0):
         continue
-
+    
     # skim condition 5: muon invariant mass
     pt1 = getattr(tree,'_lPt')[muoninds[0]]
     eta1 = getattr(tree,'_lEta')[muoninds[0]]
@@ -208,8 +208,10 @@ for j in range(nprocess):
                 count = False
         if count:
             njets += 1
+	# original:
         if(getattr(tree,'_jetDeepCsv_b')[j]+getattr(tree,'_jetDeepCsv_bb')[j] > loosebtag):
             nloosebtags += 1
+
     if(nloosebtags >= 1):
         continue
 

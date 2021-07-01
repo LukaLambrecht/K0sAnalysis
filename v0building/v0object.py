@@ -17,6 +17,9 @@ class Track:
     # self.d0			= signed transverse impact parameter
     # self.dz			= signed longitudinal impact parameter
     # self.isolation		= isolation variable
+    # additional parameters (not stored in older versions of the ntuples)
+    # self.loosequality		= bool for loose quality criteria
+    # self.transipsig		= transvers impact parameter significance
     
     def __init__( self, treeEntry, v0index, charge ):
 	# constructor from an entry in a TTree at given V0 index and charge (1 or -1)
@@ -31,6 +34,13 @@ class Track:
 	self.d0 = getattr(treeEntry,'_V0D0'+suffix)[v0index]
 	self.dz = getattr(treeEntry,'_V0Dz'+suffix)[v0index]
 	self.isolation = getattr(treeEntry,'_V0Iso'+suffix)[v0index]
+	# additional track parameters (not stored in older versions of the ntuples)
+	self.loosequality = False
+	if hasattr(treeEntry,'_V0LooseQuality'+suffix): 
+	    self.loosequality = (getattr(treeEntry,'_V0LooseQuality'+suffix)[v0index]>0.5)
+	self.transipsig = 0.
+	if hasattr(treeEntry,'_V0TransIPSig'+suffix):
+	    self.transipsig = getattr(treeEntry,'_V0TransIPSig'+suffix)[v0index]
 
     def copy( self ):
 	# deep copy function
@@ -41,7 +51,9 @@ class Track:
 	track.charge = self.charge
 	track.d0 = self.d0
 	track.dz = self.dz
-	track.isolation = self.isolation	
+	track.isolation = self.isolation
+	track.loosequality = self.loosequality
+	track.transipsig = self.transipsig
 
 class V0Object:
 

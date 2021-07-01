@@ -115,8 +115,14 @@ void skimFile( const std::string& inputFilePath,
     UInt_t _celeborn_lCharge[2]; outputTreePtr->Branch("_celeborn_lCharge",&_celeborn_lCharge,"_celeborn_lCharge[2]/I");
 
     // link input tree branches used to evaluate the skim condition to variables
+    // NOTE: nL_max and nJets_max must correspond to the values used in the ntuplizer,
+    //       else the skimmer could crash after the event loop with no clear error message... 
+    //       would be better to write this as meta-info to the ntuples, 
+    //       but not yet done as far as I know.
+    //	     for old iteration of the kshort study: nL_max = 20, nJets_max = 20
+    //       for new iteration of the kshort study: nL_max = 20, nJets_max = 100
     static const unsigned nL_max = 20;
-    static const unsigned nJets_max = 20;
+    static const unsigned nJets_max = 100;
     UInt_t _nL; inputTreePtr->SetBranchAddress("_nL",&_nL);
     UInt_t _nLight; inputTreePtr->SetBranchAddress("_nLight",&_nLight);
     UInt_t _nMu; inputTreePtr->SetBranchAddress("_nMu",&_nMu);
@@ -128,6 +134,7 @@ void skimFile( const std::string& inputFilePath,
     Double_t _lPhi[nL_max]; inputTreePtr->SetBranchAddress("_lPhi",_lPhi);
     Double_t _lE[nL_max]; inputTreePtr->SetBranchAddress("_lE",_lE);
     UInt_t _nJets; inputTreePtr->SetBranchAddress("_nJets",&_nJets);
+    Double_t _jetPt[nJets_max]; inputTreePtr->SetBranchAddress("_jetPt",_jetPt);
     Double_t _jetEta[nJets_max]; inputTreePtr->SetBranchAddress("_jetEta",_jetEta);
     Double_t _jetPhi[nJets_max]; inputTreePtr->SetBranchAddress("_jetPhi",_jetPhi);
     Double_t _jetDeepCsv_b[nJets_max]; inputTreePtr->SetBranchAddress("_jetDeepCsv_b",_jetDeepCsv_b);
@@ -187,9 +194,14 @@ void skimFile( const std::string& inputFilePath,
 
 	// condition: b-jet veto
 	// note: need to reconsider jet from lepton cleaning, maybe to strict here (e.g taus?)!
+	// note: also need to consider jet quality cuts,
+	//       especially eta requirement for b-tagging score to make sense
 	int nbjets = 0;
 	_nimloth_nJets = 0;
 	for(unsigned j=0; j<_nJets; ++j){
+	    // jet pt
+	    if( _jetPt[j]<25. ) continue;
+	    // remove jets overlapping with leptons
 	    bool isleptonjet = false;
 	    for(unsigned i=0; i<_nL; ++i){
 		double deltaR = std::sqrt( std::pow(_lEta[i]-_jetEta[j],2)
@@ -198,8 +210,10 @@ void skimFile( const std::string& inputFilePath,
 	    }
 	    if(isleptonjet) continue;
 	    ++_nimloth_nJets;
+	    // check if it is a b-jet
 	    double btagvalue = _jetDeepCsv_b[j]+_jetDeepCsv_bb[j];
-	    if(btagvalue>bTagThreshold(year)) ++nbjets;
+	    bool inBTagAcceptance = ( std::fabs(_jetEta[j])<2.4 );
+	    if( inBTagAcceptance && btagvalue>bTagThreshold(year) ) ++nbjets;
 	}
 	if(nbjets>0) continue;
 
