@@ -121,7 +121,7 @@ def selection_ivf( v0object, extra ):
     #       in older versions of this study, these cuts were performed at ntupling stage
     #       (with values of 1 and >2 respectively),
     #       here instead the values are stored without selection up to this point
-    # note: this selection will not behave as expected on older files,
+    # note: this selection might behave unexpected on older files,
     #       where these track variables are not stored!
 
     # track quality cuts
@@ -138,11 +138,10 @@ def selection_ivf( v0object, extra ):
         print('### ERROR ###: extra argument for selection_legacy must contain'
                 +' primary vertex and beamspot')
         return False
-    #if( cospointing(v0object,extra['primaryVertex']) < 0.99
-    #        or cospointing(v0object,extra['beamSpot']) < 0.99): return False
+    if( cospointing(v0object,extra['primaryVertex']) < 0.99
+            or cospointing(v0object,extra['beamSpot']) < 0.99): return False
     # track parameter cuts
     if( not (v0object.postrack.loosequality and v0object.negtrack.loosequality) ): return False
     if( v0object.postrack.transipsig<2
 	or v0object.negtrack.transipsig<2 ): return False
     return True
-

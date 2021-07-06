@@ -32,6 +32,14 @@ def parse_value( option_name, option_value, option_type ):
             raise Exception('ERROR in option {}:'.format(option_name)
                             +' value {} could not be converted'.format(option_value)
                             +' to a float.')
+    elif option_type=='bool':
+	if isinstance(option_value,bool): return option_value
+	if not (option_value=='True' or option_value=='true'
+		or option_value=='False' or option_value=='false'):
+	    raise Exception('ERROR in option {}:'.format(option_name)
+			    +' value {} could not be converted'.format(option_value)
+			    +' to a boolean.')
+	return (option_value=='True' or option_value=='true')
     elif option_type=='list':
 	# note: do not use '1.' notation, only '1.0' works in the json decoder!
 	if isinstance(option_value,list): return option_value

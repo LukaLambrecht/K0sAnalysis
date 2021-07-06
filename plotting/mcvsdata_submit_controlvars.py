@@ -8,29 +8,32 @@ import numpy as np
 sys.path.append('../tools')
 import jobsubmission as jobsub
 import lumitools
+import optiontools as opt
 
 filllist = []
 plotlist = []
 
 ### global settings
-basedir = '/storage_mnt/storage/user/llambrec/K0sAnalysis/files'
-#filedir = os.path.join(basedir,'skim_ztomumu/selected_legacy_nonhits')
-filedir = os.path.join(basedir,'oldfiles')
-fillscript = 'mcvsdata_fill.py'
-plotscript = 'mcvsdata_plot.py'
-testing = True
-includelist = []
-#for era in ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']: includelist.append(era)
-#for era in ['2017B','2017C','2017D','2017E','2017F']: includelist.append(era)
-#for era in ['2018A','2018B','2018C','2018D']: includelist.append(era)
-includelist.append('2016')
-includelist.append('2017')
-includelist.append('2018')
-includelist.append('run2')
+options = []
+options.append( opt.Option('filedir', vtype='path') )
+options.append( opt.Option('fillscript', default='mcvsdata_fill.py') )
+options.append( opt.Option('plotscript', default='mcvsdata_plot.py') )
+options.append( opt.Option('testing', vtype='bool', default=False) )
+options.append( opt.Option('includelist', vtype='list', 
+		    default=['2016','2017','2018','run2']) )
+options = opt.OptionCollection( options )
+if len(sys.argv)==1:
+    print('Use with following options:')
+    print(options)
+    sys.exit()
+else:
+    options.parse_options( sys.argv[1:] )
+    print('Found following configuration:')
+    print(options)
 
 ### fill eralist with files to run on and related properties
 eralist = []
-for era in includelist:
+for era in options.includelist:
     if era=='run2': continue
     #mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
     mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
@@ -38,23 +41,28 @@ for era in includelist:
     if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
     #datadir = 'DoubleMuon_Run'+era
     datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
-    mcin = ([{ 'file':os.path.join(filedir,mcdir,'skim_ztomumu_all.root'), 'label':'simulation', 'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000}])
-    datain = ([{'file':os.path.join(filedir,datadir,'skim_ztomumu_all.root'), 'label':era+' data','luminosity':lumitools.getlumi(era)*1000}])
+    #filename = 'merged_selected.root'
+    filename = 'skim_ztomumu_all.root' # temp for running on old files
+    mcin = ([{ 'file':os.path.join(options.filedir,mcdir,filename), 
+		'label':'simulation', 'xsection':6077.22,
+		'luminosity':lumitools.getlumi(era)*1000}])
+    datain = ([{'file':os.path.join(options.filedir,datadir,filename), 
+		'label':era+' data','luminosity':lumitools.getlumi(era)*1000}])
     label = era
     eralist.append({'mcin':mcin,'datain':datain,'label':label})
 # special cases:
-if 'run2' in includelist:
+if 'run2' in options.includelist:
     mcin = []
     datain = []
     # 2016
-    mcin.append({ 'file':os.path.join(filedir,'RunIISummer16_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
-    datain.append({'file':os.path.join(filedir,'Run2016_DoubleMuon','skim_ztomumu_all.root'), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
+    mcin.append({ 'file':os.path.join(options.filedir,'RunIISummer16_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2016_DoubleMuon','skim_ztomumu_all.root'), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
     # 2017
-    mcin.append({ 'file':os.path.join(filedir,'RunIIFall17_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2017')*1000})
-    datain.append({'file':os.path.join(filedir,'Run2017_DoubleMuon','skim_ztomumu_all.root'), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
+    mcin.append({ 'file':os.path.join(options.filedir,'RunIIFall17_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2017')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2017_DoubleMuon','skim_ztomumu_all.root'), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
     # 2018
-    mcin.append({ 'file':os.path.join(filedir,'RunIIAutumn18_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2018')*1000})
-    datain.append({'file':os.path.join(filedir,'Run2018_DoubleMuon','skim_ztomumu_all.root'), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
+    mcin.append({ 'file':os.path.join(options.filedir,'RunIIAutumn18_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2018')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2018_DoubleMuon','skim_ztomumu_all.root'), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
     label = 'Run-II'
     eralist.append({'mcin':mcin,'datain':datain,'label':label})
 
@@ -106,14 +114,17 @@ for varname in varnamelist:
     else:
 	print('### WARNING ###: variable name '+varname+' not recognized, skipping...')
 
-if testing:
-    #eralist = [eralist[0]]
-    #varlist = [varlist[0]]
+if options.testing:
+    # run on a subselection of eras only
+    eralist = [eralist[0]]
+    # run on a subselection of variables only
+    varlist = [varlist[0]]
+    # run on a subselection of events only
     for i in range(len(varlist)): varlist[i]['reductionfactor'] = 100
 
 for era in eralist:
 
-    thishistdir = os.path.join(filedir,'histograms',era['label'],'controlvariables')
+    thishistdir = os.path.join(options.filedir,'histograms',era['label'],'controlvariables')
     if not os.path.exists(thishistdir):
 	os.makedirs(thishistdir)
     thismcin = era['mcin']
@@ -133,12 +144,12 @@ for era in eralist:
 	    optionstring += " '"+option+"="+str(var[option])+"'"
 	optionstring += " 'histtitle="+thistitle+"'"
 
-	scriptname = 'mcvsdata_submit.sh'
+	scriptname = 'qjob_mcvsdata_submit.sh'
 	with open(scriptname,'w') as script:
-	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_16_patch1')
-	    script.write('python '+fillscript+optionstring+'\n')
-	    script.write('python '+plotscript+optionstring+'\n')
-	if testing:
+	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_20')
+	    script.write('python '+options.fillscript+optionstring+'\n')
+	    script.write('python '+options.plotscript+optionstring+'\n')
+	if options.testing:
 	    os.system('bash '+scriptname)
 	else:
 	    jobsub.submitQsubJob(scriptname)

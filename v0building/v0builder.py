@@ -75,11 +75,13 @@ celeborn_variables = ['_celeborn_lPt','_celeborn_lEta','_celeborn_lPhi','_celebo
 for varname in celeborn_variables: celeborn.Branch(varname,fillvalue,str(varname+'/F'))
 # K0s variable branches
 laurelin_variables = (['_mass','_vertexX','_vertexY','_vertexZ','_RPV','_RBS',
+			'_pt','_ptSum','_eta','_phi',
 			'_nHitsPos','_nHitsNeg','_ptPos','_ptNeg','_trackdR'])
 for varname in laurelin_variables: laurelin.Branch(varname,fillvalue,str(varname+'/F'))
 # Lambda0 variable branches
 # note: up to now Lambda0 and Lambda0Bar are taken together
 telperion_variables = (['_mass','_vertexX','_vertexY','_vertexZ','_RPV','_RBS',
+			'_pt','_ptSum','_eta','_phi',
 			'_nHitsPos','_nHitsNeg','_ptPos','_ptNeg','_trackdR'])
 for varname in telperion_variables: telperion.Branch(varname,fillvalue,str(varname+'/F'))
 # add extra branch for event weight to all trees
@@ -136,6 +138,11 @@ for i in range(nevents):
 	RBS = np.sqrt(  np.power(k0s.vertex[0]-getattr(intree,'_beamSpotX'),2)
                         +np.power(k0s.vertex[1]-getattr(intree,'_beamSpotY'),2) )
 	fillvalue[0] = RBS; laurelin.GetBranch('_RBS').Fill()
+	fillvalue[0] = k0s.fourmomentum.Pt(); laurelin.GetBranch('_pt').Fill()
+	sumpt = k0s.postrack.fourmomentum.Pt() + k0s.negtrack.fourmomentum.Pt() 
+	fillvalue[0] = sumpt; laurelin.GetBranch('_ptSum').Fill()
+	fillvalue[0] = k0s.fourmomentum.Eta(); laurelin.GetBranch('_eta').Fill()
+	fillvalue[0] = k0s.fourmomentum.Phi(); laurelin.GetBranch('_phi').Fill()
 	fillvalue[0] = k0s.postrack.nhits; laurelin.GetBranch('_nHitsPos').Fill()
 	fillvalue[0] = k0s.negtrack.nhits; laurelin.GetBranch('_nHitsNeg').Fill()
 	fillvalue[0] = k0s.postrack.fourmomentum.Pt(); laurelin.GetBranch('_ptPos').Fill()
@@ -157,6 +164,11 @@ for i in range(nevents):
                         +np.power(l0.vertex[1]-getattr(intree,'_beamSpotY'),2) 
                         +np.power(l0.vertex[2]-getattr(intree,'_beamSpotZ'),2) )
         fillvalue[0] = RBS; telperion.GetBranch('_RBS').Fill()
+	fillvalue[0] = l0.fourmomentum.Pt(); telperion.GetBranch('_pt').Fill()
+        sumpt = l0.postrack.fourmomentum.Pt() + l0.negtrack.fourmomentum.Pt()        
+        fillvalue[0] = sumpt; telperion.GetBranch('_ptSum').Fill()
+        fillvalue[0] = l0.fourmomentum.Eta(); telperion.GetBranch('_eta').Fill()
+        fillvalue[0] = l0.fourmomentum.Phi(); telperion.GetBranch('_phi').Fill()
 	fillvalue[0] = l0.postrack.nhits; telperion.GetBranch('_nHitsPos').Fill()
         fillvalue[0] = l0.negtrack.nhits; telperion.GetBranch('_nHitsNeg').Fill()
 	fillvalue[0] = l0.postrack.fourmomentum.Pt(); telperion.GetBranch('_ptPos').Fill()

@@ -256,6 +256,7 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
                 eventsumweights += weight/sumweights*xsection*lumi
     # loop over V0 instances 
     tree = f.Get(gargs['treename'])
+    red = 1
     if( 'reductionfactor' in gargs.keys() ): red = float(gargs['reductionfactor'])
     nentries = int(tree.GetEntries()/red)
     for j in range(nentries):
