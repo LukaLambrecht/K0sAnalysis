@@ -111,12 +111,16 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
 	for j in range(nybins):
 	    ndata = hist0.GetBinContent(i+1,j+1)
 	    nmc = mchistsum.GetBinContent(i+1,j+1)
+	    edata = hist0.GetBinError(i+1,j+1)
+	    emc = mchistsum.GetBinError(i+1,j+1)
 	    if ndata<1 or nmc<0.:
 		vals[i].append(0.)
 		ers[i].append(0.)
 	    else:
-		vals[i].append(ndata/nmc)
-		error = np.sqrt(ndata/nmc**2+ndata**2/nmc**3)
+		val = ndata/nmc
+		vals[i].append(val)
+		#error = np.sqrt(ndata/nmc**2+ndata**2/nmc**3)
+		error = val*np.sqrt((edata/ndata)**2+(emc/nmc)**2)
 		ers[i].append(error)
 
     ### optional: redefine histogram as category histogram
