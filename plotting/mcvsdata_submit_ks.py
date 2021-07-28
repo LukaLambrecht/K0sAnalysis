@@ -36,14 +36,14 @@ else:
 eralist = []
 for era in options.includelist:
     if era=='run2': continue
-    mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
-    #mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
-    #if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
-    #if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
-    datadir = 'DoubleMuon_Run'+era
-    #datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
-    filename = 'merged_selected.root'
-    #filename = 'skim_ztomumu_all.root' # temp for running on old files
+    #mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
+    mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
+    if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
+    if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
+    #datadir = 'DoubleMuon_Run'+era
+    datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
+    #filename = 'merged_selected.root'
+    filename = 'skim_ztomumu_all.root' # temp for running on old files
     mcin = ([{ 'file':os.path.join(options.filedir,mcdir,filename), 'label':'Simulation', 
 		'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000}])
     datain = ([{'file':os.path.join(options.filedir,datadir,filename), 'label':era+' data',
@@ -56,7 +56,7 @@ if 'run2' in options.includelist:
     datain = []
     # 2016
     mcin.append({ 'file':os.path.join(options.filedir,'RunIISummer16_DYJetsToLL',filename), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
-    datain.append({'file':os.path.join(optons.filedir,'Run2016_DoubleMuon',filename), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2016_DoubleMuon',filename), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
     # 2017
     mcin.append({ 'file':os.path.join(options.filedir,'RunIIFall17_DYJetsToLL',filename), 'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2017')*1000})
     datain.append({'file':os.path.join(options.filedir,'Run2017_DoubleMuon',filename), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
@@ -82,24 +82,25 @@ if not allexist: sys.exit()
 ### fill plotlist with properties of plots to make
 plotlist = []
 varnamedict = ({
-	    'rpv':{'variablename':'_RPV','xaxtitle':'#Delta(PV-SV)_{2D} [cm]','histtitle':'K^{0}_{S} vertex radial distance'}
+	    'rpv':{'variablename':'_RPV','xaxtitle':'#Delta_{2D} (cm)','histtitle':'K^{0}_{S} vertex radial distance'}
 		})
 bckmodedict = ({
 	    #'bckdefault':'default',
 	    'bcksideband':'sideband'
 		})
-extracut = 'bool(abs(getattr(tree,"_mass")-0.49761)<0.01)'
+#extracut = 'bool(abs(getattr(tree,"_mass")-0.49761)<0.01)'
+extracut = 'bool(2>1)'
 # note: extracut will only be applied in case of no background subtraction and mainly for testing,
 #	not recommended to be used.
 binsdict = ({
-	'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
+	#'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
 	'defaultbins':json.dumps([0.,0.5,1.5,4.5,10.,20.],separators=(',',':'))
 	    })
 normdict = ({
 	#'norm1':{'type':1,'normrange':''},
 	#'norm4':{'type':4,'normrange':''},
 	'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
-	'norm3med':{'type':3,'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
+	#'norm3med':{'type':3,'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
 	    })
 
 for varname in varnamedict:
