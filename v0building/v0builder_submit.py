@@ -26,7 +26,7 @@ def reducedfoldername(foldername):
 	    reducedname += '_2016'
 	elif 'MiniAOD2017' in foldername:
 	    reducedname += '_2017'
-	elif 'MiniAOD18' in foldername:
+	elif 'MiniAOD2018' in foldername:
 	    reducedname += '_2018'
     return os.path.join(basename,reducedname)
 
@@ -65,6 +65,7 @@ for root,dirs,files in os.walk(options.inputdir):
     for dirname in dirs:
 	dirname = os.path.join(root,dirname)
 	#if 'MiniAOD' in dirname: continue # temp to do only sim or only data
+	if(not '2016' in dirname or 'Summer' in dirname): continue # temp
 	flist = [f for f in os.listdir(dirname) if f[-5:]=='.root']
 	if len(flist)>0: 
 	    inputfiles[os.path.relpath(dirname,options.inputdir)] = flist

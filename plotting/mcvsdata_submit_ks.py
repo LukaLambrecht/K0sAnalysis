@@ -36,14 +36,14 @@ else:
 eralist = []
 for era in options.includelist:
     if era=='run2': continue
-    #mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
-    mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
-    if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
-    if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
-    #datadir = 'DoubleMuon_Run'+era
-    datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
-    #filename = 'merged_selected.root'
-    filename = 'skim_ztomumu_all.root' # temp for running on old files
+    mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
+    #mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
+    #if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
+    #if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
+    datadir = 'DoubleMuon_Run'+era
+    #datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
+    filename = 'merged_selected.root'
+    #filename = 'skim_ztomumu_all.root' # temp for running on old files
     mcin = ([{ 'file':os.path.join(options.filedir,mcdir,filename), 'label':'Simulation', 
 		'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000}])
     datain = ([{'file':os.path.join(options.filedir,datadir,filename), 'label':era+' data',
@@ -54,7 +54,8 @@ for era in options.includelist:
 if 'run2' in options.includelist:
     mcin = []
     datain = []
-    # 2016
+    # temp for running on old files:
+    '''# 2016
     mcin.append({ 'file':os.path.join(options.filedir,'RunIISummer16_DYJetsToLL',filename), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
     datain.append({'file':os.path.join(options.filedir,'Run2016_DoubleMuon',filename), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
     # 2017
@@ -62,7 +63,26 @@ if 'run2' in options.includelist:
     datain.append({'file':os.path.join(options.filedir,'Run2017_DoubleMuon',filename), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
     # 2018
     mcin.append({ 'file':os.path.join(options.filedir,'RunIIAutumn18_DYJetsToLL',filename), 'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2018')*1000})
-    datain.append({'file':os.path.join(options.filedir,'Run2018_DoubleMuon',filename), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2018_DoubleMuon',filename), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})'''
+    # for running on new files
+    # 2016
+    mcin.append({ 'file':os.path.join(options.filedir,'DYJetsToLL_2016',filename), 
+		  'label':'2016 sim.', 'xsection':6077.22, 
+		  'luminosity':lumitools.getlumi('2016')*1000})
+    datain.append({'file':os.path.join(options.filedir,'DoubleMuon_Run2016',filename), 
+		   'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
+    # 2017
+    mcin.append({ 'file':os.path.join(options.filedir,'DYJetsToLL_2017',filename), 
+		  'label':'2017 sim.', 'xsection':6077.22, 
+		  'luminosity':lumitools.getlumi('2017')*1000})
+    datain.append({'file':os.path.join(options.filedir,'DoubleMuon_Run2017',filename), 
+		   'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
+    # 2018
+    mcin.append({ 'file':os.path.join(options.filedir,'DYJetsToLL_2018',filename), 
+		  'label':'2018 sim.', 'xsection':6077.22, 
+		  'luminosity':lumitools.getlumi('2018')*1000})
+    datain.append({'file':os.path.join(options.filedir,'DoubleMuon_Run2018',filename), 
+		   'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
     label = 'Run-II'
     eralist.append({'mcin':mcin,'datain':datain,'label':label})
 

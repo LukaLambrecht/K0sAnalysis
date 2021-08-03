@@ -55,7 +55,7 @@ if __name__=='__main__':
     xwidth = (xhigh-xlow)/4. # initial guess of peak width 
 
     # initialization of plot settings
-    xaxtitle = 'm(#pi^{+},#pi^{-}) [GeV]'
+    xaxtitle = 'm(#pi^{+},#pi^{-}) (GeV)'
     yaxtitle = 'Number of reconstructed vertices'
 
     # normalization method 1: normalize each simulated histogram to data

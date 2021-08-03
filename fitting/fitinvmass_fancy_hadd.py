@@ -42,8 +42,8 @@ if __name__=='__main__':
 	lumi += float(fin.Get("lumi_w")[0])
 	nfilled += float(fin.Get("nfilled_w")[0])
 	fin.Close()
-	print(lumi)
-	print(nfilled)
+	#print(lumi)
+	#print(nfilled)
 
     # do hadd to correctly merge the histograms, then get the histogram list
     cmd = 'hadd -f {}'.format(fout)

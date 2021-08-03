@@ -54,15 +54,35 @@ for era in options.includelist:
 if 'run2' in options.includelist:
     mcin = []
     datain = []
-    # 2016
-    mcin.append({ 'file':os.path.join(options.filedir,'RunIISummer16_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
-    datain.append({'file':os.path.join(options.filedir,'Run2016_DoubleMuon','skim_ztomumu_all.root'), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
+    # temp for running on old files:
+    '''# 2016
+    mcin.append({ 'file':os.path.join(options.filedir,'RunIISummer16_DYJetsToLL',filename), 'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2016')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2016_DoubleMuon',filename), 'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
     # 2017
-    mcin.append({ 'file':os.path.join(options.filedir,'RunIIFall17_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2017')*1000})
-    datain.append({'file':os.path.join(options.filedir,'Run2017_DoubleMuon','skim_ztomumu_all.root'), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
+    mcin.append({ 'file':os.path.join(options.filedir,'RunIIFall17_DYJetsToLL',filename), 'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2017')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2017_DoubleMuon',filename), 'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
     # 2018
-    mcin.append({ 'file':os.path.join(options.filedir,'RunIIAutumn18_DYJetsToLL','skim_ztomumu_all.root'), 'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2018')*1000})
-    datain.append({'file':os.path.join(options.filedir,'Run2018_DoubleMuon','skim_ztomumu_all.root'), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
+    mcin.append({ 'file':os.path.join(options.filedir,'RunIIAutumn18_DYJetsToLL',filename), 'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lumitools.getlumi('2018')*1000})
+    datain.append({'file':os.path.join(options.filedir,'Run2018_DoubleMuon',filename), 'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})'''
+    # for running on new files
+    # 2016
+    mcin.append({ 'file':os.path.join(options.filedir,'DYJetsToLL_2016',filename),
+                  'label':'2016 sim.', 'xsection':6077.22,
+                  'luminosity':lumitools.getlumi('2016')*1000})
+    datain.append({'file':os.path.join(options.filedir,'DoubleMuon_Run2016',filename),
+                   'label':'2016 data','luminosity':lumitools.getlumi('2016')*1000})
+    # 2017
+    mcin.append({ 'file':os.path.join(options.filedir,'DYJetsToLL_2017',filename),
+                  'label':'2017 sim.', 'xsection':6077.22,
+                  'luminosity':lumitools.getlumi('2017')*1000})
+    datain.append({'file':os.path.join(options.filedir,'DoubleMuon_Run2017',filename),
+                   'label':'2017 data','luminosity':lumitools.getlumi('2017')*1000})
+    # 2018
+    mcin.append({ 'file':os.path.join(options.filedir,'DYJetsToLL_2018',filename),
+                  'label':'2018 sim.', 'xsection':6077.22,
+                  'luminosity':lumitools.getlumi('2018')*1000})
+    datain.append({'file':os.path.join(options.filedir,'DoubleMuon_Run2018',filename),
+                   'label':'2018 data','luminosity':lumitools.getlumi('2018')*1000})
     label = 'Run-II'
     eralist.append({'mcin':mcin,'datain':datain,'label':label})
 
@@ -90,7 +110,8 @@ bckmodedict = ({
 	    #'bckdefault':'default',
 	    'bcksideband':'sideband'
 		})
-extracut = 'bool(abs(getattr(tree,"_KsInvMass")-0.49761)<0.01)'
+#extracut = 'bool(abs(getattr(tree,"_KsInvMass")-0.49761)<0.01)'
+extracut = 'bool(2>1)'
 # note: extracut will only be applied in case of no background subtraction and mainly for testing,
 #	not recommended to be used.
 binsdict = ({

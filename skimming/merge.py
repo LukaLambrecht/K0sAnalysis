@@ -46,6 +46,14 @@ if __name__=='__main__':
 		thisdir = os.path.join(root,thisdir)
                 if len([f for f in os.listdir(thisdir) if f[-5:]=='.root'])>1:
                     indirs.append(thisdir)
+	sorted(indirs)
+	print('found following subdirs containing root files that will be merged:')
+	for indir in indirs:
+	    print('  -  '+indir)
+	print('coninue? (y/n)')
+	go = raw_input()
+	if not go=='y':
+	    sys.exit()
 	for indir in indirs:
 	    print('--------------------')
 	    print(indir)

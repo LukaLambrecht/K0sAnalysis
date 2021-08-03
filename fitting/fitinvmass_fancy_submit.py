@@ -7,31 +7,42 @@ import os
 sys.path.append('../tools')
 import jobsubmission as jobsub
 import lumitools
+import optiontools as opt
 
 ### global settings
-basedir = '/storage_mnt/storage/user/llambrec/K0sAnalysis/files'
-filedir = os.path.join(basedir,'oldfiles')
-includelist = []
-#for era in ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']: includelist.append(era)
-#for era in ['2017B','2017C','2017D','2017E','2017F']: includelist.append(era)
-#for era in ['2018A','2018B','2018C','2018D']: includelist.append(era)
-includelist.append('2016')
-includelist.append('2017')
-includelist.append('2018')
-# note: for full run-2 plots, one can simply hadd the file
+options = []
+options.append( opt.Option('filedir', vtype='path') )
+options.append( opt.Option('includelist', vtype='list',
+                    default=['2016','2017','2018']) )
+options = opt.OptionCollection( options )
+if len(sys.argv)==1:
+    print('Use with following options:')
+    print(options)
+    sys.exit()
+else:
+    options.parse_options( sys.argv[1:] )
+    print('Found following configuration:')
+    print(options)
 
 ### fill eralist with files to run on and related properties
 eralist = []
-for era in includelist:
-    if era=='run2': continue
-    #mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
-    mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
-    if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
-    if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
-    #datadir = 'DoubleMuon_Run'+era
-    datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
-    mcin = ({'file':os.path.join(filedir,mcdir,'skim_ztomumu_all.root'), 'label':'Simulation', 'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000})
-    datain = ({'file':os.path.join(filedir,datadir,'skim_ztomumu_all.root'), 'label':era+' data','luminosity':lumitools.getlumi(era)*1000})
+for era in options.includelist:
+    if era=='run2':
+	exc = 'ERROR: era "run2" is not a valid argument for this script.'
+	exc += ' You should process 2016, 2017 and 2018 separately and then hadd them.'
+	raise Exception(exc)
+    mcdir = 'DYJetsToLL_'+era.rstrip('ABCDEFGH')
+    #mcdir = 'RunIISummer16_DYJetsToLL' # temp for running on old files
+    #if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL' # temp for running on old files
+    #if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL' # temp for running on old files
+    datadir = 'DoubleMuon_Run'+era
+    #datadir = 'Run'+era+'_DoubleMuon' # temp for running on old files
+    filename = 'merged_selected.root'
+    #filename = 'skim_ztomumu_all.root' # temp for running on old files
+    mcin = ({'file':os.path.join(options.filedir,mcdir,filename), 'label':'Simulation', 
+	     'xsection':6077.22,'luminosity':lumitools.getlumi(era)*1000})
+    datain = ({'file':os.path.join(options.filedir,datadir,filename), 'label':era+' data',
+	       'luminosity':lumitools.getlumi(era)*1000})
     label = era
     eralist.append({'mcin':mcin,'datain':datain,'label':label})
 
