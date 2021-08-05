@@ -114,7 +114,9 @@ extracut = 'bool(2>1)'
 #	not recommended to be used.
 binsdict = ({
 	#'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
-	'defaultbins':json.dumps([0.,0.5,1.5,4.5,10.,20.],separators=(',',':'))
+	'defaultbins':json.dumps([0.,0.5,1.5,4.5,10.,20.],separators=(',',':')),
+	'bbins_small':json.dumps([0.,0.5,1.,5.,20.],separators=(',',':')), # for Basile (1)
+	'bbins_large':json.dumps([0.,0.5,4.,10.,20.],separators=(',',':')) # for Basile (2)
 	    })
 normdict = ({
 	#'norm1':{'type':1,'normrange':''},

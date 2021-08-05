@@ -189,12 +189,14 @@ def rootsumsquare( histlist ):
 
 ### printing ###
 
-def printhistogram(hist,naninfo=False):
+def printhistogram(hist,rangeinfo=False,naninfo=False):
 
     print('### {} ###'.format(hist.GetName()))
     for i in range(0,hist.GetNbinsX()+2):
         bininfo = '  -----------\n'
-        bininfo += '  bin: {} -> {}\n'.format(hist.GetBinLowEdge(i),
+	bininfo += '  bin number: {}\n'.format(i)
+	if rangeinfo:
+	    bininfo += '  bin range: {} -> {}\n'.format(hist.GetBinLowEdge(i),
                                             hist.GetBinLowEdge(i)+hist.GetBinWidth(i))
         bininfo += '  content: {}\n'.format(hist.GetBinContent(i))
 	if naninfo:
@@ -202,6 +204,27 @@ def printhistogram(hist,naninfo=False):
 	    bininfo += '    (isinf: {})\n'.format(math.isinf(hist.GetBinContent(i)))
         bininfo += '  error: {}\n'.format(hist.GetBinError(i))
         print(bininfo)
+
+def printhistogram2d(hist,rangeinfo=False,naninfo=False):
+
+    print('### {} ###'.format(hist.GetName()))
+    for i in range(0,hist.GetNbinsX()+2):
+	for j in range(0,hist.GetNbinsY()+2):
+	    bininfo = '  -----------\n'
+	    bininfo += '  bin number: {}/{}'.format(i,j)
+	    if rangeinfo:
+		bininfo += '  bin x-range: {} -> {}\n'.format(hist.GetXaxis().GetBinLowEdge(i),
+                                            hist.GetXaxis().GetBinLowEdge(i)
+					    +hist.GetXaxis().GetBinWidth(i))
+		bininfo += '  bin y-range: {} -> {}\n'.format(hist.GetYaxis().GetBinLowEdge(j),
+                                            hist.GetYaxis().GetBinLowEdge(j)
+                                            +hist.GetYaxis().GetBinWidth(j))
+	    bininfo += '  content: {}\n'.format(hist.GetBinContent(i,j))
+	    if naninfo:
+		bininfo += '    (isnan: {})\n'.format(math.isnan(hist.GetBinContent(i,j)))
+		bininfo += '    (isinf: {})\n'.format(math.isinf(hist.GetBinContent(i,j)))
+	    bininfo += '  error: {}\n'.format(hist.GetBinError(i,j))
+	    print(bininfo)
 	
 def printhistograms( histfile, mustcontainall=[], mustcontainone=[],
 				maynotcontainall=[], maynotcontainone=[],

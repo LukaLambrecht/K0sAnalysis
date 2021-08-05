@@ -116,7 +116,14 @@ extracut = 'bool(2>1)'
 #	not recommended to be used.
 binsdict = ({
 	'defaultbins':{'xbins':json.dumps([0.,0.5,1.5,4.5,20.],separators=(',',':')),
-			'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))}
+			'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))},
+	'bbins_small':{'xbins':json.dumps([0.,0.5,1.,5.,20.],separators=(',',':')), 
+			'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))}, 
+			# (for Basile (1))
+        'bbins_large':{'xbins':json.dumps([0.,0.5,4.,10.,20.],separators=(',',':')), 
+			'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))} 
+			# (for Basile (2))
+
 	    })
 normdict = ({
 	'norm3small':{'type':3,'xnormrange':json.dumps([0.,0.5],separators=(',',':')),
@@ -162,13 +169,15 @@ for varname in varnamedict:
 		    thismcin = era['mcin']
 		    thisdatain = era['datain']
 		    
-		    optionsdict['histtitle'] = varnamedict[varname]['histtitle']+' ({})'.format(era['label'])
+		    optionsdict['histtitle'] = (varnamedict[varname]['histtitle']
+						+' ({})'.format(era['label']))
 
 		    optionstring = " 'histfile="+os.path.join(thishistdir,'histograms.root')+"'"
 		    optionstring += " 'helpdir="+os.path.join(thishistdir,'temp')+"'"
 		    optionstring += " 'mcin="+json.dumps(thismcin,separators=(",",":"))+"'"
 		    optionstring += " 'datain="+json.dumps(thisdatain,separators=(",",":"))+"'"
 		    optionstring += " 'outfile="+os.path.join(thishistdir,'figure.png')+"'"
+		    optionstring += " 'outrootfile="+os.path.join(thishistdir,'scalefactors.root')+"'"
 		    for option in optionsdict.keys():
 			optionstring += " '"+option+"="+str(optionsdict[option])+"'"
 		    

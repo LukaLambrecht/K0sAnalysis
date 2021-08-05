@@ -14,7 +14,11 @@ def getlumi( era ):
     elif era=='2016F': return 3.11
     elif era=='2016G': return 7.58
     elif era=='2016H': return 8.65
-    elif era=='2016': return 35.9
+    #elif era=='2016': return 35.9
+    # note: switch to new value for 2016 after improved analysis by Lumi POG (Spring 2021).
+    #       however, the values per era are not updated and correspond to the situation
+    #       before this update!
+    elif era=='2016': return 36.3
 
     elif era=='2017B': return 4.82
     elif era=='2017C': return 9.66
@@ -29,7 +33,9 @@ def getlumi( era ):
     elif era=='2018D': return 31.93
     elif era=='2018': return 59.7
 
-    elif era=='run2': return 137
+    #elif era=='run2': return 137
+    # note: see 2016
+    elif era=='run2': return 138
 
     else: print('### WARNING ###: cannot find luminosity for era '+era)
     return 0.

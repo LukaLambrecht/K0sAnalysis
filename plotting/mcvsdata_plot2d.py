@@ -46,8 +46,11 @@ def loadobjects(histfile):
     return res
 
 def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',title='',
-		    drawbox=None,lumistr='',writebincontents=True,binmode='default'):
-    # binmode: 'default', 'category' or 'equal'
+		    drawbox=None,lumistr='',writebincontents=True,binmode='default',
+		    outrootfile=None):
+    # binmode: 'default', 'category' or 'equal'.
+    # outrootfile: name of the root file to which the histogram corresponding to the figure 
+    #              will be written (if None, no output root file is created, only the figure).
 
     ### Create canvas and set parameters
     plottools.setTDRstyle()
@@ -102,7 +105,11 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
 
     ### create ratio histogram and get arrays of values and errors
     histratio = hist0.Clone()
+    histratio.SetName('histratio')
+    histratio.SetTitle('data to simulation ratio')
     histratio.Divide(mchistsum)
+    # note: default error calculation of Divide is simple relative quadratic addition.
+    #       this can be modified in the manual calculation below if required.
     vals = []
     ers = []
     for i in range(nxbins):
@@ -113,15 +120,36 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
 	    nmc = mchistsum.GetBinContent(i+1,j+1)
 	    edata = hist0.GetBinError(i+1,j+1)
 	    emc = mchistsum.GetBinError(i+1,j+1)
-	    if ndata<1 or nmc<0.:
+	    if ndata<1 or nmc<1e-12:
 		vals[i].append(0.)
 		ers[i].append(0.)
+		histratio.SetBinContent(i+1,j+1,0.)
+		histratio.SetBinError(i+1,j+1,0.)
+	    # option 1: take default Divide behaviour
 	    else:
+		vals[i].append(histratio.GetBinContent(i+1,j+1))
+		ers[i].append(histratio.GetBinError(i+1,j+1))
+	    # option 2: modify default Divide behaviour
+	    '''else:
 		val = ndata/nmc
 		vals[i].append(val)
 		#error = np.sqrt(ndata/nmc**2+ndata**2/nmc**3)
 		error = val*np.sqrt((edata/ndata)**2+(emc/nmc)**2)
 		ers[i].append(error)
+		histratio.SetBinContent(i+1,j+1,val)
+		histratio.SetBinError(i+1,j+1,error)'''
+	    print('bin {}/{}:'.format(i+1,j+1))
+	    print('histratio bincontent: {}'.format(histratio.GetBinContent(i+1,j+1)))
+	    print('histratio binerror: {}'.format(histratio.GetBinError(i+1,j+1)))
+	    print('manual ratio: {}'.format(vals[i][j]))
+	    print('manual error: {}'.format(ers[i][j]))
+
+    ### write the output root file if requested
+    # (do this before further transformations to the ratio histogram for plotting)
+    if outrootfile is not None:
+	f = ROOT.TFile.Open(outrootfile,'recreate')
+	histratio.Write()
+	f.Close()
 
     ### optional: redefine histogram as category histogram
     if binmode=='category':
@@ -259,6 +287,8 @@ if __name__=='__main__':
     title = r'K^{0}_{S} vertex radial distance'
     xaxistitle = 'radial distance (cm)' # set x axis title
     yaxistitle = r'ditrack p_{T} sum (GeV)' # set y axis title
+    outrootfile = None
+    # (file to write ratio histogram to)
 
     # configure input parameters (from command line for submission script)
     cmdargs = sys.argv[1:]
@@ -272,6 +302,7 @@ if __name__=='__main__':
             elif argname == 'xaxistitle': xaxistitle = argval; coreargs['xaxistitle']=True
             elif argname == 'yaxistitle': yaxistitle = argval; coreargs['yaxistitle']=True
             elif argname == 'outfile': outfile = argval; coreargs['outfile']=True
+	    elif argname == 'outrootfile': outrootfile = argval
         if False in coreargs.values():
             print('ERROR: the following core arguments were not defined:')
             for key in coreargs.keys():
@@ -293,6 +324,6 @@ if __name__=='__main__':
     plotmcvsdata2d(indict['mchistlist'],indict['datahistlist'],outfile,
                     xaxistitle=xaxistitle,yaxistitle=yaxistitle,title=title,
                     drawbox=[xnormrange[0],ynormrange[0],xnormrange[1],ynormrange[1]],
-                    lumistr=lumistr,binmode='equal')
+                    lumistr=lumistr,binmode='equal',outrootfile=outrootfile)
 
     sys.stderr.write('### done ###\n')

@@ -232,7 +232,7 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	except: print('### WARNING ###: no valid hCounter in file!')
 	try: 
 	    puscale = f.Get("PUScale")
-	    test = puscale.GetBinContent(1)
+	    _ = puscale.GetBinContent(1)
 	except: 
 	    print('### WARNING ###: no valid PUScale in file!')
 	    puscale = None
@@ -247,7 +247,8 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	    for j in range(int(eventtree.GetEntries())):
 		eventtree.GetEntry(j)
 		weight = getattr(eventtree,'_weight')
-		if puscale is not None: weight *= pu.getpuscale(getattr(eventtree,'_nTrueInt'),puscale)
+		if puscale is not None: 
+		    weight *= pu.getpuscale(getattr(eventtree,'_nTrueInt'),puscale)
 		eventsumweights += weight/sumweights*xsection*lumi
     # loop over V0 instances 
     tree = f.Get(gargs['treename'])

@@ -84,12 +84,16 @@ telperion_variables = (['_mass','_vertexX','_vertexY','_vertexZ','_RPV','_RBS',
 			'_pt','_ptSum','_eta','_phi',
 			'_nHitsPos','_nHitsNeg','_ptPos','_ptNeg','_trackdR'])
 for varname in telperion_variables: telperion.Branch(varname,fillvalue,str(varname+'/F'))
-# add extra branch for event weight to all trees
+# add extra branch for event weight and number of interactions to all trees
 if not isdata:
     nimloth.Branch('_weight',fillvalue,str('_weight/F'))
     celeborn.Branch('_weight',fillvalue,str('_weight/F'))
     laurelin.Branch('_weight',fillvalue,str('_weight/F'))
     telperion.Branch('_weight',fillvalue,str('_weight/F'))
+    nimloth.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
+    celeborn.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
+    laurelin.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
+    telperion.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
 
 # loop over input tree
 print('starting event loop for '+str(nevents)+' events...')
@@ -109,6 +113,10 @@ for i in range(nevents):
 	nimloth.GetBranch('_weight').Fill()
 	celeborn.GetBranch('_weight').Fill()
 	celeborn.GetBranch('_weight').Fill()
+	fillvalue[0] = getattr(intree,'_nTrueInt')
+	nimloth.GetBranch('_nTrueInt').Fill()
+        celeborn.GetBranch('_nTrueInt').Fill()
+        celeborn.GetBranch('_nTrueInt').Fill()
 
     # get collection of V0's from event	
     v0collection = V0Collection(); v0collection.initFromTreeEntry(intree)
@@ -148,7 +156,9 @@ for i in range(nevents):
 	fillvalue[0] = k0s.postrack.fourmomentum.Pt(); laurelin.GetBranch('_ptPos').Fill()
 	fillvalue[0] = k0s.negtrack.fourmomentum.Pt(); laurelin.GetBranch('_ptNeg').Fill()
 	fillvalue[0] = k0s.trackdR(); laurelin.GetBranch('_trackdR').Fill()
-	if not isdata: fillvalue[0] = getattr(intree,'_weight'); laurelin.GetBranch('_weight').Fill()
+	if not isdata: 
+	    fillvalue[0] = getattr(intree,'_weight'); laurelin.GetBranch('_weight').Fill()
+	    fillvalue[0] = getattr(intree,'_nTrueInt'); laurelin.GetBranch('_nTrueInt').Fill()
 
     # fill telperion
     for l0 in lambdacollection:
@@ -174,7 +184,9 @@ for i in range(nevents):
 	fillvalue[0] = l0.postrack.fourmomentum.Pt(); telperion.GetBranch('_ptPos').Fill()
 	fillvalue[0] = l0.negtrack.fourmomentum.Pt(); telperion.GetBranch('_ptNeg').Fill()
 	fillvalue[0] = l0.trackdR(); telperion.GetBranch('_trackdR').Fill()
-	if not isdata: fillvalue[0] = getattr(intree,'_weight'); telperion.GetBranch('_weight').Fill()
+	if not isdata: 
+	    fillvalue[0] = getattr(intree,'_weight'); telperion.GetBranch('_weight').Fill()
+	    fillvalue[0] = getattr(intree,'_nTrueInt'); telperion.GetBranch('_nTrueInt').Fill()
 
 # write output trees to file
 nimloth.SetEntries(); nimloth.Write()
