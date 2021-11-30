@@ -108,9 +108,12 @@ def ratiototxt(histnum,histdenom,outfilename):
                          +'\t'+str(histratio.GetBinError(i))+'\n')
     outtxtfile.close()
 
-def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',title='',
-		logy=False,drawrange=None,lumistr='',dotxt=False):
+def plotmcvsdata(mchistlist, datahistlist, outfile,
+		xaxistitle='', yaxistitle='', title='',
+		colorlist=None,
+		logy=False, drawrange=None, lumistr='', dotxt=False):
     # optional input args:
+    # - colorlist: list of same length as mchistlist with root colors
     # - logy is a boolean whether to set y axis to log scale
     # - drawrange is a tuple of x-values  where dotted vertical lines will be drawn
     # - lumistr is the luminosity string to display (ignored if zero)
@@ -128,11 +131,21 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     titlefont = 4; titlesize = 22
     labelfont = 4; labelsize = 20
     axtitlefont = 4; axtitlesize = 25
-    infofont = 4; infosize = 30
+    infofont = 4; infosize = 20
     legendfont = 4; legendsize = 20
     xlow = datahistlist[0].GetBinLowEdge(1)
     xhigh = (datahistlist[0].GetBinLowEdge(datahistlist[0].GetNbinsX())
 		+ datahistlist[0].GetBinWidth(datahistlist[0].GetNbinsX()))
+    statcolor = ROOT.kOrange
+    statfillstyle = 1001
+    stattransparency = 0.5
+    if colorlist is None: 
+	colorlist = ([ROOT.kAzure-4,ROOT.kAzure+6,ROOT.kViolet,ROOT.kMagenta-9,
+		      ROOT.kRed,ROOT.kPink-9,ROOT.kBlue+1])
+	# (shades of blue and purple)
+	#colorlist = ([ROOT.kGreen+1,ROOT.kCyan-7,ROOT.kAzure-4,ROOT.kViolet, 
+	#         ROOT.kMagenta-9,ROOT.kRed-4,ROOT.kYellow])
+	# (bright, high contrast)
 
     ### Create pad and containers for stacked and summed histograms
     pad1.cd()
@@ -155,23 +168,13 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     leg.SetBorderSize(0)
 
     ### Add MC histograms
-    clist = ([ROOT.kAzure-4,ROOT.kAzure+6,ROOT.kViolet,ROOT.kMagenta-9,
-		ROOT.kRed,ROOT.kPink-9,ROOT.kBlue+1])
-    # (shades of blue and purple)
-    #clist = [ROOT.kAzure+6]
-    #clist = [ROOT.kAzure]
-    #clist = [ROOT.kGreen+1,ROOT.kCyan-7,ROOT.kAzure-4,ROOT.kViolet, 
-    #		ROOT.kMagenta-9,ROOT.kRed-4,ROOT.kYellow] 
-    # (bright, high contrast)
-    #ROOT.gStyle.SetPalette(1)
     for i,hist in enumerate(mchistlist):
 	hist.SetStats(False)
 	hist.SetLineColor(ROOT.kBlack)
 	hist.SetLineWidth(1)
-	hist.SetFillColor(clist[i])
+	hist.SetFillColor(colorlist[i])
 	hist.SetFillStyle(1001)
 	leg.AddEntry(hist,hist.GetTitle(),"f")
-	#leg.AddEntry(hist,"Simulation","f")
 	mcstack.Add(hist)
 	mchistsum.Add(hist)
 
@@ -182,15 +185,15 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     xax.SetNdivisions(5,4,0,ROOT.kTRUE)
     xax.SetLabelSize(0)
     # Y-axis layout
-    # log scale
+    ymin = 0. 
+    ymax = mcstack.GetMaximum()*1.5
+    # modify in case of log scale
     if logy:
 	pad1.SetLogy()
-	mcstack.SetMaximum(mcstack.GetMaximum()*10)
-	mcstack.SetMinimum(mcstack.GetMaximum()/1e2)
-    # lin scale
-    else:
-	mcstack.SetMaximum(mcstack.GetMaximum()*1.5)
-	mcstack.SetMinimum(0.)
+	ymin = mcstack.GetMaximum()/1e2
+	ymax = mcstack.GetMaximum()*10	
+    mcstack.SetMaximum(ymax)
+    mcstack.SetMinimum(ymin)
     yax = mcstack.GetYaxis()
     yax.SetMaxDigits(3)
     yax.SetNdivisions(8,4,0,ROOT.kTRUE)
@@ -205,8 +208,8 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     ### Summed histogram layout
     mchistsum.SetStats(False)
     mchistsum.SetLineWidth(0)
-    mchistsum.SetFillColor(ROOT.kOrange)
-    mchistsum.SetFillStyle(3001)
+    mchistsum.SetFillColorAlpha(statcolor, stattransparency)
+    mchistsum.SetFillStyle(statfillstyle)
     mchistsum.Draw("SAME E2")
     leg.AddEntry(mchistsum,"Stat. uncertainty","f")
 
@@ -218,7 +221,7 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
 	    hist0.Add(hist)
 	hist0.SetMarkerStyle(20)
 	hist0.SetMarkerSize(0.9)
-	leg.AddEntry(hist0,"Observed","ep")
+	leg.AddEntry(hist0,"Data","ep")
 	hist0.Draw("SAME E1")
     else:
 	hist0 = mchistlist[0].Clone()
@@ -249,27 +252,55 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     #	print(hist0.GetBinContent(i))
     #	print(mchistsum.GetBinContent(i))
 
-    '''# TEMP: draw vertical lines
-    linestyle = 9
+    # TEMP: draw vertical lines for 2016 pixel detector
+    '''linestyle = 9
     linewidth = 2
     linecolor = ROOT.kRed
-    dl1 = ROOT.TLine(2.9,hist.GetMinimum()/10.,
-	            2.9,hist.GetMaximum()*1.2)
+    adhocymin = ymin*0.4
+    adhocymax = ymax*0.15
+    dl1 = ROOT.TLine(4.4,adhocymin, 4.4,adhocymax)
     dl1.SetLineWidth(linewidth); dl1.SetLineColor(linecolor)
     dl1.SetLineStyle(linestyle)
     dl1.Draw()
-    dl2 = ROOT.TLine(6.8,hist.GetMinimum()/10.,
-	            6.8,hist.GetMaximum()*1.2)
+    dl2 = ROOT.TLine(7.3,adhocymin, 7.3,adhocymax)
     dl2.SetLineWidth(linewidth); dl2.SetLineColor(linecolor)
     dl2.SetLineStyle(linestyle)
     dl2.Draw()
-    dl3 = ROOT.TLine(10.9,hist.GetMinimum()/10,
-	            10.9,hist.GetMaximum()*1.2)
+    dl3 = ROOT.TLine(10.2,adhocymin, 10.2,adhocymax)
     dl3.SetLineWidth(linewidth); dl3.SetLineColor(linecolor)
     dl3.SetLineStyle(linestyle)
     dl3.Draw()
-    dl4 = ROOT.TLine(16.0,hist.GetMinimum()/10,
-	            16.0,hist.GetMaximum()*1.2)
+    tinfo = ROOT.TLatex()
+    tinfo.SetTextFont(10*infofont+3)
+    tinfo.SetTextSize(infosize)
+    tinfo.SetTextColor(linecolor)
+    tinfo.DrawLatexNDC(0.33,0.57,"PXL1")
+    tinfo.DrawLatexNDC(0.45,0.52,"PXL2")
+    tinfo.DrawLatexNDC(0.57,0.47,"PXL3")'''
+
+    # TEMP: draw vertical lines for 2017/2018 pixel detector
+    '''linestyle = 9
+    linewidth = 2
+    linecolor = ROOT.kRed
+    adhocymin = ymin*0.4
+    adhocymax = ymax*0.15
+    dl1 = ROOT.TLine(2.9,adhocymin,
+	            2.9,adhocymax)
+    dl1.SetLineWidth(linewidth); dl1.SetLineColor(linecolor)
+    dl1.SetLineStyle(linestyle)
+    dl1.Draw()
+    dl2 = ROOT.TLine(6.8,adhocymin,
+	            6.8,adhocymax)
+    dl2.SetLineWidth(linewidth); dl2.SetLineColor(linecolor)
+    dl2.SetLineStyle(linestyle)
+    dl2.Draw()
+    dl3 = ROOT.TLine(10.9,adhocymin,
+	            10.9,adhocymax)
+    dl3.SetLineWidth(linewidth); dl3.SetLineColor(linecolor)
+    dl3.SetLineStyle(linestyle)
+    dl3.Draw()
+    dl4 = ROOT.TLine(16.0,adhocymin,
+	            16.0,adhocymax)
     dl4.SetLineWidth(linewidth); dl4.SetLineColor(linecolor)
     dl4.SetLineStyle(linestyle)
     dl4.Draw()
@@ -277,10 +308,10 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     tinfo.SetTextFont(10*infofont+3)
     tinfo.SetTextSize(infosize)
     tinfo.SetTextColor(linecolor)
-    tinfo.DrawLatexNDC(0.26,0.55,"pixel layer 1")
-    tinfo.DrawLatexNDC(0.41,0.5,"pixel layer 2")
-    tinfo.DrawLatexNDC(0.56,0.45,"pixel layer 3")
-    tinfo.DrawLatexNDC(0.75,0.4,"pixel layer 4")'''
+    tinfo.DrawLatexNDC(0.27,0.59,"PXL1")
+    tinfo.DrawLatexNDC(0.43,0.53,"PXL2")
+    tinfo.DrawLatexNDC(0.60,0.45,"PXL3")
+    tinfo.DrawLatexNDC(0.80,0.38,"PXL4")'''
 
     ### Create pad for ratio plots
     pad2.cd()
@@ -301,8 +332,8 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     histratio2.SetStats(False)
     histratio2.SetTitle("")
     histratio2.SetLineWidth(0)
-    histratio2.SetFillColor(ROOT.kOrange)
-    histratio2.SetFillStyle(3001)
+    histratio2.SetFillColorAlpha(statcolor, stattransparency)
+    histratio2.SetFillStyle(statfillstyle)
     histratio2.Draw("E2")
     # X-axis layout
     xax = histratio2.GetXaxis()
@@ -314,15 +345,15 @@ def plotmcvsdata(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',tit
     xax.SetTitleSize(axtitlesize)
     xax.SetTitleOffset(3.)
     # Y-axis layout
-    histratio2.SetMinimum(0.75)
-    histratio2.SetMaximum(1.25)
+    histratio2.SetMinimum(0.88)
+    histratio2.SetMaximum(1.12)
     #histratio2.SetMinimum(0.)
     #histratio2.SetMaximum(2.)
     yax = histratio2.GetYaxis()
     yax.SetNdivisions(4,5,0,ROOT.kTRUE)
     yax.SetLabelFont(10*labelfont+3)
     yax.SetLabelSize(labelsize)
-    yax.SetTitle('Obs./Pred.')
+    yax.SetTitle('Data/Pred.')
     yax.SetTitleFont(10*axtitlefont+3)
     yax.SetTitleSize(axtitlesize)
     yax.SetTitleOffset(1.5)
@@ -405,9 +436,18 @@ if __name__=='__main__':
     lumistr = ''
     if indict['lumi'] > 0: 
 	lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
+    colorlist = []
+    for hist in indict['mchistlist']:
+	if '2016' in hist.GetTitle(): colorlist.append(ROOT.kAzure-4)
+	elif '2017' in hist.GetTitle(): colorlist.append(ROOT.kAzure+6)
+	elif '2018' in hist.GetTitle(): colorlist.append(ROOT.kViolet)
+	else:
+	    print('WARNING: histogram title could not be associated with a color')
+	    colorlist.append(ROOT.kBlack)
     
     plotmcvsdata(indict['mchistlist'],indict['datahistlist'],outfile,
 		    xaxistitle=xaxistitle,yaxistitle=yaxistitle,title=title,
+		    colorlist=colorlist,
 		    logy=True,drawrange=normrange,
 		    lumistr=lumistr,dotxt=False)
 

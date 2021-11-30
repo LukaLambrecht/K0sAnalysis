@@ -56,7 +56,7 @@ if __name__=='__main__':
 
     # initialization of plot settings
     xaxtitle = 'm(#pi^{+},#pi^{-}) (GeV)'
-    yaxtitle = 'Number of reconstructed vertices'
+    yaxtitle = 'Reconstructed vertices'
 
     # normalization method 1: normalize each simulated histogram to data
     for j in range(len(datahistlist)):

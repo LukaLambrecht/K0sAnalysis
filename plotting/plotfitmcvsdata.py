@@ -78,7 +78,9 @@ def plot_fit_mcvsdata(datahist,simhist,figname,fitfunc=None,backfit=None,
 
     # Y-axis layout
     datahist.SetMaximum(datahist.GetMaximum()*1.3)
-    datahist.SetMinimum(0.)
+    #datahist.SetMinimum(0.)
+    # shift y-axis so labels do not overlap with x-axis
+    datahist.SetMinimum(-datahist.GetMaximum()*0.03)
     yax = datahist.GetYaxis()
     yax.SetMaxDigits(3)
     yax.SetNdivisions(8,4,0,ROOT.kTRUE)

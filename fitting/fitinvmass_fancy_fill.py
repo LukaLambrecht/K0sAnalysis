@@ -27,11 +27,11 @@ if __name__=='__main__':
     fitrange = [xlow,xhigh] # range to fit in
     xcenter = (xhigh+xlow)/2. # initial guess of peak center
     xwidth = (xhigh-xlow)/4. # initial guess of peak width
-    varname = '_mass'
+    varname = '_KsInvMass'
 
     # possibility to make a histogram per bin in another variable
     # (to disable: use empty string for divvarname)
-    divvarname = '_RPV'
+    divvarname = '_KsRPV'
     divvarlabel = '#Delta_{2D} (cm)'
     divbins = array.array('f',[0.,0.5,1.5,4.,20.])
     show_divinfo = True
