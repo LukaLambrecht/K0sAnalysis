@@ -244,23 +244,37 @@ def make_equal_width( hist ):
 
 def make_equal_width_2d( hist, keeplabels=True ):
     
+    # get original axes
     nxbins = hist.GetNbinsX()
     nybins = hist.GetNbinsY()
     origxax = hist.GetXaxis()
     origyax = hist.GetYaxis()
+    # printouts for testing
+    origxaxlist = [origxax.GetBinLowEdge(i) for i in range(nxbins+2)]
+    origyaxlist = [origyax.GetBinLowEdge(i) for i in range(nybins+2)]
+    # initialize new histogram
     newxbins = array('f',list(range(nxbins+1)))
     newybins = array('f',list(range(nybins+1)))
     newhist = ROOT.TH2F('newhist','newhist',nxbins,newxbins,nybins,newybins)
+    newhist.SetDirectory(0)
     newhist.SetName(hist.GetName())
     newhist.SetTitle(hist.GetTitle())
+    # fill new histogam
     for i in range(nxbins+2):
 	for j in range(nybins+2):
 	    newhist.SetBinContent(i,j,hist.GetBinContent(i,j))
 	    newhist.SetBinError(i,j,hist.GetBinError(i,j))
+    # change labels to original bin labels
     if keeplabels:
+        xax = newhist.GetXaxis()
+        xax.SetNdivisions(nxbins,0,0,ROOT.kFALSE)
+        yax = newhist.GetYaxis()
+        yax.SetNdivisions(nybins,0,0,ROOT.kFALSE)
 	for i in range(nxbins+2):
+            #print('setting x-axis label for bin {} to {}'.format(i,origxax.GetBinLowEdge(i)))
 	    newhist.GetXaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origxax.GetBinLowEdge(i)))
 	for i in range(nybins+2):
+            #print('setting y-axis label for bin {} to {}'.format(i,origyax.GetBinLowEdge(i)))
 	    newhist.GetYaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origyax.GetBinLowEdge(i)))
     return (newhist,newxbins,newybins)
 

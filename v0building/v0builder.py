@@ -1,8 +1,11 @@
 ###########################################################
 # python script to make dedicated V0 trees out of ntuples #
 ###########################################################
-# note: will only work on files that have been processed with the V0Analyzer module in the ntuplizer
-#       and that have been processed with the skimmer in the ../skimming directory! 
+# note: will only work on files that have been processed with the custom ntuplizer
+#       (e.g. using the V0Analyzer module)
+#       and that have been processed with the skimmer in the ../skimming directory!
+# note: kept for later reference, but recommended to use v0builder2.py instead
+#       (with uproot instead of PyROOT)
 
 import sys
 import os
@@ -13,12 +16,15 @@ from array import array
 from v0object import *
 
 # write starting tag (for automatic crash checking)
-sys.stderr.write('### starting ###\n')
+sys.stderr.write('###starting###\n')
 
 if len(sys.argv)!=5:
-    print('### ERROR ###: wrong number of command line arguments.')
-    print('               usage: python v0builder.py <input_file> <output_file> <nevents>')
-    print('                      <selection>')
+    print('ERROR: wrong number of command line arguments.')
+    print('       expected arguments:')
+    print('         - input_file')
+    print('         - output_file')
+    print('         - nevents')
+    print('         - selection')
     sys.exit()
 
 input_file_path = os.path.abspath(sys.argv[1])
@@ -27,8 +33,14 @@ nevents = int(sys.argv[3])
 selection_name = sys.argv[4]
 
 # check selection_name
-if selection_name not in (['legacy','legacy_loosenhits','legacy_nonhits',
-			    'ivf']):
+allowed_selections = [
+  'legacy',
+  'legacy_loosenhits',
+  'legacy_nonhits',
+  'legacy_highpt',
+  'ivf'
+]
+if selection_name not in allowed_selections:
     print('### ERROR ###: selection '+selection_name+' not recognized.')
     sys.exit()
 
@@ -198,4 +210,4 @@ if not isdata:
     ntrueint.Write()
 outf.Close()
 # write closing tag (for automatic crash checkiing)
-sys.stderr.write('### done ###\n')
+sys.stderr.write('###done###\n')

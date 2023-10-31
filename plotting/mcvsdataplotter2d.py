@@ -1,6 +1,7 @@
-####################################################################################
-# script to reading the output of mcvsdata_fill2d.py and making sim vs. data plots #
-####################################################################################
+###################################
+# Making sim vs. data plots in 2D #
+###################################
+
 import ROOT
 import numpy as np
 import os
@@ -10,44 +11,18 @@ from array import array
 sys.path.append(os.path.abspath('../tools'))
 import plottools
 import histtools
+from mcvsdataplotter import loadobjects
 
-def loadobjects(histfile):
-    print('loading histograms')
-    f = ROOT.TFile.Open(histfile)
-    res = {}
-    normalization = int(f.Get("normalization")[0])
-    res['normalization'] = normalization
-    if(normalization==3):
-	res['xnormrange'] = [f.Get("normrange")[0],f.Get("normrange")[1]]
-	res['ynormrange'] = [f.Get("normrange")[2],f.Get("normrange")[3]]
-    try:
-	lumi = f.Get("lumi")[0]
-        res['lumi'] = lumi
-    except:
-        print('WARNING: could not find luminosity value...')
-        lumi = 0
-        res['lumi'] = 0
-    # load histograms
-    histlist = plottools.loadallhistograms(histfile)
-    mchistlist = []
-    datahistlist = []
-    for hist in histlist:
-        if 'sim' in hist.GetName():
-            mchistlist.append(hist)
-        elif 'data' in hist.GetName():
-            datahistlist.append(hist)
-        else:
-            print('### WARNING ###: histogram type not recognized: '+hist.GetName())
-            print('                 skipping it...')
-    print('found '+str(len(datahistlist))+' data files and '
-            +str(len(mchistlist))+' simulation files.')
-    res['mchistlist'] = mchistlist
-    res['datahistlist'] = datahistlist
-    return res
-
-def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',title='',
-		    drawbox=None,lumistr='',writebincontents=True,binmode='default',
-		    outrootfile=None):
+def plotmcvsdata2d( mchistlist, datahistlist, outfile,
+                    xaxistitle=None, yaxistitle=None, title=None,
+                    xaxtitleoffset=None, yaxtitleoffset=None,
+                    axtitlesize=None, titlesize=None,
+                    p1topmargin=None, p1bottommargin=None,
+                    p1leftmargin=None, p1rightmargin=None,
+		    drawbox=None, lumistr='', writebincontents=True,
+                    binmode='default',
+		    outrootfile=None,
+                    extrainfos=None, infoleft=None, infotop=None ):
     # binmode: 'default', 'category' or 'equal'.
     # outrootfile: name of the root file to which the histogram corresponding to the figure 
     #              will be written (if None, no output root file is created, only the figure).
@@ -56,26 +31,37 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
     plottools.setTDRstyle()
     ROOT.gROOT.SetBatch(ROOT.kTRUE)
     c1 = ROOT.TCanvas("c1","c1")
-    c1.SetCanvasSize(600,600)
+    c1.SetCanvasSize(1200,600)
     pad1 = ROOT.TPad("pad1","",0.,0.,1.,1.)
     pad1.Draw()
-    titlefont = 4; titlesize = 25
+    titlefont = 4
+    if titlesize is None: titlesize = 25
     labelfont = 4; labelsize = 20
-    axtitlefont = 4; axtitlesize = 25
+    axtitlefont = 4
+    if axtitlesize is None: axtitlesize = 25
     infofont = 4; infosize = 20
     legendfont = 4; legendsize = 20
-    p1bottommargin = 0.15
-    p1topmargin = 0.07
-    p1leftmargin = 0.15
-    p1rightmargin = 0.15
-    xaxtitleoffset = 1.2
-    yaxtitleoffset = 1.7
+    if p1bottommargin is None: p1bottommargin = 0.15
+    if p1topmargin is None: p1topmargin = 0.07
+    if p1leftmargin is None: p1leftmargin = 0.1
+    if p1rightmargin is None: p1rightmargin = 0.15
+    if xaxtitleoffset is None: xaxtitleoffset = 1.2
+    if yaxtitleoffset is None: yaxtitleoffset = 1.2
+    # extra info box parameters
+    if infoleft is None: infoleft = p1leftmargin+0.05
+    if infotop is None: infotop = 1-p1topmargin-0.1
 
     ### get bins and related properties
     nxbins = mchistlist[0].GetNbinsX()
     xbins = mchistlist[0].GetXaxis().GetXbins()
     nybins = mchistlist[0].GetNbinsY()
     ybins = mchistlist[0].GetYaxis().GetXbins()
+    # printouts for testing
+    #print('Bins:')
+    #print(nxbins)
+    #print([xbins)
+    #print(nybins)
+    #print(ybins)
 
     ### Create pad and containers summed histograms
     pad1.cd()
@@ -138,11 +124,12 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
 		ers[i].append(error)
 		histratio.SetBinContent(i+1,j+1,val)
 		histratio.SetBinError(i+1,j+1,error)'''
-	    print('bin {}/{}:'.format(i+1,j+1))
-	    print('histratio bincontent: {}'.format(histratio.GetBinContent(i+1,j+1)))
-	    print('histratio binerror: {}'.format(histratio.GetBinError(i+1,j+1)))
-	    print('manual ratio: {}'.format(vals[i][j]))
-	    print('manual error: {}'.format(ers[i][j]))
+            # printouts for testing
+	    #print('bin {}/{}:'.format(i+1,j+1))
+	    #print('histratio bincontent: {}'.format(histratio.GetBinContent(i+1,j+1)))
+	    #print('histratio binerror: {}'.format(histratio.GetBinError(i+1,j+1)))
+	    #print('manual ratio: {}'.format(vals[i][j]))
+	    #print('manual error: {}'.format(ers[i][j]))
 
     ### write the output root file if requested
     # (do this before further transformations to the ratio histogram for plotting)
@@ -220,18 +207,20 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
     xax = histratio.GetXaxis()
     xax.SetLabelFont(10*labelfont+3)
     xax.SetLabelSize(labelsize)
-    xax.SetTitle(xaxistitle)
-    xax.SetTitleFont(10*axtitlefont+3)
-    xax.SetTitleSize(axtitlesize)
-    xax.SetTitleOffset(xaxtitleoffset)
+    if xaxistitle is not None:
+        xax.SetTitle(xaxistitle)
+        xax.SetTitleFont(10*axtitlefont+3)
+        xax.SetTitleSize(axtitlesize)
+        xax.SetTitleOffset(xaxtitleoffset)
     # Y-axis layout
     yax = histratio.GetYaxis()
     yax.SetLabelFont(10*labelfont+3)
     yax.SetLabelSize(labelsize)
-    yax.SetTitle(yaxistitle)
-    yax.SetTitleFont(10*axtitlefont+3)
-    yax.SetTitleSize(axtitlesize)
-    yax.SetTitleOffset(yaxtitleoffset)
+    if yaxistitle is not None:
+        yax.SetTitle(yaxistitle)
+        yax.SetTitleFont(10*axtitlefont+3)
+        yax.SetTitleSize(axtitlesize)
+        yax.SetTitleOffset(yaxtitleoffset)
     histratio.SetMinimum(0.8)
     histratio.SetMaximum(1.2)
     ROOT.gStyle.SetPalette(ROOT.kBird)
@@ -249,13 +238,14 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
 	#b1.SetFillColorAlpha(ROOT.kRed,0.35)
 	b1.Draw()
 
-    ### Title and other information displays
-    # title
-    ttitle = ROOT.TLatex()	
-    ttitle.SetTextFont(10*titlefont+3)
-    ttitle.SetTextSize(titlesize)
-    ttitle.DrawLatexNDC(p1leftmargin,1-p1topmargin+0.02,title)
-    # values and errors
+    ### Write title
+    if title is not None:
+        ttitle = ROOT.TLatex()	
+        ttitle.SetTextFont(10*titlefont+3)
+        ttitle.SetTextSize(titlesize)
+        ttitle.DrawLatexNDC(p1leftmargin,1-p1topmargin+0.02,title)
+
+    # Write values and errors
     if writebincontents:
 	tvals = ROOT.TLatex()	
 	tvals.SetTextFont(10*infofont+3)
@@ -268,10 +258,21 @@ def plotmcvsdata2d(mchistlist,datahistlist,outfile,xaxistitle='',yaxistitle='',t
 		valstr = '{0:.2f}'.format(vals[i][j])
 		erstr = '{0:.2f}'.format(ers[i][j])
 		tvals.DrawLatex(xcenter,ycenter,'#splitline{'+valstr+'}{'+r'#pm'+erstr+'}')
+
+    # Write extra info
+    if extrainfos is not None:
+        tinfo = ROOT.TLatex()
+        tinfo.SetTextFont(10*infofont+3)
+        tinfo.SetTextSize(infosize)
+        for i,info in enumerate(extrainfos):
+            vspace = 0.07*(float(infosize)/20)
+            tinfo.DrawLatexNDC(infoleft,infotop-(i+1)*vspace, info)
 		
-    # luminosity
-    plottools.drawLumi(pad1,cmstext='',extratext='',
-			lumitext=lumistr,lumitext_size_factor=0.4,lumitext_offset=0.02)
+    # Write luminosity
+    plottools.drawLumi( pad1, cmstext='',extratext='',
+			lumitext=lumistr,
+                        lumitext_size_factor=0.4,
+                        lumitext_offset=0.02)
 
     c1.Update()
     c1.SaveAs(outfile)
@@ -297,19 +298,22 @@ if __name__=='__main__':
 		    'yaxistitle':True,'outfile':True}
         for arg in cmdargs:
             argname,argval = arg.split('=')
+            # required arguments
             if argname == 'histfile': histfile = argval; coreargs['histfile']=True
             elif argname == 'histtitle': title = argval; coreargs['histtitle']=True
             elif argname == 'xaxistitle': xaxistitle = argval; coreargs['xaxistitle']=True
             elif argname == 'yaxistitle': yaxistitle = argval; coreargs['yaxistitle']=True
             elif argname == 'outfile': outfile = argval; coreargs['outfile']=True
+            # optional arguments
 	    elif argname == 'outrootfile': outrootfile = argval
+            elif argname == 'doextrainfos': doextrainfos = (argval.lower()=='true')
         if False in coreargs.values():
             print('ERROR: the following core arguments were not defined:')
             for key in coreargs.keys():
                 if(coreargs[key]==False): print(key)
             sys.exit()
 
-    indict = loadobjects(histfile)
+    indict = loadobjects(histfile, histdim=2)
 
     # configure other parameters based on input
     xnormrange = None
@@ -321,9 +325,43 @@ if __name__=='__main__':
     if indict['lumi'] > 0:
         lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
 
-    plotmcvsdata2d(indict['mchistlist'],indict['datahistlist'],outfile,
-                    xaxistitle=xaxistitle,yaxistitle=yaxistitle,title=title,
+    # make extra info
+    extrainfos = []
+    infoleft = None
+    infotop = None
+    p1rightmargin = None
+    if doextrainfos:
+      p1rightmargin = 0.35
+      infoleft = 0.8
+      infotop = 0.7
+      if( indict['v0type'] is not None ):
+        v0type = indict['v0type']
+        if v0type.lower()=='ks':
+          extrainfos.append('K^{0}_{S} candidates')
+        elif v0type.lower()=='la':
+          extrainfos.append('#Lambda^{0} candidates')
+      if( indict['bckmode'] is not None ):
+        bckmode = indict['bckmode']
+        if bckmode.lower()=='default':
+          extrainfos.append('Background not subtracted')
+        elif bckmode.lower()=='sideband':
+          extrainfos.append('Background subtracted')
+      if( indict['normalization'] is not None ):
+        norm = indict['normalization']
+        if norm==1:
+          extrainfos.append('Normalized to luminosity')
+        if norm==2:
+          extrainfos.append('Normalized to data')
+        if norm==3:
+          extrainfos.append('Normalized in range')
+        if norm==4:
+          extrainfos.append('Normalized to data events')
+
+    plotmcvsdata2d( indict['mchistlist'], indict['datahistlist'], outfile,
+                    xaxistitle=xaxistitle, yaxistitle=yaxistitle, title=title,
                     drawbox=[xnormrange[0],ynormrange[0],xnormrange[1],ynormrange[1]],
-                    lumistr=lumistr,binmode='equal',outrootfile=outrootfile)
+                    lumistr=lumistr, binmode='equal', outrootfile=outrootfile,
+                    extrainfos=extrainfos, infoleft=infoleft, infotop=infotop,
+                    p1rightmargin=p1rightmargin )
 
     sys.stderr.write('### done ###\n')

@@ -1,0 +1,4 @@
+# 2016 PostVFP data
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2016F-UL2016_MiniAODv2-v1_data_doublemuon
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2016G-UL2016_MiniAODv2-v1_data_doublemuon
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2016H-UL2016_MiniAODv2-v2_data_doublemuon

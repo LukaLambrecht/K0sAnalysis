@@ -9,6 +9,7 @@ import os
 import numpy as np
 sys.path.append(os.path.abspath('../tools'))
 import fittools as ft
+sys.path.append(os.path.abspath('../plotting'))
 import plotfit as pft
 
 ROOT.gROOT.SetBatch(ROOT.kTRUE)

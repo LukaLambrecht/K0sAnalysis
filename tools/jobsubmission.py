@@ -1,8 +1,8 @@
 ##################################################################################
 # some utilities for qsub job submission; copied from Willem's ewkino repository #
 ##################################################################################
+# DEPRECATED AS QSUB IS NO LONGER SUPPORTED ON T2, USE CONDOR TOOLS INSTEAD
 
-#include python library classes
 import subprocess
 import time
 import os

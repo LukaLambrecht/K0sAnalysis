@@ -1,3 +1,9 @@
+/*
+Perform Z -> mu+mu- skimming.
+Runs on a single input file and produces a single output file.
+Apart from event selection, branch reduction is performed.
+*/
+
 // include c++ library classes 
 #include <string>
 #include <vector>
@@ -18,33 +24,52 @@ const static double ZMass = 91.19;
 
 // definition of b-tag thresholds
 // see e.g. subpages of https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation
-double bTagThreshold(std::string year){
-    if(year=="2016") return 0.2217;
-    else if(year=="2017") return 0.1522;
-    else if(year=="2018") return 0.1241;
-    else {
-	std::cout<<"### ERROR ###: year '"<<year<<"' not recognized in bTagThreshold."<<std::endl; 
-	return 1;
+// the thresholds correspond to loose deep-CSV working point.
+double bTagThreshold(const std::string& campaign, const std::string& year){
+    if(campaign=="run2preul"){
+	if(year=="2016") return 0.2217;
+	else if(year=="2017") return 0.1522;
+	else if(year=="2018") return 0.1241;
+    } else if(campaign=="run2ul"){
+	if(year=="2016PreVFP") return 0.2027;
+	else if(year=="2016PostVFP") return 0.1918;
+        else if(year=="2017") return 0.1355;
+        else if(year=="2018") return 0.1208;
+    } else{
+	std::string msg = "ERROR in bTagThreshold:"; 
+        msg += " campaign '" + campaign + "' or year '" + year + "' not recognized.";
+        throw std::runtime_error(msg);
     }
+    return 0.; // for syntax
 }
 
-std::string getYearFromFileName(const std::string& fileName){
-    // small help function to exctract the year from the name of an input file
-    if( fileName.find("Summer16")!=std::string::npos 
-	|| fileName.find("Run2016")!=std::string::npos 
-	|| fileName.find("MiniAOD2016")!=std::string::npos ){
-	return std::string("2016");}
-    else if( fileName.find("Fall17")!=std::string::npos 
-	     || fileName.find("Run2017")!=std::string::npos 
-	     || fileName.find("MiniAOD2017")!=std::string::npos ){
-	     return std::string("2017");}
-    else if( fileName.find("Autunm18")!=std::string::npos
-	     || fileName.find("Run2018")!=std::string::npos 
-	     || fileName.find("MiniAOD2018")!=std::string::npos ){
-	     return std::string("2018");}
+std::pair<std::string, std::string> getYearFromFileName(const std::string& fileName){
+    // small help function to exctract the campaign and year from the name of an input file
+    if( fileName.find("RunIISummer20UL16MiniAODAPVv2")!=std::string::npos 
+        || fileName.find("HIPM_UL2016_MiniAODv2")!=std::string::npos ){
+	return std::make_pair("run2ul", "2016PreVFP"); }
+    else if( fileName.find("RunIISummer20UL16MiniAODv2")!=std::string::npos
+        || fileName.find("UL2016_MiniAODv2")!=std::string::npos ){
+        return std::make_pair("run2ul", "2016PostVFP"); }
+    else if( fileName.find("RunIISummer20UL17MiniAODv2")!=std::string::npos
+        || fileName.find("UL2017_MiniAODv2")!=std::string::npos ){
+        return std::make_pair("run2ul", "2017"); }
+    else if( fileName.find("RunIISummer20UL18MiniAODv2")!=std::string::npos
+        || fileName.find("UL2018_MiniAODv2")!=std::string::npos ){
+        return std::make_pair("run2ul", "2018"); }
+    else if( fileName.find("Run2016")!=std::string::npos 
+	|| fileName.find("RunIISummer16")!=std::string::npos ){
+	return std::make_pair("run2preul", "2016"); }
+    else if( fileName.find("Run2017")!=std::string::npos 
+	|| fileName.find("RunIIFall17")!=std::string::npos ){
+	return std::make_pair("run2preul", "2017"); }
+    else if( fileName.find("Run2018")!=std::string::npos 
+	|| fileName.find("RunIIAutumn18")!=std::string::npos ){
+	return std::make_pair("run2preul", "2018"); }
     else{
-	std::cout<<"### ERROR ###: year could not be extracted from filename "<<fileName<<std::endl;
-	return std::string("");
+	std::string msg = "ERROR: year could not be extracted from filename";
+	msg += " " + fileName;
+	throw std::runtime_error(msg);
     }
 } 
 
@@ -75,7 +100,9 @@ void skimFile( const std::string& inputFilePath,
 
     std::cout << "skimming " << inputFilePath << std::endl;
 
-    std::string year = getYearFromFileName(inputFilePath);
+    std::pair<std::string, std::string> temp = getYearFromFileName(inputFilePath);
+    std::string campaign = temp.first;
+    std::string year = temp.second;
 
     // load input histograms and tree
     TFile* inputFilePtr = TFile::Open( inputFilePath.c_str() );
@@ -213,7 +240,7 @@ void skimFile( const std::string& inputFilePath,
 	    // check if it is a b-jet
 	    double btagvalue = _jetDeepCsv_b[j]+_jetDeepCsv_bb[j];
 	    bool inBTagAcceptance = ( std::fabs(_jetEta[j])<2.4 );
-	    if( inBTagAcceptance && btagvalue>bTagThreshold(year) ) ++nbjets;
+	    if( inBTagAcceptance && btagvalue>bTagThreshold(campaign, year) ) ++nbjets;
 	}
 	if(nbjets>0) continue;
 
@@ -237,7 +264,7 @@ void skimFile( const std::string& inputFilePath,
 
 
 int main( int argc, char* argv[] ){
-    std::cerr << "### starting ###" << std::endl;
+    std::cerr << "###starting###" << std::endl;
     if( argc != 4 ){
         std::cerr << "### ERROR ###: skimmer requires exactly three arguments to run :" << std::endl;
 	std::cerr << "input_file_path, output_file_path, nentries" << std::endl;
@@ -251,6 +278,6 @@ int main( int argc, char* argv[] ){
     if(nEntries_raw < 0) nEntries_raw = 0;
     long unsigned nEntries = (long unsigned) nEntries_raw; 
     skimFile( input_file_path, output_directory, nEntries );
-    std::cerr << "### done ###" << std::endl;
+    std::cerr << "###done###" << std::endl;
     return 0;
 }

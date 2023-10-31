@@ -1,18 +1,29 @@
 #####################################################################################
-# Python script to read a noskim.root tuple (or similar), and plot a variable in it #
+# Read a ROOT tuple (or similar), and plot a variable in it #
 #####################################################################################
+
 import ROOT
 import sys
 sys.path.append('../tools')
-import plottools as pt
 import optiontools as opt
+import plottools as pt
+import singlehistplotter as shp
 
-def fillvarfromtuple(tree, varname, xlow, xhigh, nbins, 
-		    varsize='', weightvar='', nprocess=-1, label=''):
+def fillvarfromtuple( tree, 
+                      varname, 
+                      xlow = 0., 
+                      xhigh = 1., 
+                      nbins = 10, 
+		      varsize=None, 
+                      weightvar=None, 
+                      nprocess=-1, 
+                      label=None ):
     # filling histogram from a given tree
     
     # make output histogram
-    hist = ROOT.TH1F('hist','',nbins,xlow,xhigh)
+    hist = ROOT.TH1F('hist', 'hist', nbins, xlow, xhigh)
+    hist.SetDirectory(0)
+    hist.Sumw2()
 
     # set number of events to process
     if( nprocess<0 or nprocess>tree.GetEntries() ): nprocess=tree.GetEntries() 
@@ -24,11 +35,11 @@ def fillvarfromtuple(tree, varname, xlow, xhigh, nbins,
 	tree.GetEntry(i)
 	# determine weight for this entry
 	weight = 1
-	if weightvar!='': weight = getattr(tree,weightvar)
+	if weightvar is not None: weight = getattr(tree,weightvar)
 	# determine values for requested variable in this entry
 	varvalues = []
 	# case 1: branch is scalar
-	if varsize=='':
+	if varsize is None:
 	    varvalues = [getattr(tree,varname)]
 	# case 2: branch is vector
 	else:
@@ -38,12 +49,13 @@ def fillvarfromtuple(tree, varname, xlow, xhigh, nbins,
 	for var in varvalues: hist.Fill(var,weight)
     
     # set histogram title
-    if label=='': hist.SetTitle(varname)
+    if label is None: hist.SetTitle(varname)
     else: hist.SetTitle(label)
     return hist
 
 def plotsinglehistogram(hist, figname, title='', xaxtitle='', yaxtitle='', logy=False):
     # drawing a single histogram
+    # DEPRECATED, USE SINGLEHISTOGRAMPLOTTER INSTEAD
 
     pt.setTDRstyle()
     ROOT.gROOT.SetBatch(ROOT.kTRUE)
@@ -148,20 +160,20 @@ if __name__=='__main__':
     options.append( opt.Option('treename', default='blackJackAndHookers/blackJackAndHookersTree') )
     options.append( opt.Option('nprocess', vtype='int', default=-1) )
     options.append( opt.Option('varname', explanation='name of the variable to plot' ) )
-    options.append( opt.Option('sizevarname', 
+    options.append( opt.Option('sizevarname',
+                        default=None,
 			explanation='length of the variable array in tuple,'
 				    +' e.g. _nL for _lPt,'
-				    +' use default (empty string) for scalar variables',
-			default='') )
+				    +' use default (empty string) for scalar variables' ) )
     options.append( opt.Option('weightvarname',
+                        default=None,
 			explanation='weight of each event,'
 				    +' e.g. _weight in standard ntuples,'
 				    +' use default (empty string) for equal weighting'
-				    +' (entries instead of events)',
-			default='') )
-    options.append( opt.Option('xaxtitle', default='') )
-    options.append( opt.Option('yaxtitle', default='') )
-    options.append( opt.Option('title', default='') )
+				    +' (entries instead of events)' ) )
+    options.append( opt.Option('xaxtitle', default=None) )
+    options.append( opt.Option('yaxtitle', default=None) )
+    options.append( opt.Option('title', default=None) )
     options.append( opt.Option('xlow', vtype='float', default=0.) )
     options.append( opt.Option('xhigh', vtype='float', default=100.) )
     options.append( opt.Option('nbins', vtype='int', default=10) )
@@ -180,9 +192,8 @@ if __name__=='__main__':
     tree = fin.Get(options.treename)
 
     hist = fillvarfromtuple(tree, options.varname, 
-			    options.xlow, options.xhigh, options.nbins, 
+			    xlow=options.xlow, xhigh=options.xhigh, nbins=options.nbins, 
 			    varsize=options.sizevarname, weightvar=options.weightvarname, 
 			    nprocess=options.nprocess)
-    plotsinglehistogram(hist, options.outfilename, 
-			xaxtitle=options.xaxtitle, yaxtitle=options.yaxtitle, 
-			title=options.title)
+    shp.plotsinglehistogram( hist, options.outfilename, 
+        xaxtitle=options.xaxtitle, yaxtitle=options.yaxtitle, title=options.title)

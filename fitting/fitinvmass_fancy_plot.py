@@ -15,13 +15,38 @@ sys.path.append('../plotting')
 from plotfitmcvsdata import plot_fit_mcvsdata
 
 if __name__=='__main__':
+   
+    # first case: only a directory is given
+    if len(sys.argv)==2:
+        inputdir = sys.argv[1]
+        years = ['2016', '2017', '2018', 'run2']
+        v0types = ['ks', 'la']
+        datalabel = 'Data'
+        simlabel = 'Simulation'
+        for year in years:
+          for v0type in v0types:
+            datafinloc = os.path.join(inputdir,'{}_invmass_{}_data.root'.format(v0type,year))
+            simfinloc = os.path.join(inputdir,'{}_invmass_{}_sim.root'.format(v0type,year))
+            outputfile = os.path.join(inputdir,'{}_invmass_{}_fig'.format(v0type,year))
+            cmd = 'python fitinvmass_fancy_plot.py'
+            cmd += ' ' + datafinloc
+            cmd += ' ' + datalabel
+            cmd += ' ' + simfinloc
+            cmd += ' ' + simlabel
+            cmd += ' ' + v0type
+            cmd += ' ' + outputfile
+            os.system(cmd)
+        sys.exit()
     
+    # second case: all command line arguments are given
+ 
     # initialization of intput files
     datafinloc = sys.argv[1] # input data file
     datalabel = sys.argv[2] # legend entry for data
     simfinloc = sys.argv[3] # simlation input file
     simlabel = sys.argv[4] # legend entry for simulation
-    outfile = sys.argv[5] # output file
+    v0type = sys.argv[5] # either ks or la
+    outfile = sys.argv[6] # output file
 
     # load all objects from input files
     datahistlist = ht.loadallhistograms( datafinloc )
@@ -45,6 +70,25 @@ if __name__=='__main__':
 			str(simfin.Get("divvarname_w").GetTitle())))
     simfin.Close()
 
+    # printouts for testing
+    print('Data histograms:')
+    for hist in datahistlist: print('  {}'.format(hist))
+    print('Simulation histograms:')
+    for hist in simhistlist: print('  {}'.format(hist))
+    print('Divider bins:')
+    print('  {}'.format(divvarname))
+    print('  {}'.format(divbins))
+    print('Lumi:')
+    print('  {}'.format(lumi))
+
+    # add histograms from several divider bins
+    datahisttot = datahistlist[0].Clone()
+    for hist in datahistlist[1:]: datahisttot.Add(hist)
+    simhisttot = simhistlist[0].Clone()
+    for hist in simhistlist[1:]: simhisttot.Add(hist)
+    datahistlist.append(datahisttot)
+    simhistlist.append(simhisttot)
+
     # initialization of fit settings
     polydegree = 1 # degree of background polynomial fit 
     xlow = datahistlist[0].GetBinLowEdge(1)
@@ -55,7 +99,9 @@ if __name__=='__main__':
     xwidth = (xhigh-xlow)/4. # initial guess of peak width 
 
     # initialization of plot settings
-    xaxtitle = 'm(#pi^{+},#pi^{-}) (GeV)'
+    xaxtitle = 'Invariant mass (GeV)'
+    if v0type.lower()=='ks': xaxtitle = 'm(#pi^{+},#pi^{-}) (GeV)'
+    elif v0type.lower()=='la': xaxtitle = 'm(p,#pi) (GeV)'
     yaxtitle = 'Reconstructed vertices'
 
     # normalization method 1: normalize each simulated histogram to data
@@ -96,10 +142,16 @@ if __name__=='__main__':
 	mu_unc = totfit.GetParError(idx)
 	# step 3: plot
 	lumitext = '' if lumi==0 else '{0:.3g} '.format(float(lumi)/1000.) + 'fb^{-1} (13 TeV)'
-	extrainfo = str(divbins[j])+' < '+str(divvarlabel)+'  < '+str(divbins[j+1])
-	extrainfo += ' << <<Fitted K_{S}^{0} mass: <<  '
-	extrainfo += '{:.3f} #pm {:.3f} MeV'.format(paramdict['#mu']*1000,mu_unc*1000)
-	#extrainfo += ' << <<HACK_KS'
+        extrainfo = ''
+        if j!=len(datahistlist)-1:
+	    extrainfo = str(divbins[j])+' < '+str(divvarlabel)+'  < '+str(divbins[j+1])
+            extrainfo += '<< <<'
+	if v0type.lower()=='ks':
+            extrainfo += 'Fitted K_{S}^{0} mass: <<  '
+	    extrainfo += '{:.3f} #pm {:.3f} MeV'.format(paramdict['#mu']*1000,mu_unc*1000)
+        elif v0type.lower()=='la':
+            extrainfo += 'Fitted #Lambda^{0} mass: <<  '
+            extrainfo += '{:.3f} #pm {:.3f} MeV'.format(paramdict['#mu']*1000,mu_unc*1000)
 	thisoutfile = outfile
 	if len(datahistlist)>1:
 	    thisoutfile = outfile.split('.')[0]+'_{}.png'.format(j)

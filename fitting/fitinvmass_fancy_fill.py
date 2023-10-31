@@ -14,26 +14,34 @@ if __name__=='__main__':
     # initialization of intput files
     finloc = sys.argv[1] # input data file
     outfile = sys.argv[2] # output file
+    v0type = sys.argv[3] # either 'ks' or 'la'
     lumi = 0.
-    if len(sys.argv)>3:
-	lumi = float(sys.argv[3])
+    if len(sys.argv)>4:
+	lumi = float(sys.argv[4])
 
     # initialization of histogram settings
-    treename = 'laurelin' # tree in input root files to read variable from
+    if v0type.lower()=='ks':
+        treename = 'laurelin' # tree in input root files to read variable from
+        xlow = 0.44
+        xhigh = 0.56
+        binwidth = 0.002
+        varname = '_KsInvMass'
+        divvarname = '_KsRPV'
+        divvarlabel = '#Delta_{2D} (cm)'
+        divbins = array.array('f',[0.,0.5,1.5,4.,20.])
+    elif v0type.lower()=='la':
+        treename = 'telperion' # tree in input root files to read variable from
+        xlow = 1.08
+        xhigh = 1.15
+        binwidth = 0.002
+        varname = '_LaInvMass'
+        divvarname = '_LaRPV'
+        divvarlabel = '#Delta_{2D} (cm)'
+        divbins = array.array('f',[0.,0.5,1.5,4.,20.])
     nmax = -1 # maximum number of processed instances
-    xlow = 0.44
-    xhigh = 0.56
-    binwidth = 0.002
     fitrange = [xlow,xhigh] # range to fit in
     xcenter = (xhigh+xlow)/2. # initial guess of peak center
     xwidth = (xhigh-xlow)/4. # initial guess of peak width
-    varname = '_KsInvMass'
-
-    # possibility to make a histogram per bin in another variable
-    # (to disable: use empty string for divvarname)
-    divvarname = '_KsRPV'
-    divvarlabel = '#Delta_{2D} (cm)'
-    divbins = array.array('f',[0.,0.5,1.5,4.,20.])
     show_divinfo = True
     nhists = len(divbins)-1
     if divvarname=='': 

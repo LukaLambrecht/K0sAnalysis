@@ -14,24 +14,22 @@ import mergetools as mt
 if __name__=='__main__':
 
     if len(sys.argv)==2:
-	input_directory = os.path.abspath( sys.argv[1] )
-	indirs = {}
+        # find all subdirectories in provided directory
+        # that contain at least one root file named '*_selected.root'
+        input_directory = os.path.abspath( sys.argv[1] )
+        indirs = {}
         for root,dirs,files in os.walk(input_directory):
             for thisdir in dirs:
-		thisdir = os.path.join(root,thisdir)
-		filelist = ([os.path.join(thisdir,f) for f in os.listdir(thisdir)
-			    if '_selected.root' in f])
-                if len(filelist)>1:
-                    indirs[thisdir] = filelist
-	for indir in indirs.keys():
-	    print('--------------------')
-	    print(indir)
-	    print(indirs[indir])
-	    outfile = os.path.join(indir,'selected.root')
-	    if os.path.exists(outfile):
-		os.system('rm '+outfile)
-	    mt.mergefiles(indirs[indir],outfile,removeinput=False)
+                thisdir = os.path.join(root,thisdir)
+                filelist = ([os.path.join(thisdir,f) for f in os.listdir(thisdir)
+                            if f.endswith('_selected.root')])
+                if len(filelist)>1: indirs[thisdir] = filelist
+        for indir in indirs.keys():
+            print('now running on {} ({} files)'.format(indir, len(indirs[indir])))
+            outfile = os.path.join(indir, 'selected.root')
+            if os.path.exists(outfile): os.system('rm '+outfile)
+            mt.mergefiles(indirs[indir], outfile, removeinput=False, runjob=False)
 
     else:
-	print('### ERROR ###: need different number of command line arguments')
-	print('               usage: python merge.py <input_directory>')
+        print('### ERROR ###: need different number of command line arguments')
+        print('               usage: python merge.py <input_directory>')

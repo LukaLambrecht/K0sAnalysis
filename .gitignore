@@ -5,6 +5,7 @@
 *.png
 *.jpeg
 *.jpg
+*.eps
 *.pdf
 
 ### ignore compiled pythomn

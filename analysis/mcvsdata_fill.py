@@ -1,6 +1,8 @@
-#########################################################################
-# script to read a variable from a flat tree and make MC vs. data plots #
-#########################################################################
+############################################
+# Read RPV variable and make distributions #
+############################################
+# With options for background subtraction, normalization, etc.
+
 import ROOT
 import os
 import sys
@@ -13,7 +15,7 @@ from count_peak import count_peak
 sys.path.append(os.path.abspath('../pureweighting'))
 import addpuscale as pu
 
-sys.stderr.write('### starting ###\n')
+sys.stderr.write('###starting###\n')
 
 ### Set global program parameters
 
@@ -104,7 +106,7 @@ else:
     # (directory to store other useful objects in)
     args['bck_mode'] = 'sideband'
     # (bck_mode parameter:  default = count all instances of varname)
-    #                       sidebands = subtract background based on sidebands in another variable)
+    #                       sideband = subtract background based on sidebands in another variable)
     args['varname'] = '_KsRPV'
     args['treename'] = 'laurelin'
     args['extracut'] = '' # default: empty string (no additional selection)
@@ -387,17 +389,35 @@ if(args['normalization']==5):
 
 print('writing histograms to file...')
 f = ROOT.TFile.Open(args['histfile'],"recreate")
+# write histograms
 for hist in mchistlist+datahistlist:
 	hist.Write(hist.GetName())
-normalization_st = ROOT.TVectorD(1); normalization_st[0] = args['normalization']
+# write normalization
+normalization_st = ROOT.TVectorD(1)
+normalization_st[0] = args['normalization']
 normalization_st.Write("normalization")
+# write norm range
 if(args['normalization']==3 or args['normalization']==5):
     normrange_st = ROOT.TVectorD(2)
-    normrange_st[0] = args['normrange'][0]; normrange_st[1] = args['normrange'][1]
+    normrange_st[0] = args['normrange'][0]
+    normrange_st[1] = args['normrange'][1]
     normrange_st.Write("normrange")
+# write luminosity
 lumi_st = ROOT.TVectorD(1)
 lumi_st[0] = args['lumi']
 lumi_st.Write("lumi")
+# write background mode
+bck_mode_st = ROOT.TVectorD(1)
+if args["bck_mode"]=='default': bck_mode_st[0] = 1
+elif args["bck_mode"]=='sideband': bck_mode_st[0] = 2
+else: bck_mode_st[0] = 0
+bck_mode_st.Write("bckmode")
+# write V0 type
+v0type_st = ROOT.TVectorD(1)
+if args["treename"]=="laurelin": v0type_st[0] = 1
+elif args["treename"]=="telperion": v0type_st[0] = 2
+else: v0type_st[0] = 0
+v0type_st.Write("v0type")
 f.Close()
 
-sys.stderr.write('### done ###\n')
+sys.stderr.write('###done###\n')

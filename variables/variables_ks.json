@@ -1,0 +1,36 @@
+[
+{
+  "name": "_KsInvMass",
+  "xlow": 0.42,
+  "xhigh": 0.58,
+  "nbins": 50,
+  "xaxtitle": "m(#pi^{+},#pi^{-}) (GeV)",
+  "yaxtitle": "Number of candidates"
+},
+{
+  "name": "_KsRPV",
+  "xlow": 0.0,
+  "xhigh": 40.0,
+  "nbins": 80,
+  "xaxtitle": "#Delta_{2D} (cm)",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_KsPt",
+  "xlow": 0.0,
+  "xhigh": 20.0,
+  "nbins": 40,
+  "xaxtitle": "p_{T} (GeV)",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_KsEta",
+  "xlow": -3.0,
+  "xhigh": 3.0,
+  "nbins": 60,
+  "xaxtitle": "#eta",
+  "yaxtitle": "Number of candidates"
+}
+]

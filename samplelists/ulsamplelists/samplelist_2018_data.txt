@@ -1,0 +1,5 @@
+# 2018 data
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2018A-UL2018_MiniAODv2-v1_data_doublemuon
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2018B-UL2018_MiniAODv2-v1_data_doublemuon
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2018C-UL2018_MiniAODv2-v1_data_doublemuon
+/pnfs/iihe/cms/store/user/llambrec/heavyNeutrinoKsUL/DoubleMuon/crab_Run2018D-UL2018_MiniAODv2-v1_data_doublemuon

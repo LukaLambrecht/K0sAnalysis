@@ -1,40 +1,25 @@
-#####################################################
-# Python script to prepare and submit skimming jobs #
-#####################################################
+########################################################
+# Python script to prepare and submit V0 building jobs #
+########################################################
+# note: the entire folder structure in inputdir will be copied to output dir.
+# note: can be used with both v0builder.py and v0builder2.py, see command line args.
+
 import os
 import sys
 sys.path.append('../tools')
-import jobsubmission as jobsub
+import condortools as ct
 import listtools as lt
 import sampletools as st
 import optiontools as opt
 
-def reducedfoldername(foldername):
-    # return a simplified folder name for the output to allow easier access in later stages
-    # the foldername is assumed to be in crab format with <samplename>_<versionname>
-    foldername = foldername.rstrip('/')
-    basename = ''
-    if '/' in foldername:
-	[basename,foldername] = foldername.rsplit('/',1)
-    isdata = False if 'MiniAOD' in foldername else True
-    if isdata:
-	foldername = foldername.replace('-','_').split('_')
-	reducedname = foldername[0]+'_'+foldername[2]
-    else:
-	reducedname = foldername.replace('-','_').split('_')[0]
-	if 'MiniAOD2016' in foldername:
-	    reducedname += '_2016'
-	elif 'MiniAOD2017' in foldername:
-	    reducedname += '_2017'
-	elif 'MiniAOD2018' in foldername:
-	    reducedname += '_2018'
-    return os.path.join(basename,reducedname)
 
 # parse input arguments
 options = []
 options.append( opt.Option('inputdir', vtype='path') )
 options.append( opt.Option('outputdir', vtype='path') )
 options.append( opt.Option('selection_name', default='legacy') )
+options.append( opt.Option('v0builder', default='v0builder2.py') )
+options.append( opt.Option('runmode', default='condor') )
 options = opt.OptionCollection( options )
 if len(sys.argv)==1:
     print('Use with following options:')
@@ -44,13 +29,28 @@ else:
     options.parse_options( sys.argv[1:] )
     print('Found following configuration:')
     print(options)
-# note: the entire folder structure in inputdir will be copied to output dir
-#	(apart from renaming of sample folders)
+
+# check v0builder
+python = 'python'
+v0builder = 'v0builder.py'
+cmssw = '/user/llambrec/CMSSW_10_2_20'
+if options.v0builder=='v0builder.py': pass
+elif options.v0builder=='v0builder2.py':
+    python = 'python3'
+    v0builder = 'v0builder2.py'
+    cmssw = '/user/llambrec/CMSSW_12_4_6'
+else: raise Exception('ERROR: v0builder {} not recognized.'.format(options.v0builder))
 
 # check selection_name
-if options.selection_name not in (['legacy','legacy_loosenhits','legacy_nonhits',
-				    'ivf']):
-    print('### ERROR ###: selection '+options.selection_name+' not recognized')
+allowed_selections = [
+  'legacy',
+  'legacy_loosenhits',
+  'legacy_nonhits',
+  'legacy_highpt',
+  'ivf'
+]
+if options.selection_name not in allowed_selections:
+    print('### ERROR ###: selection '+options.selection_name+' not recognized.')
     sys.exit()
 
 # check if input directory exists
@@ -68,7 +68,7 @@ for root,dirs,files in os.walk(options.inputdir):
 	#if(not '2016' in dirname or 'Summer' in dirname): continue # temp
 	flist = [f for f in os.listdir(dirname) if f[-5:]=='.root']
 	if len(flist)>0: 
-	    inputfiles[os.path.relpath(dirname,options.inputdir)] = flist
+	    inputfiles[os.path.relpath(dirname,options.inputdir)] = sorted(flist)
 	    ninputfiles += len(flist)
 
 print('found following input files:')
@@ -82,19 +82,28 @@ go = raw_input()
 if not go=='y':
     sys.exit()
 
-# loop over input files and submit jobs
 workdir = os.getcwd()
+cmds = []
+# loop over input directories
 for indirname in inputfiles.keys():
-    outdirname = os.path.join(options.outputdir,reducedfoldername(indirname))
+    outdirname = os.path.join(options.outputdir, indirname)
+    # clean outputdir if it exists, else create it
     if os.path.exists(outdirname):
 	os.system('rm -r '+outdirname)
     os.makedirs(outdirname)
+    # loop over input files
     for inputfile in inputfiles[indirname]:
 	outputfile = os.path.join(outdirname,inputfile.replace('.root','_selected.root'))
 	inputfile = os.path.join(options.inputdir,indirname,inputfile)
-	scriptname = 'qjob_v0builder.sh'
-	with open(scriptname,'w') as script: 
-	    jobsub.initializeJobScript(script,cmssw_version='CMSSW_10_2_20')
-	    command = 'python v0builder.py '+inputfile+' '+outputfile+' -1 '+options.selection_name
-	    script.write(command+'\n')
-	jobsub.submitQsubJob(scriptname)
+        # make command
+        cmd = python + ' ' + v0builder
+	cmd += ' '+inputfile+' '+outputfile+' -1 '+options.selection_name
+        cmds.append(cmd)
+
+# submit jobs
+if options.runmode=='local':
+    for cmd in cmds:
+        print(cmd)
+        os.system(cmd)
+elif options.runmode=='condor':
+    ct.submitCommandsAsCondorCluster('cjob_v0builder', cmds, cmssw_version=cmssw)

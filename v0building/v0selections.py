@@ -16,8 +16,9 @@ def pass_selection( v0object, selection_name, extra=None ):
     if(selection_name=='legacy_highpt'): return selection_legacy_highpt( v0object, extra )
     if(selection_name=='ivf'): return selection_ivf( v0object, extra )
     else:
-	print('### ERROR ###: selection function '+selection_name+' not recognized.')
-	return False
+        msg = 'ERROR: in pass_selection:'
+        msg += ' selection function '+selection_name+' not recognized.'
+        raise Exception(msg)
 
 ##### help functions #####
 
@@ -36,24 +37,24 @@ def selection_legacy( v0object, extra ):
 
     # track quality cuts
     if( v0object.postrack.nhits < 6 
-	or v0object.negtrack.nhits < 6 ): return False
+        or v0object.negtrack.nhits < 6 ): return False
     if( v0object.postrack.fourmomentum.Pt() < 1
-	or v0object.negtrack.fourmomentum.Pt() < 1): return False
+        or v0object.negtrack.fourmomentum.Pt() < 1): return False
     # dca cut
     if( v0object.vardict['_V0DCA'] > 0.2 ): return False
     # vertex fit chi2 cut
     if( v0object.vardict['_V0VtxNormChi2'] > 7 ): return False
     # cos pointing angle
     if( ('primaryVertex' not in extra.keys()) or ('beamSpot' not in extra.keys()) ):
-	print('### ERROR ###: extra argument for selection_legacy must contain'
-		+' primary vertex and beamspot')
-	return False
+        print('### ERROR ###: extra argument for selection_legacy must contain'
+                +' primary vertex and beamspot')
+        return False
     if( cospointing(v0object,extra['primaryVertex']) < 0.99
-	    or cospointing(v0object,extra['beamSpot']) < 0.99): return False
+            or cospointing(v0object,extra['beamSpot']) < 0.99): return False
     return True 
 
 def selection_legacy_loosenhits( v0object, extra ):
-    # same requirement and selection as for selection_legacy
+    # same requirement and selection as for 'legacy' selection
     # only a bit looser on number of hits
     
     # track quality cuts
@@ -75,7 +76,8 @@ def selection_legacy_loosenhits( v0object, extra ):
     return True
 
 def selection_legacy_nonhits( v0object, extra ):
-    # same requirement and selection as for selection_legacy_loosenhits
+    # same requirement and selection as for 'legacy' selection
+    # with looser number of hits per track,
     # but not requiring number of hits at all
     
     # track quality cuts
@@ -95,7 +97,8 @@ def selection_legacy_nonhits( v0object, extra ):
     return True
 
 def selection_legacy_highpt( v0object, extra ):
-    # same requirement and selection as for selection_legacy
+    # same requirement and selection as for 'legacy' selection
+    # (without selection on number of hits per track)
     # but with higher pt threshold on the tracks
 
     # track quality cuts
@@ -120,7 +123,9 @@ def selection_ivf( v0object, extra ):
     #       (loosequality and transverse impact parameter significance);
     #       in older versions of this study, these cuts were performed at ntupling stage
     #       (with values of 1 and >2 respectively),
-    #       here instead the values are stored without selection up to this point
+    #       here instead the values are stored without selection up to this point.
+    # note: above remark is outdated, these selections are again
+    #       performed at ntupling stage (to reduce computational load).
     # note: this selection might behave unexpected on older files,
     #       where these track variables are not stored!
 
@@ -143,5 +148,5 @@ def selection_ivf( v0object, extra ):
     # track parameter cuts
     if( not (v0object.postrack.loosequality and v0object.negtrack.loosequality) ): return False
     if( v0object.postrack.transipsig<2
-	or v0object.negtrack.transipsig<2 ): return False
+        or v0object.negtrack.transipsig<2 ): return False
     return True

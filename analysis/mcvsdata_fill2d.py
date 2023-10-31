@@ -13,7 +13,7 @@ from count_peak import count_peak
 sys.path.append(os.path.abspath('../pureweighting'))
 import addpuscale as pu
 
-sys.stderr.write('### starting ###\n')
+sys.stderr.write('###starting###\n')
 
 ### Set global program parameters
 
@@ -389,10 +389,13 @@ if(args['normalization']==4):
 
 print('writing histograms to file...')
 f = ROOT.TFile.Open(args['histfile'],"recreate")
+# write histograms
 for hist in mchistlist+datahistlist:
     hist.Write(hist.GetName())
+# write normalization
 normalization_st = ROOT.TVectorD(1); normalization_st[0] = args['normalization']
 normalization_st.Write("normalization")
+# write norm range
 if(args['normalization']==3):
     normrange_st = ROOT.TVectorD(4)
     normrange_st[0] = args['xnormrange'][0]
@@ -400,8 +403,22 @@ if(args['normalization']==3):
     normrange_st[2] = args['ynormrange'][0]
     normrange_st[3] = args['ynormrange'][1]
     normrange_st.Write("normrange")
+# write luminosity
 lumi_st = ROOT.TVectorD(1)
 lumi_st[0] = args['lumi']
 lumi_st.Write("lumi")
+# write background mode
+bck_mode_st = ROOT.TVectorD(1)
+if args["bck_mode"]=='default': bck_mode_st[0] = 1
+elif args["bck_mode"]=='sideband': bck_mode_st[0] = 2
+else: bck_mode_st[0] = 0
+bck_mode_st.Write("bckmode")
+# write V0 type
+v0type_st = ROOT.TVectorD(1)
+if args["treename"]=="laurelin": v0type_st[0] = 1
+elif args["treename"]=="telperion": v0type_st[0] = 2
+else: v0type_st[0] = 0
+v0type_st.Write("v0type")
 f.Close()
-sys.stderr.write('### done ###\n')
+
+sys.stderr.write('###done###\n')

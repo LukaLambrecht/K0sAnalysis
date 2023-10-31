@@ -1,0 +1,36 @@
+[
+{
+  "name": "_LaInvMass",
+  "xlow": 1.075,
+  "xhigh": 1.17,
+  "nbins": 40,
+  "xaxtitle": "m(p,#pi) (GeV)",
+  "yaxtitle": "Number of candidates"
+},
+{
+  "name": "_LaRPV",
+  "xlow": 0.0,
+  "xhigh": 40.0,
+  "nbins": 40,
+  "xaxtitle": "#Delta_{2D} (cm)",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_LaPt",
+  "xlow": 0.0,
+  "xhigh": 40.0,
+  "nbins": 40,
+  "xaxtitle": "p_{T} (GeV)",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_LaEta",
+  "xlow": -3.0,
+  "xhigh": 3.0,
+  "nbins": 60,
+  "xaxtitle": "#eta",
+  "yaxtitle": "Number of candidates"
+}
+]
