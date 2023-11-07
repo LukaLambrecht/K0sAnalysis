@@ -8,8 +8,11 @@
 *.eps
 *.pdf
 
-### ignore compiled pythomn
+### ignore compiled python
 *.pyc
+
+### ignore crab job files
+cjob_*
 
 ### ignore specific directories altogether
 files
