@@ -7,6 +7,7 @@ import ROOT
 import os
 import sys
 import copy
+import math
 import numpy as np
 from array import array
 import json
@@ -270,16 +271,21 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
 	    if puscale is not None: weight *= pu.getpuscale(getattr(tree,'_nTrueInt'),puscale)
 	# determine the variable value
 	varvalue = getattr(tree,gargs['varname'])
-	# evaluate an extra selection condition if needed
+	# safety for nan values (not observed for RPV, but sometimes for RPV significance)
+        if math.isnan(varvalue): continue
+        # evaluate an extra selection condition if needed
 	if('extracut' in gargs and len(gargs['extracut'])>0):
 	    if not eval(gargs['extracut']): continue
+        # determine if this value is out of range
 	if(varvalue<gargs['bins'][0] or varvalue>gargs['bins'][-1]): continue
+        # handle case of no background subtraction
 	if(gargs['bck_mode']=='default'):
 	    varhist.Fill(varvalue,weight*lumi*xsection/sumweights)
 	    if(gargs['normalization']==3 
 		and varvalue>gargs['normrange'][0]
 		and varvalue<gargs['normrange'][1]):
 		    sumweightsinrange += weight*lumi*xsection/sumweights
+        # handle case of background subtraction
 	elif(gargs['bck_mode']=='sideband'):
 	    histindex = varhist.FindBin(varvalue)-1
 	    sidevarvalue = getattr(tree,gargs['sidevarname'])

@@ -10,6 +10,7 @@ import plottools as pt
 def plotsinglehistogram(hist, figname, 
                 title=None, xaxtitle=None, yaxtitle=None, 
 	        label=None, color=None, logy=False, drawoptions='',
+                ymaxlinfactor=1.8, yminlogfactor=0.2, ymaxlogfactor=100,
 	        do_cms_text=False, lumitext='', extralumitext='',
 	        topmargin=None, bottommargin=None,
 	        leftmargin=None, rightmargin=None,
@@ -103,15 +104,20 @@ def plotsinglehistogram(hist, figname,
 	xax.SetTitleSize(axtitlesize)
 	xax.SetTitleOffset(1.2)
     ### Y-axis layout
-    if not logy:
-	hist.SetMaximum(hist.GetMaximum()*1.2)
-	hist.SetMinimum(0.)
+    histmin = hist.GetMinimum()
+    histmax = hist.GetMaximum()
+    # in case of log scale
+    if logy:
+        if histmin<=0: histmin = histmax*0.01
+        pad1.SetLogy()
+        if yaxmin is None: yaxmin = histmin*yminlogfactor
+        if yaxmax is None: yaxmax = histmax*ymaxlogfactor
+    # in case of lin scale
     else:
-	c1.SetLogy()
-	hist.SetMaximum(hist.GetMaximum()*10)
-	hist.SetMinimum(hist.GetMaximum()/1e7)
-    if yaxmin is not None: hist.SetMinimum(yaxmin)
-    if yaxmax is not None: hist.SetMaximum(yaxmax)
+        if yaxmin is None: yaxmin = 0.
+        if yaxmax is None: yaxmax = histmax*ymaxlinfactor
+    hist.SetMaximum(yaxmax)
+    hist.SetMinimum(yaxmin)
     yax = hist.GetYaxis()
     yax.SetMaxDigits(3)
     yax.SetNdivisions(8,4,0,ROOT.kTRUE)
@@ -161,5 +167,5 @@ def plotsinglehistogram(hist, figname,
 	    bintext.DrawLatex(xcoord, ycoord+0.05, bincontentfmt.format(printvalue))
 
     c1.SaveAs(figname.split('.')[0]+'.png')
-    c1.SaveAs(figname.split('.')[0]+'.eps')
-    c1.SaveAs(figname.split('.')[0]+'.pdf')
+    #c1.SaveAs(figname.split('.')[0]+'.eps')
+    #c1.SaveAs(figname.split('.')[0]+'.pdf')

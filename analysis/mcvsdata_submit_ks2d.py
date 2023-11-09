@@ -53,65 +53,55 @@ eralist = getfiles( options.filedir, includelist, options.version,
                     check_exist=True, **kwargs)
 
 ### fill plotlist with properties of plots to make
-varnamedict = ({
-	    'rpv_vs_pt':{'xvarname':'_RPV',
-                         'xaxtitle':'#Delta_{2D} (cm)',
-		         'yvarname':'_pt',
-                         'yaxtitle':'p_{T} (GeV)',
-		         'histtitle':'Data / Simulation'}
-		})
-bckmodedict = ({
-	    #'bckdefault':'default',
-	    'bcksideband':'sideband'
-		})
-#extracut = 'bool(abs(getattr(tree,"_KsInvMass")-0.49761)<0.01)'
-extracut = 'bool(2>1)'
-# note: extracut will only be applied in case of no background subtraction and mainly for testing,
-#	not recommended to be used.
-binsdict = ({
-	'defaultbins':{ 'xbins':json.dumps([0.,0.5,1.5,4.5,20.],separators=(',',':')),
-			'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':')) },
-        'finexbins':{ 'xbins':json.dumps([0.,0.5,1.,1.5,2.,5.,10.,15.,20.],separators=(',',':')),
-                      'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':')) },
-	#'bbins_small':{'xbins':json.dumps([0.,0.5,1.,5.,20.],separators=(',',':')), 
-	#		'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))}, 
-			# (for Basile (1))
-        #'bbins_large':{'xbins':json.dumps([0.,0.5,4.,10.,20.],separators=(',',':')), 
-	#		'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':'))} 
-			# (for Basile (2))
+variables = ['rpv_vs_pt']
+settings = ({
+  'rpv_vs_pt': {'xvarname': '_RPV', 'xaxtitle': '#Delta_{2D} (cm)',
+		'yvarname': '_pt', 'yaxtitle': 'p_{T} (GeV)',
+		'histtitle': 'Data / Simulation',
+                'bckmodes': {'bcksideband': 'sideband'},
+                'extracut': 'bool(2>1)',
+                # note: extracut will only be applied in case of no background subtraction
+                # and mainly for testing, not recommended to be used.
+                'bins': {
+	          'defaultbins':{ 'xbins':json.dumps([0.,0.5,1.5,4.5,20.],separators=(',',':')),
+			          'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':')) },
+                  'finexbins':{ 'xbins':json.dumps([0.,0.5,1.,1.5,2.,5.,10.,15.,20.],separators=(',',':')),
+                                'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':')) },
+                },
+                'normalization': {
+	          'norm3small':{ 'type':3,'xnormrange':json.dumps([0.,0.5],separators=(',',':')),
+			         'ynormrange':json.dumps([0.,20.],separators=(',',':'))}
+	        } 
+  }
+})
 
-	    })
-normdict = ({
-	'norm3small':{'type':3,'xnormrange':json.dumps([0.,0.5],separators=(',',':')),
-			       'ynormrange':json.dumps([0.,20.],separators=(',',':'))}
-	    })
-
-for varname in varnamedict:
-    for bckmode in bckmodedict:
-	for norm in normdict:
-	    for bins in binsdict:
-		subfolder = '{}_{}_{}_{}'.format(varname,bckmode,norm,bins)
-		optionsdict = ({ 'xvarname': varnamedict[varname]['xvarname'],
-			    'yvarname': varnamedict[varname]['yvarname'],
+for varname in variables
+    variable = settings[varname]
+    for bckmodename, bckmode in variable['bckmodes'].items():
+	for normname, norm in variable['normalization'].items():
+	    for binname, bins in variable['bins'].items():
+		subfolder = '{}_{}_{}_{}'.format(varname, bckmodename, normname, binname)
+		optionsdict = ({ 'xvarname': variable['xvarname'],
+			    'yvarname': variable['yvarname'],
                             'treename': 'laurelin',
-                            'bck_mode': bckmodedict[bckmode],
+                            'bck_mode': bckmode,
                             'extracut': '',
-                            'normalization': normdict[norm]['type'],
-                            'xaxistitle': varnamedict[varname]['xaxtitle'],
-                            'yaxistitle': varnamedict[varname]['yaxtitle'],
-                            'xbins': binsdict[bins]['xbins'],
-			    'ybins': binsdict[bins]['ybins'],
-                            'histtitle': varnamedict[varname]['histtitle'],
+                            'normalization': norm['type'],
+                            'xaxistitle': variable['xaxtitle'],
+                            'yaxistitle': variable['yaxtitle'],
+                            'xbins': bins['xbins'],
+			    'ybins': bins['ybins'],
+                            'histtitle': variable['histtitle'],
 			    'sidevarname': '_mass',
 			    'sidexlow': 0.44,
 			    'sidexhigh': 0.56,
 			    'sidenbins': 30,
-			    'xnormrange': normdict[norm]['xnormrange'],
-			    'ynormrange': normdict[norm]['ynormrange'],
+			    'xnormrange': norm['xnormrange'],
+			    'ynormrange': norm['ynormrange'],
 			    'eventtreename': 'nimloth'
 			    })
-		if bckmodedict[bckmode]=='default':
-		    optionsdict['extracut']=extracut
+		if bckmode=='default':
+		    optionsdict['extracut']=variable['extracut']
 		if options.testing:
                     # run on a subset of era only
                     eralist = [eralist[0]]

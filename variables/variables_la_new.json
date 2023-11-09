@@ -1,0 +1,45 @@
+[
+{
+  "name": "_mass",
+  "xlow": 1.075,
+  "xhigh": 1.17,
+  "nbins": 40,
+  "xaxtitle": "m(p,#pi) (GeV)",
+  "yaxtitle": "Number of candidates"
+},
+{
+  "name": "_RPV",
+  "xlow": 0.0,
+  "xhigh": 40.0,
+  "nbins": 40,
+  "xaxtitle": "#Delta_{2D} (cm)",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_RSigPV",
+  "xlow": 0.0,
+  "xhigh": 400.0,
+  "nbins": 40,
+  "xaxtitle": "#Delta_{2D} significance",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_pt",
+  "xlow": 0.0,
+  "xhigh": 40.0,
+  "nbins": 40,
+  "xaxtitle": "p_{T} (GeV)",
+  "yaxtitle": "Number of candidates",
+  "inforight": "true"
+},
+{
+  "name": "_eta",
+  "xlow": -3.0,
+  "xhigh": 3.0,
+  "nbins": 60,
+  "xaxtitle": "#eta",
+  "yaxtitle": "Number of candidates"
+}
+]

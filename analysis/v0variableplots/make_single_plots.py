@@ -73,3 +73,13 @@ if __name__=='__main__':
         drawoptions='hist e',
         do_cms_text=True,
         extrainfos=extrainfos, infoleft=infoleft )
+
+    # same with log scale
+    logoutputfile = os.path.splitext(outputfile)[0] + '_log'
+    plotsinglehistogram( hist, logoutputfile,
+        xaxtitle=xaxtitle, yaxtitle=yaxtitle, title=title,
+        topmargin=0.1,
+        logy=True, yminlogfactor=0.2, ymaxlogfactor=10,
+        drawoptions='hist e',
+        do_cms_text=True,
+        extrainfos=extrainfos, infoleft=infoleft )

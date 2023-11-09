@@ -195,6 +195,7 @@ def plotmultihistograms(histlist,
     (totmin,totmax) = getminmax(histlist)
     # in case of log scale
     if logy:
+        if totmin<=0: totmin = totmax*0.01
         pad1.SetLogy()
 	if ylims is None: ylims = (totmin*yminlogfactor, totmax*ymaxlogfactor)
     # in case of lin scale
@@ -259,8 +260,8 @@ def plotmultihistograms(histlist,
 	    return plotobject
 	else:
 	    c1.SaveAs(figname.replace('.png','')+'.png')
-	    c1.SaveAs(figname.replace('.png','')+'.eps')
-	    c1.SaveAs(figname.replace('.png','')+'.pdf')
+	    #c1.SaveAs(figname.replace('.png','')+'.eps')
+	    #c1.SaveAs(figname.replace('.png','')+'.pdf')
 	    return None
 
     ### make the lower part of the plot
@@ -307,6 +308,6 @@ def plotmultihistograms(histlist,
         return plotobject
     else:
 	c1.SaveAs(figname.replace('.png','')+'.png')
-	c1.SaveAs(figname.replace('.png','')+'.eps')
-	c1.SaveAs(figname.replace('.png','')+'.pdf')
+	#c1.SaveAs(figname.replace('.png','')+'.eps')
+	#c1.SaveAs(figname.replace('.png','')+'.pdf')
         return None

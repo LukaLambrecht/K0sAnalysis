@@ -16,12 +16,12 @@ from multihistplotter import plotmultihistograms
 if __name__=='__main__':
 
   parser = argparse.ArgumentParser( description = 'Make V0 plots' )
-  parser.add_argument('--inputfiles', required=True, type=os.path.abspath, nargs='+')
-  parser.add_argument('--treename', required=True)
-  parser.add_argument('--variables', required=True, type=os.path.abspath)
-  parser.add_argument('--inputlabels', nargs='+', default=[])
-  parser.add_argument('--outputdir', default='output_test')
-  parser.add_argument('--nprocess', type=int, default=-1)
+  parser.add_argument('-i', '--inputfiles', required=True, type=os.path.abspath, nargs='+')
+  parser.add_argument('-t', '--treename', required=True)
+  parser.add_argument('-v', '--variables', required=True, type=os.path.abspath)
+  parser.add_argument('-l', '--inputlabels', nargs='+', default=[])
+  parser.add_argument('-o', '--outputdir', default='output_test')
+  parser.add_argument('-n', '--nprocess', type=int, default=-1)
   parser.add_argument('--extrainfos', default=None)
   parser.add_argument('--colors', default=None)
   parser.add_argument('--normalize', default=False, action='store_true')
@@ -94,5 +94,16 @@ if __name__=='__main__':
             dolegend=dolegend, labellist=args.inputlabels,
             colorlist=colorlist,
             ymaxlinfactor=1.8,
+            drawoptions='hist e',
+            extrainfos=extrainfos, infosize=None, infoleft=infoleft, infotop=infotop)
+
+    # same in log scale
+    logoutputfile = os.path.splitext(outputfile)[0]+'_log'
+    plotmultihistograms( histlist,
+            figname=logoutputfile, title=title, xaxtitle=xaxtitle, yaxtitle=yaxtitle,
+            normalize=args.normalize,
+            logy=True, yminlogfactor=0.2, ymaxlogfactor=100,
+            dolegend=dolegend, labellist=args.inputlabels,
+            colorlist=colorlist,
             drawoptions='hist e',
             extrainfos=extrainfos, infosize=None, infoleft=infoleft, infotop=infotop)

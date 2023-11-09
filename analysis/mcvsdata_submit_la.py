@@ -53,55 +53,61 @@ eralist = getfiles( options.filedir, includelist, options.version,
                     check_exist=True, **kwargs)
 
 ### fill plotlist with properties of plots to make
-varnamedict = ({
-	    'rpv':{'variablename':'_RPV','xaxtitle':'#Delta_{2D} (cm)',
-		   'histtitle':''}
-		})
-bckmodedict = ({
-	    'bckdefault':'default',
-	    'bcksideband':'sideband'
-		})
-#extracut = 'bool(abs(getattr(tree,"_mass")-0.49761)<0.01)'
-extracut = 'bool(2>1)'
-# note: extracut will only be applied in case of no background subtraction and mainly for testing,
-#	not recommended to be used.
-binsdict = ({
-	'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
-	'defaultbins':json.dumps([0.,0.5,1.5,4.,10.,20.],separators=(',',':')),
-	#'bbins_small':json.dumps([0.,0.5,1.,5.,20.],separators=(',',':')), # for Basile (1)
-	#'bbins_large':json.dumps([0.,0.5,4.,10.,20.],separators=(',',':')) # for Basile (2)
-	    })
-normdict = ({
-	'norm1':{'type':1,'normrange':''},
-	'norm4':{'type':4,'normrange':''},
-	'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
-	'norm3med':{'type':3,'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
-	    })
+variables = ['rpvsig']
+settings = ({
+  'rpv': {'variablename':'_RPV','xaxtitle':'#Delta_{2D} (cm)', 'histtitle':'',
+          'bckmodes': {'bckdefault':'default', 'bcksideband':'sideband'},
+          'extracut': 'bool(2>1)',
+          # note: extracut will only be applied in case of no background subtraction 
+          # and mainly for testing, not recommended to be used.
+          'bins': {
+            'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
+	    'defaultbins':json.dumps([0.,0.5,1.5,4.,10.,20.],separators=(',',':')),
+	  },
+          'normalization': {
+	    'norm1':{'type':1,'normrange':''},
+	    'norm4':{'type':4,'normrange':''},
+	    'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
+	    'norm3med':{'type':3,'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
+	    },
+  },
+  'rpvsig': {'variablename':'_RSigPV', 'xaxtitle':'#Delta_{2D} significance', 'histtitle':'',
+             'bckmodes': {'bckdefault':'default', 'bcksideband':'sideband'},
+             'extracut': 'bool(2>1)',
+             'bins': {
+               'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
+             },
+             'normalization': {
+               'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
+             },
+  }
+})
 
 ### loop over configurations
-for varname in varnamedict:
-    for bckmode in bckmodedict:
-	for norm in normdict:
-	    for bins in binsdict:
-		subfolder = '{}_{}_{}_{}'.format(varname,bckmode,norm,bins)
-		optionsdict = ({ 'varname': varnamedict[varname]['variablename'],
+for varname in variables:
+    variable = settings[varname]
+    for bckmodename, bckmode in variable['bckmodes'].items():
+	for normname, norm in variable['normalization'].items():
+	    for binname, bins in variable['bins'].items():
+		subfolder = '{}_{}_{}_{}'.format(varname, bckmodename, normname, binname)
+		optionsdict = ({ 'varname': variable['variablename'],
                             'treename': 'telperion',
-                            'bck_mode': bckmodedict[bckmode],
+                            'bck_mode': bckmode,
                             'extracut': '',
-                            'normalization': normdict[norm]['type'],
-                            'xaxistitle': varnamedict[varname]['xaxtitle'],
+                            'normalization': norm['type'],
+                            'xaxistitle': variable['xaxtitle'],
                             'yaxistitle': 'Reconstructed vertices',
-                            'bins': binsdict[bins],
-                            'histtitle': varnamedict[varname]['histtitle'],
+                            'bins': bins,
+                            'histtitle': variable['histtitle'],
 			    'sidevarname': '_mass',
 			    'sidexlow': 1.08,
 			    'sidexhigh': 1.15,
 			    'sidenbins': 30,
-			    'normrange': normdict[norm]['normrange'],
+			    'normrange': norm['normrange'],
 			    'eventtreename': 'nimloth'
 			    })
-		if bckmodedict[bckmode]=='default':
-		    optionsdict['extracut']=extracut
+		if bckmode=='default':
+		    optionsdict['extracut'] = variable['extracut']
 		if options.testing:
                     # run on a subselection of eras only
                     eralist = [eralist[0]]
