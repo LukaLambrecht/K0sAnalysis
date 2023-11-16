@@ -2,16 +2,16 @@
 {
   "name": "_RPV",
   "xlow": 0.0,
-  "xhigh": 20.0,
-  "nbins": 80,
+  "xhigh": 2.0,
+  "nbins": 40,
   "xaxtitle": "$\\Delta_{2D}$ (cm)",
   "yaxtitle": "Number of candidates"
 },
 {
   "name": "_RSigPV",
   "xlow": 0.0,
-  "xhigh": 600.0,
-  "nbins": 80,
+  "xhigh": 60.0,
+  "nbins": 40,
   "xaxtitle": "$\\Delta_{2D}$ significance",
   "yaxtitle": "Number of candidates"
 }

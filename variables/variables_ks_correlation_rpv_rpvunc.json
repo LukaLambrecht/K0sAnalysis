@@ -8,11 +8,11 @@
   "yaxtitle": "Number of candidates"
 },
 {
-  "name": "_RSigPV",
+  "name": "_RPVUnc",
   "xlow": 0.0,
-  "xhigh": 600.0,
+  "xhigh": 0.3,
   "nbins": 80,
-  "xaxtitle": "$\\Delta_{2D}$ significance",
+  "xaxtitle": "$\\Delta_{2D}$ uncertainty (cm)",
   "yaxtitle": "Number of candidates"
 }
 ]
