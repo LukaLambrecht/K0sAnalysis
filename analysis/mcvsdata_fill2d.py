@@ -1,10 +1,12 @@
 ##################################################################################
 # script to read 2 variables from flat trees and make 2D sim vs. data histograms #
 ##################################################################################
+
 import ROOT
 import os
 import sys
 import copy
+import math
 import numpy as np
 from array import array
 import json
@@ -26,8 +28,7 @@ def parse_arguments():
 		    'xvarname':None,'xbins':None,'yvarname':None,'ybins':None,
 		    'normalization':None,
                     'mcin':None,'datain':None}
-    otherargs = {'extracut':'','xnormrange':[0,0],'ynormrange':[0,0],
-		'eventtreename':'',
+    otherargs = {'extracut':'','normrange':[0,0],'normvariable':'','eventtreename':'',
                 'sidebandvarname':'','sidexlow':0,'sidexhigh':1,'sidenbins':1}
     i = 0
     while(i<len(cmdargs)):
@@ -53,7 +54,7 @@ def parse_arguments():
         for key in coreargs.keys():
             if(coreargs[key] is None): print(key)
         return {}
-    checknorm3={'xnormrange':False,'ynormrange':False}
+    checknorm3={'normrange':False,'normvariable':False}
     checknorm4 = {'eventtreename':False}
     checkbck = {'sidevarname':False,'sidexlow':False,'sidexhigh':False,'sidenbins':False}
     for arg in cmdargs:
@@ -64,10 +65,10 @@ def parse_arguments():
         if(argname=='reductionfactor'): otherargs['reductionfactor'] = argval
         # specific options:
         elif(coreargs['normalization']==3 or coreargs['normalization']==5):
-            if argname=='xnormrange':
-                otherargs['xnormrange'] = json.loads(argval); checknorm3['xnormrange']=True
-	    if argname=='ynormrange':
-                otherargs['ynormrange'] = json.loads(argval); checknorm3['ynormrange']=True
+            if argname=='normrange':
+                otherargs['normrange'] = json.loads(argval); checknorm3['normrange']=True
+	    if argname=='normvariable':
+                otherargs['normvariable'] = argval; checknorm3['normvariable']=True
         elif(coreargs['normalization']==4):
             if argname=='eventtreename':
                 otherargs['eventtreename'] = argval; checknorm4['eventtreename']=True
@@ -113,16 +114,16 @@ else:
     # settings for 2D-histogram
     args['xvarname'] = '_KsRPV'
     args['xbins'] = array('f',[0.,0.5,1.5,4.,20.])
-    args['xnormrange'] = [0.,0.5] # ignored if normalization != 3
     args['yvarname'] = '_KsSumPt'
     args['ybins'] = array('f',[0.,15.,20.,25.,40.])
-    args['ynormrange'] = [0.,40.] # ignored if normalization != 3
     args['normalization'] = 3
     # (normalization parameter:	0 = no normalization, weights, xsection and lumi set to 1.)
     # (				1 = normalize using weights, xsection and lumi.)
     # (				2 = same as before but apply normalization to data afterwards.)
     # (				3 = same as before but normalize in specified range only.)
     # (				4 = normalize number of events to data, not number of instances)
+    args['normrange'] = [0.,0.5] # ignored if normalization != 3 or 5
+    args['normvariable'] = '_KsRPV' # ignroed if normalization != 3 or 5
     args['eventtreename'] = 'nimloth' # ignored if normalization != 4
     # settings for sideband histograms (ignored if mode != 2)
     args['sidevarname'] = '_KsInvMass'
@@ -189,6 +190,7 @@ for i in range(len(args['datain'])):
 				nxbins,args['xbins'],nybins,args['ybins']))
     datahistlist[i].SetDirectory(0)
 # initialize histograms for sideband variable (per bin in main variables)
+# (3D lists: dimension 1: different files, dim 2 and 3: different main variable bins)
 mcsidehistlist = []
 datasidehistlist = []
 if args['bck_mode']=='sideband':
@@ -212,10 +214,26 @@ if args['bck_mode']=='sideband':
 		hist.Sumw2()
 		hist.SetDirectory(0)
 		mcsidehistlist[i][j].append(hist)
+# initialize histograms for sideband variable for normalization in range
+# (1D lists: dimesion 1: different files)
+mcnormsidehistlist = []
+datanormsidehistlist = []
+if( args['bck_mode']=='sideband' and args['normalization']==3 ):
+    for sample in args['datain']:
+        hist = ROOT.TH1F(sample['label']+'_norm',"",args['sidenbins'],args['sidexlow'],args['sidexhigh'])
+        hist.Sumw2()
+        hist.SetDirectory(0)
+        datanormsidehistlist.append(hist)
+    for sample in args['mcin']:
+        hist = ROOT.TH1F(sample['label']+'_norm',"",args['sidenbins'],args['sidexlow'],args['sidexhigh'])
+        hist.Sumw2()
+        hist.SetDirectory(0)
+        mcnormsidehistlist.append(hist)
 
 ### loop over instances and fill histograms
 
-def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
+def addinputfile(inlist, index, isdata, varhist,
+    sidehistlist=None, sidenormhistlist=None, gargs=None):
     ### fill histogram belonging to a certain sample
     # input arguments: 
     # - inlist = input structure (list of dicts) containing sample info
@@ -265,30 +283,46 @@ def addinputfile(inlist,index,isdata,varhist,sidehistlist=None,gargs=None):
             sys.stdout.write("\r"+str(percent)+'%')
             sys.stdout.flush()
         tree.GetEntry(j)
+
 	# set correct weight for this entry
         weight = 1.
         if(not isdata and not gargs['normalization']==0):
             weight = getattr(tree,'_weight')
             if puscale is not None: weight *= pu.getpuscale(getattr(tree,'_nTrueInt'),puscale)
-        # determine the variable value
+
+        # determine the variable value and do some extra checks
 	xvarvalue = getattr(tree,args['xvarname'])
 	yvarvalue = getattr(tree,args['yvarname'])
+        # safety for nan values (not observed for RPV, but sometimes for RPV significance)
+        if math.isnan(xvarvalue): continue
+        if math.isnan(yvarvalue): continue
 	# evaluate an extra selection condition if needed
         if('extracut' in gargs and len(gargs['extracut'])>0):
             if not eval(gargs['extracut']): continue
+        # determine if this value is out of range
 	if(xvarvalue<gargs['xbins'][0] or xvarvalue>gargs['xbins'][-1]): continue
 	if(yvarvalue<gargs['ybins'][0] or yvarvalue>gargs['ybins'][-1]): continue
+
+        # value is valid, now fill it in the correct histogram
+        # case of no background subtraction
 	if(gargs['bck_mode']=='default'):
 	    varhist.Fill(xvarvalue,yvarvalue,weight*lumi*xsection/sumweights)
-	    if(gargs['normalization']==3
-                and xvarvalue>gargs['xnormrange'][0] and xvarvalue<gargs['xnormrange'][1]
-		and yvarvalue>gargs['ynormrange'][0] and yvarvalue<gargs['ynormrange'][1]):
+	    if(gargs['normalization']==3):
+                normvalue = getattr(tree,gargs['normvariable'])
+                if( normvalue>gargs['normrange'][0] 
+                    and normvalue<gargs['normrange'][1] ):
 		    sumweightsinrange += weight*lumi*xsection/sumweights
+        # handle case of background subtraction
 	elif(gargs['bck_mode']=='sideband'):
 	    binx = varhist.GetXaxis().FindBin(xvarvalue)-1
 	    biny = varhist.GetYaxis().FindBin(yvarvalue)-1
 	    sidevarvalue = getattr(tree,gargs['sidevarname'])
 	    sidehistlist[index][binx][biny].Fill(sidevarvalue,weight*lumi*xsection/sumweights)
+            if(gargs['normalization']==3):
+                normvalue = getattr(tree,gargs['normvariable'])
+                if( normvalue>gargs['normrange'][0]
+                    and normvalue<gargs['normrange'][1] ):
+                    sidenormhistlist[index].Fill(sidevarvalue,weight*lumi*xsection/sumweights)
     f.Close()
     sys.stdout.write("\r"+'100%'+"\n")
     sys.stdout.flush()
@@ -298,7 +332,10 @@ print('adding simulation files...')
 for i in range(len(args['mcin'])):
     print('file '+str(i+1)+' of '+str(len(args['mcin'])))
     mchist = mchistlist[i]
-    temp = addinputfile(args['mcin'],i,False,mchist,sidehistlist=mcsidehistlist,gargs=args)
+    temp = addinputfile(args['mcin'],i,False,mchist,
+                        sidehistlist=mcsidehistlist,
+                        sidenormhistlist=mcnormsidehistlist,
+                        gargs=args)
     mceventweights += temp[0]
     mcwinrange += temp[1]
 print('adding data files...')
@@ -306,7 +343,9 @@ for i in range(len(args['datain'])):
     print('file '+str(i+1)+' of '+str(len(args['datain'])))
     datahist = datahistlist[i]
     temp = addinputfile(args['datain'],i,True,datahist,
-                        sidehistlist=datasidehistlist,gargs=args)
+                        sidehistlist=datasidehistlist,
+                        sidenormhistlist=datanormsidehistlist,
+                        gargs=args)
     dataeventweights += temp[0]
     datawinrange += temp[1]
 
@@ -314,7 +353,6 @@ for i in range(len(args['datain'])):
  
 if(args['bck_mode']=='sideband'):
     print('performing fits to background in all bins...')
-    # define common arguments
     gargs = copy.copy(args)
     for i in range(nxbins):
 	for j in range(nybins):
@@ -340,43 +378,44 @@ if(args['bck_mode']=='sideband'):
 
 ### Normalize MC histograms to data if needed
 
-# for normalization equalling 2 or 3, calculate sum of MC and sum of data histograms
-if(args['normalization']==2 or args['normalization']==3):
-    mchist = mchistlist[0].Clone()
-    for i in range(1,len(mchistlist)):
-	mchist.Add(mchistlist[i])
-    datahist = datahistlist[0].Clone()
-    for i in range(1,len(datahistlist)):
-        datahist.Add(datahistlist[i])
-
-# for normalization equalling 2, normalize sum of MC to sum of data
+# for normalization equalling 2,
+# calculate sum of MC and sum of data histograms,
+# and scale total MC to total data
 if(args['normalization']==2):
-    print('post-processing simulation files...')
+    mchist = mchistlist[0].Clone()
+    for i in range(1,len(mchistlist)): mchist.Add(mchistlist[i])
+    datahist = datahistlist[0].Clone()
+    for i in range(1,len(datahistlist)): datahist.Add(datahistlist[i])
     ndataw = datahist.GetSumOfWeights()
     nmcw = mchist.GetSumOfWeights()
     scale = ndataw/nmcw
-    for hist in mchistlist:
-	hist.Scale(scale)
+    for hist in mchistlist: hist.Scale(scale)
 
-# for normalization equalling 3, same as above but only in given range
+# for normalization equalling 3,
+# calculate sum of weights of MC events and data events,
+# for events with a specified variable in a specified range
 if(args['normalization']==3):
-    print('post-processing simulation files...')
-    # need to recalculate datawinrange and mcwinrange if bck_mode==2, 
-    # as they cannot be calculated in event loop
+    # use datawinrange and mcwinrange calculated in event loop,
+    # but for sideband background subtraction, they need to be recalculated
+    # by fitting the background in the sideband histograms
     if(args['bck_mode']=='sideband'):
-        datawinrange = datahist.Integral(
-		    datahist.GetXaxis().FindBin(args['xnormrange'][0]+0.1*minxbinwidth),
-                    datahist.GetXaxis().FindBin(args['xnormrange'][1]-0.1*minxbinwidth),
-		    datahist.GetYaxis().FindBin(args['ynormrange'][0]+0.1*minybinwidth),
-		    datahist.GetYaxis().FindBin(args['ynormrange'][1]-0.1*minybinwidth))
-        mcwinrange = mchist.Integral(
-		    mchist.GetXaxis().FindBin(args['xnormrange'][0]+0.1*minxbinwidth),
-                    mchist.GetXaxis().FindBin(args['xnormrange'][1]-0.1*minxbinwidth),
-		    mchist.GetYaxis().FindBin(args['ynormrange'][0]+0.1*minybinwidth),
-		    mchist.GetYaxis().FindBin(args['ynormrange'][1]-0.1*minybinwidth))
+        datawinrange = 0.
+        mcwinrange = 0.
+        extrainfo = '{0:.2f} < '.format(args['normrange'][0])
+        extrainfo += args['normvariable']
+        extrainfo += ' < {0:.2f}'.format(args['normrange'][1])
+        for j in range(len(args['mcin'])):
+            gargs['lumi'] = args['mcin'][j]['luminosity']
+            (npeak,nerror) = count_peak(mcnormsidehistlist[j],'simulation',
+                                        extrainfo,gargs,mode='hybrid')
+            mcwinrange += npeak
+        for j in range(len(args['datain'])):
+            gargs['lumi'] = args['datain'][j]['luminosity']
+            (npeak,nerror) = count_peak(datanormsidehistlist[j],'data',
+                                        extrainfo,gargs,mode='hybrid')
+            datawinrange += npeak
     scale = datawinrange/mcwinrange
-    for hist in mchistlist:
-	hist.Scale(scale)
+    for hist in mchistlist: hist.Scale(scale)
 
 # for normalization equalling 4, scale using event weights
 if(args['normalization']==4):
@@ -390,19 +429,24 @@ if(args['normalization']==4):
 print('writing histograms to file...')
 f = ROOT.TFile.Open(args['histfile'],"recreate")
 # write histograms
-for hist in mchistlist+datahistlist:
-    hist.Write(hist.GetName())
+for hist in mchistlist+datahistlist: hist.Write(hist.GetName())
+# write meta-info
+xvarname_st = ROOT.TNamed('xvarname', args['xvarname'])
+xvarname_st.Write()
+yvarname_st = ROOT.TNamed('yvarname', args['yvarname'])
+yvarname_st.Write()
 # write normalization
-normalization_st = ROOT.TVectorD(1); normalization_st[0] = args['normalization']
+normalization_st = ROOT.TVectorD(1)
+normalization_st[0] = args['normalization']
 normalization_st.Write("normalization")
 # write norm range
 if(args['normalization']==3):
-    normrange_st = ROOT.TVectorD(4)
-    normrange_st[0] = args['xnormrange'][0]
-    normrange_st[1] = args['xnormrange'][1]
-    normrange_st[2] = args['ynormrange'][0]
-    normrange_st[3] = args['ynormrange'][1]
+    normrange_st = ROOT.TVectorD(2)
+    normrange_st[0] = args['normrange'][0]
+    normrange_st[1] = args['normrange'][1]
     normrange_st.Write("normrange")
+    normvariable_st = ROOT.TNamed('normvariable', args['normvariable'])
+    normvariable_st.Write()
 # write luminosity
 lumi_st = ROOT.TVectorD(1)
 lumi_st[0] = args['lumi']

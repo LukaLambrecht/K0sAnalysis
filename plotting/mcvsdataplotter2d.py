@@ -288,8 +288,10 @@ if __name__=='__main__':
     title = r'K^{0}_{S} vertex radial distance'
     xaxistitle = 'radial distance (cm)' # set x axis title
     yaxistitle = r'ditrack p_{T} sum (GeV)' # set y axis title
+    # optional arguments
     outrootfile = None
-    # (file to write ratio histogram to)
+    doextrainfos = False
+    extrainfos = []
 
     # configure input parameters (from command line for submission script)
     cmdargs = sys.argv[1:]
@@ -307,6 +309,7 @@ if __name__=='__main__':
             # optional arguments
 	    elif argname == 'outrootfile': outrootfile = argval
             elif argname == 'doextrainfos': doextrainfos = (argval.lower()=='true')
+            elif argname == 'extrainfos': extrainfos = argval
         if False in coreargs.values():
             print('ERROR: the following core arguments were not defined:')
             for key in coreargs.keys():
@@ -316,17 +319,17 @@ if __name__=='__main__':
     indict = loadobjects(histfile, histdim=2)
 
     # configure other parameters based on input
-    xnormrange = None
-    ynormrange = None
+    xvarname = indict['xvarname']
+    yvarname = indict['yvarname']
+    normrange = None
     if indict['normalization'] == 3: 
-	xnormrange = indict['xnormrange']
-	ynormrange = indict['ynormrange']
+	normrange = indict['normrange']
+	normvariable = indict['normvariable']
     lumistr = ''
     if indict['lumi'] > 0:
         lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
 
     # make extra info
-    extrainfos = []
     infoleft = None
     infotop = None
     p1rightmargin = None
@@ -334,32 +337,34 @@ if __name__=='__main__':
       p1rightmargin = 0.35
       infoleft = 0.8
       infotop = 0.7
-      if( indict['v0type'] is not None ):
-        v0type = indict['v0type']
-        if v0type.lower()=='ks':
-          extrainfos.append('K^{0}_{S} candidates')
-        elif v0type.lower()=='la':
-          extrainfos.append('#Lambda^{0} candidates')
-      if( indict['bckmode'] is not None ):
-        bckmode = indict['bckmode']
-        if bckmode.lower()=='default':
-          extrainfos.append('Background not subtracted')
-        elif bckmode.lower()=='sideband':
-          extrainfos.append('Background subtracted')
-      if( indict['normalization'] is not None ):
-        norm = indict['normalization']
-        if norm==1:
-          extrainfos.append('Normalized to luminosity')
-        if norm==2:
-          extrainfos.append('Normalized to data')
-        if norm==3:
-          extrainfos.append('Normalized in range')
-        if norm==4:
-          extrainfos.append('Normalized to data events')
+      if len(extrainfos)==0:
+        if( indict['v0type'] is not None ):
+          v0type = indict['v0type']
+          if v0type.lower()=='ks':
+            extrainfos.append('K^{0}_{S} candidates')
+          elif v0type.lower()=='la':
+            extrainfos.append('#Lambda^{0} candidates')
+        if( indict['bckmode'] is not None ):
+          bckmode = indict['bckmode']
+          if bckmode.lower()=='default':
+            extrainfos.append('Background not subtracted')
+          elif bckmode.lower()=='sideband':
+            extrainfos.append('Background subtracted')
+        if( indict['normalization'] is not None ):
+          norm = indict['normalization']
+          if norm==1:
+            extrainfos.append('Normalized to luminosity')
+          if norm==2:
+            extrainfos.append('Normalized to data')
+          if norm==3:
+            extrainfos.append('Normalized in range')
+          if norm==4:
+            extrainfos.append('Normalized to data events')
+      else:
+        extrainfos = extrainfos.split(',')
 
     plotmcvsdata2d( indict['mchistlist'], indict['datahistlist'], outfile,
                     xaxistitle=xaxistitle, yaxistitle=yaxistitle, title=title,
-                    drawbox=[xnormrange[0],ynormrange[0],xnormrange[1],ynormrange[1]],
                     lumistr=lumistr, binmode='equal', outrootfile=outrootfile,
                     extrainfos=extrainfos, infoleft=infoleft, infotop=infotop,
                     p1rightmargin=p1rightmargin )

@@ -53,12 +53,14 @@ eralist = getfiles( options.filedir, includelist, options.version,
                     check_exist=True, **kwargs)
 
 ### fill plotlist with properties of plots to make
-variables = ['rpv_vs_pt']
+variables = ['rpv_vs_pt', 'rpvsig_vs_pt']
 settings = ({
   'rpv_vs_pt': {'xvarname': '_RPV', 'xaxtitle': '#Delta_{2D} (cm)',
 		'yvarname': '_pt', 'yaxtitle': 'p_{T} (GeV)',
 		'histtitle': 'Data / Simulation',
-                'bckmodes': {'bcksideband': 'sideband'},
+                'bckmodes': {
+                  'bcksideband': {'type': 'sideband', 'info': 'Background subtracted'}
+                },
                 'extracut': 'bool(2>1)',
                 # note: extracut will only be applied in case of no background subtraction
                 # and mainly for testing, not recommended to be used.
@@ -69,13 +71,31 @@ settings = ({
                                 'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':')) },
                 },
                 'normalization': {
-	          'norm3small':{ 'type':3,'xnormrange':json.dumps([0.,0.5],separators=(',',':')),
-			         'ynormrange':json.dumps([0.,20.],separators=(',',':'))}
+	          'norm3small':{ 'type':3, 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
+                                 'normvariable': '_RPV', 'normrange':json.dumps([0.,0.5],separators=(',',':'))},
 	        } 
+  },
+  'rpvsig_vs_pt': {'xvarname': '_RSigPV', 'xaxtitle': '#Delta_{2D} significance',
+                'yvarname': '_pt', 'yaxtitle': 'p_{T} (GeV)',
+                'histtitle': 'Data / Simulation',
+                'bckmodes': {
+                  'bcksideband': {'type': 'sideband', 'info': 'Background subtracted'}
+                },
+                'extracut': 'bool(2>1)',
+                # note: extracut will only be applied in case of no background subtraction
+                # and mainly for testing, not recommended to be used.
+                'bins': {
+                  'finexbins':{ 'xbins':json.dumps([0., 100., 200., 300., 400., 500., 600.],separators=(',',':')),
+                                'ybins':json.dumps([0.,5.,10.,20.],separators=(',',':')) },
+                },
+                'normalization': {
+                  'norm3small':{ 'type':3, 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
+                                 'normvariable': '_RPV', 'normrange':json.dumps([0.,0.5],separators=(',',':'))},                              
+                }
   }
 })
 
-for varname in variables
+for varname in variables:
     variable = settings[varname]
     for bckmodename, bckmode in variable['bckmodes'].items():
 	for normname, norm in variable['normalization'].items():
@@ -84,7 +104,7 @@ for varname in variables
 		optionsdict = ({ 'xvarname': variable['xvarname'],
 			    'yvarname': variable['yvarname'],
                             'treename': 'laurelin',
-                            'bck_mode': bckmode,
+                            'bck_mode': bckmode['type'],
                             'extracut': '',
                             'normalization': norm['type'],
                             'xaxistitle': variable['xaxtitle'],
@@ -96,12 +116,12 @@ for varname in variables
 			    'sidexlow': 0.44,
 			    'sidexhigh': 0.56,
 			    'sidenbins': 30,
-			    'xnormrange': norm['xnormrange'],
-			    'ynormrange': norm['ynormrange'],
+                            'normvariable': norm['normvariable'],
+			    'normrange': norm['normrange'],
 			    'eventtreename': 'nimloth'
 			    })
-		if bckmode=='default':
-		    optionsdict['extracut']=variable['extracut']
+		if bckmode['type']=='default':
+		    optionsdict['extracut'] = variable['extracut']
 		if options.testing:
                     # run on a subset of era only
                     eralist = [eralist[0]]
@@ -117,7 +137,7 @@ for varname in variables
 		    thismcin = era['mcin']
 		    thisdatain = era['datain']
 		    
-		    optionsdict['histtitle'] = (varnamedict[varname]['histtitle']
+		    optionsdict['histtitle'] = (variable['histtitle']
 						+' ({})'.format(era['label']))
 
 		    optionstring = " 'histfile="+os.path.join(thishistdir,'histograms.root')+"'"
@@ -129,6 +149,8 @@ for varname in variables
 		    for option in optionsdict.keys():
 			optionstring += " '"+option+"="+str(optionsdict[option])+"'"
                     optionstring += " 'doextrainfos=True'"
+                    extrainfos = 'K^{0}_{S} candidates'+',{},{}'.format(bckmode['info'],norm['info'])
+                    optionstring += " 'extrainfos={}'".format(extrainfos)
 		    
                     # make commands
                     cmds = []

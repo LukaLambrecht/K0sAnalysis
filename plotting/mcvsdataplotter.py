@@ -19,16 +19,10 @@ def loadobjects(histfile, histdim=1):
     normalization = int(f.Get("normalization")[0])
     res['normalization'] = normalization
     if(normalization==3):
-        if histdim==1:
-            normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
-            res['normrange'] = normrange
-            normvariable = f.Get("normvariable").GetTitle()
-            res['normvariable'] = normvariable
-        elif histdim==2:
-            xnormrange = [f.Get("normrange")[0],f.Get("normrange")[1]]
-            ynormrange = [f.Get("normrange")[2],f.Get("normrange")[3]]
-            res['xnormrange'] = xnormrange
-            res['ynormrange'] = ynormrange
+        normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
+        res['normrange'] = normrange
+        normvariable = f.Get("normvariable").GetTitle()
+        res['normvariable'] = normvariable
     # load luminosity
     try:
 	lumi = f.Get("lumi")[0]
@@ -56,8 +50,14 @@ def loadobjects(histfile, histdim=1):
         print('WARNING: could not find v0type value...')
         res['v0type'] = None
     # load meta-info
-    varname = f.Get('varname').GetTitle()
-    res['varname'] = varname
+    if histdim==1:
+        varname = f.Get('varname').GetTitle()
+        res['varname'] = varname
+    elif histdim==2:
+        xvarname = f.Get('xvarname').GetTitle()
+        res['xvarname'] = xvarname
+        yvarname = f.Get('yvarname').GetTitle()
+        res['yvarname'] = yvarname
     # load histograms
     histlist = ht.loadallhistograms(histfile)
     mchistlist = []
@@ -495,7 +495,7 @@ if __name__=='__main__':
     # optional arguments
     logy = True
     doextrainfos = False
-    extrainfos = None
+    extrainfos = []
     do2016pixel = False
     do20172018pixel = False
 
@@ -559,7 +559,7 @@ if __name__=='__main__':
 
     # make extra info
     if doextrainfos:
-      if extrainfos is None:
+      if len(extrainfos)==0:
         extrainfos = []
         if( indict['v0type'] is not None ):
           v0type = indict['v0type']
