@@ -22,6 +22,8 @@ def loadobjects(histfile, histdim=1):
         if histdim==1:
             normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
             res['normrange'] = normrange
+            normvariable = f.Get("normvariable").GetTitle()
+            res['normvariable'] = normvariable
         elif histdim==2:
             xnormrange = [f.Get("normrange")[0],f.Get("normrange")[1]]
             ynormrange = [f.Get("normrange")[2],f.Get("normrange")[3]]
@@ -53,6 +55,9 @@ def loadobjects(histfile, histdim=1):
     except:
         print('WARNING: could not find v0type value...')
         res['v0type'] = None
+    # load meta-info
+    varname = f.Get('varname').GetTitle()
+    res['varname'] = varname
     # load histograms
     histlist = ht.loadallhistograms(histfile)
     mchistlist = []
@@ -469,7 +474,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     c1.SaveAs(outfile.split('.')[0]+'.png')
     c1.SaveAs(outfile.split('.')[0]+'.pdf')
 
-    ### write ratio to txt file if requested
+    ## write ratio to txt file if requested
     if dotxt:
 	txtoutfile = outfile.split('.')[0]+'_ratio.txt'
 	ratiototxtfile(hist0,mchistsum,txtoutfile)
@@ -490,6 +495,7 @@ if __name__=='__main__':
     # optional arguments
     logy = True
     doextrainfos = False
+    extrainfos = None
     do2016pixel = False
     do20172018pixel = False
 
@@ -509,6 +515,7 @@ if __name__=='__main__':
             # optional arguments
             elif argname == 'logy': logy = (argval.lower()=='true')
             elif argname == 'doextrainfos': doextrainfos = (argval.lower()=='true')
+            elif argname == 'extrainfos': extrainfos = argval
             elif argname == 'do2016pixel': do2016pixel = (argval.lower()=='true')
             elif argname == 'do20172018pixel': do20172018pixel = (argval.lower()=='true')
         if False in coreargs.values():
@@ -521,8 +528,13 @@ if __name__=='__main__':
     #indict = loadobjects_old(histfile) # WARNING: temporarily changed to loadobjects_old!
     
     # configure other parameters based on input
+    varname = indict['varname']
     normrange = None
-    if indict['normalization'] == 3: normrange = indict['normrange']
+    normvariable = None
+    if indict['normalization'] == 3:
+      normrange = indict['normrange']
+      normvariable = indict['normvariable']
+      if varname!=normvariable: normrange = None # disable drawing norm range if variables dont match
     lumistr = ''
     if indict['lumi'] > 0: 
 	lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
@@ -546,37 +558,40 @@ if __name__=='__main__':
 	    colorlist.append(ROOT.kBlack)
 
     # make extra info
-    extrainfos = []
     if doextrainfos:
-      if( indict['v0type'] is not None ):
-        v0type = indict['v0type']
-        if v0type.lower()=='ks':
-          extrainfos.append('K^{0}_{S} candidates')
-        elif v0type.lower()=='la':
-          extrainfos.append('#Lambda^{0} candidates')
-      if( indict['bckmode'] is not None ):
-        bckmode = indict['bckmode']
-        if bckmode.lower()=='default':
-          extrainfos.append('Background not subtracted')
-        elif bckmode.lower()=='sideband':
-          extrainfos.append('Background subtracted')
-      if( indict['normalization'] is not None ):
-        norm = indict['normalization']
-        if norm==1:
-          extrainfos.append('Normalized to luminosity')
-        if norm==2:
-          extrainfos.append('Normalized to data')
-        if norm==3:
-          extrainfos.append('Normalized in range')
-        if norm==4:
-          extrainfos.append('Normalized to data events')
+      if extrainfos is None:
+        extrainfos = []
+        if( indict['v0type'] is not None ):
+          v0type = indict['v0type']
+          if v0type.lower()=='ks':
+            extrainfos.append('K^{0}_{S} candidates')
+          elif v0type.lower()=='la':
+            extrainfos.append('#Lambda^{0} candidates')
+        if( indict['bckmode'] is not None ):
+          bckmode = indict['bckmode']
+          if bckmode.lower()=='default':
+            extrainfos.append('Background not subtracted')
+          elif bckmode.lower()=='sideband':
+            extrainfos.append('Background subtracted')
+        if( indict['normalization'] is not None ):
+          norm = indict['normalization']
+          if norm==1:
+            extrainfos.append('Normalized to luminosity')
+          if norm==2:
+            extrainfos.append('Normalized to data')
+          if norm==3:
+            extrainfos.append('Normalized in range')
+          if norm==4:
+            extrainfos.append('Normalized to data events')
+      else:
+        extrainfos = extrainfos.split(',')
     
     plotmcvsdata(indict['mchistlist'],indict['datahistlist'],outfile,
 		    xaxistitle=xaxistitle,yaxistitle=yaxistitle,title=title,
 		    colorlist=colorlist,
 		    logy=logy,drawrange=normrange,
 		    lumistr=lumistr,dotxt=False,
-                    extrainfos=extrainfos, infosize=15, infoleft=0.65, infotop=0.65,
+                    extrainfos=extrainfos, infosize=15, infoleft=0.6, infotop=0.65,
                     do2016pixel=do2016pixel, do20172018pixel=do20172018pixel )
 
     sys.stderr.write('###done###\n')

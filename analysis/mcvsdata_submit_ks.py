@@ -53,33 +53,41 @@ eralist = getfiles( options.filedir, includelist, options.version,
                     check_exist=True, **kwargs)
 
 ### fill plotlist with properties of plots to make
-variables = ['rpvsig']
+variables = ['rpv', 'rpvsig']
 settings = ({
   'rpv': {'variablename':'_RPV', 'xaxtitle':'#Delta_{2D} (cm)', 'histtitle':'',
-          'bckmodes': {'bckdefault':'default', 'bcksideband':'sideband'},
+          'bckmodes': {
+            'bckdefault': {'type':'default', 'info':'Background not subtracted'},
+            'bcksideband': {'type':'sideband', 'info': 'Background subtracted'}
+          },
           'extracut': 'bool(2>1)',
           # note: extracut will only be applied in case of no background subtraction
           # and mainly for testing, not recommended to be used.
           'bins': {
-            'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
+            'finebins':json.dumps(list(np.linspace(0,20,num=41,endpoint=True)),separators=(',',':')),
             'defaultbins':json.dumps([0.,0.5,1.5,4.,10.,20.],separators=(',',':'))
           },
           'normalization': {
-            'norm1':{'type':1,'normrange':''},
-            'norm4':{'type':4,'normrange':''},
-            'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
-            'norm3med':{'type':3,'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
+            'norm1':{'type':1, 'info':'Normalized to luminosity', 'normvariable':'','normrange':''},
+            'norm4':{'type':4, 'info':'Normalized to data events', 'normvariable':'','normrange':''},
+            'norm3small':{'type':3, 'info': 'Normalized for #Delta_{2D} < 0.5 cm', 
+                          'normvariable': '_RPV', 'normrange':json.dumps([0.,0.5],separators=(',',':'))},
+            'norm3med':{'type':3, 'info': 'Normalized for #Delta_{2D} in 0.5 - 1.5 cm',
+                        'normvariable': '_RPV', 'normrange':json.dumps([0.5,1.5],separators=(',',':'))}
           },
           
   },
   'rpvsig': {'variablename':'_RSigPV', 'xaxtitle':'#Delta_{2D} significance', 'histtitle':'',
-             'bckmodes': {'bckdefault':'default', 'bcksideband':'sideband'},
+             'bckmodes': {
+               'bcksideband': {'type':'sideband', 'info': 'Background subtracted'}
+             },
              'extracut': 'bool(2>1)',
              'bins': {
-               'finebins':json.dumps(list(np.linspace(0,600,num=60,endpoint=True)),separators=(',',':')),
+               'finebins':json.dumps(list(np.linspace(0,600,num=61,endpoint=True)),separators=(',',':')),
              },
              'normalization': {
-               'norm3small':{'type':3,'normrange':json.dumps([0.,10.],separators=(',',':'))},
+               'norm3small':{'type':3, 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
+                             'normvariable': '_RPV', 'normrange':json.dumps([0.,0.5],separators=(',',':'))},
              },
   }
 })
@@ -93,7 +101,7 @@ for varname in variables:
 		subfolder = '{}_{}_{}_{}'.format(varname, bckmodename, normname, binname)
 		optionsdict = ({ 'varname': variable['variablename'],
                             'treename': 'laurelin',
-                            'bck_mode': bckmode,
+                            'bck_mode': bckmode['type'],
                             'extracut': '',
                             'normalization': norm['type'],
                             'xaxistitle': variable['xaxtitle'],
@@ -104,10 +112,11 @@ for varname in variables:
 			    'sidexlow': 0.44,
 			    'sidexhigh': 0.56,
 			    'sidenbins': 30,
+                            'normvariable': norm['normvariable'],
 			    'normrange': norm['normrange'],
 			    'eventtreename': 'nimloth'
 			    })
-		if bckmode=='default':
+		if bckmode['type']=='default':
 		    optionsdict['extracut'] = variable['extracut']
 		if options.testing:
                     # run on a subselection of eras only
@@ -132,6 +141,8 @@ for varname in variables:
 		    for option in optionsdict.keys():
 			optionstring += " '"+option+"="+str(optionsdict[option])+"'"
                     optionstring += " 'doextrainfos=True'"
+                    extrainfos = 'K^{0}_{S} candidates'+',{},{}'.format(bckmode['info'],norm['info'])
+                    optionstring += " 'extrainfos={}'".format(extrainfos)
 		    
 		    # make commands
                     cmds = []

@@ -56,59 +56,62 @@ eralist = getfiles( options.filedir, includelist, options.version,
                     check_exist=True, **kwargs)
 
 ### fill plotlist with properties of plots to make
-plotlist = []
-varnamedict = ({
-	    'rpv':{'variablename':'_RPV',
-                   'xaxtitle':'#Delta_{2D} (cm)',
-		   'histtitle':''}
-		})
-bckmodedict = ({
-            #'bckdefault':'default',
-	    'bcksideband':'sideband'
-		})
-extracut = 'bool(2>1)'
-# note: extracut will only be applied in case of no background subtraction and mainly for testing,
-#	not recommended to be used.
-binsdict = ({
-	'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
-	    })
-normdict = ({
-	'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
-	    })
+variables = ['rpv']
+settings = ({
+  'rpv': {'variablename':'_RPV', 'xaxtitle':'#Delta_{2D} (cm)', 'histtitle':'',
+          'bckmodes': {
+            'bcksideband': {'type':'sideband', 'info': 'Background subtracted'}
+          },
+          'extracut': 'bool(2>1)',
+          # note: extracut will only be applied in case of no background subtraction
+          # and mainly for testing, not recommended to be used.
+          'bins': {
+            'finebins':json.dumps(list(np.linspace(0,20,num=41,endpoint=True)),separators=(',',':')),
+          },
+          'normalization': {
+            'norm3small':{'type':3, 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
+                          'normvariable': '_RPV', 'normrange':json.dumps([0.,0.5],separators=(',',':'))},
+          },
+
+  }
+})
 
 ### loop over configurations
-for varname in varnamedict:
-    for bckmode in bckmodedict:
-	for norm in normdict:
-	    for bins in binsdict:
-		subfolder = '{}_{}_{}_{}'.format(varname,bckmode,norm,bins)
-		optionsdict = ({ 'varname': varnamedict[varname]['variablename'],
+for varname in variables:
+    variable = settings[varname]
+    for bckmodename, bckmode in variable['bckmodes'].items():
+        for normname, norm in variable['normalization'].items():
+            for binname, bins in variable['bins'].items():
+                subfolder = '{}_{}_{}_{}'.format(varname, bckmodename, normname, binname)
+                optionsdict = ({ 'varname': variable['variablename'],
                             'treename': 'laurelin',
-                            'bck_mode': bckmodedict[bckmode],
+                            'bck_mode': bckmode['type'],
                             'extracut': '',
-                            'normalization': normdict[norm]['type'],
-                            'xaxistitle': varnamedict[varname]['xaxtitle'],
+                            'normalization': norm['type'],
+                            'xaxistitle': variable['xaxtitle'],
                             'yaxistitle': 'Reconstructed vertices',
-                            'bins': binsdict[bins],
-                            'histtitle': varnamedict[varname]['histtitle'],
-			    'sidevarname': '_mass',
-			    'sidexlow': 0.44,
-			    'sidexhigh': 0.56,
-			    'sidenbins': 30,
-			    'normrange': normdict[norm]['normrange'],
-			    'eventtreename': 'nimloth'
-			    })
-		if bckmodedict[bckmode]=='default':
-		    optionsdict['extracut']=extracut
-		if options.testing:
+                            'bins': bins,
+                            'histtitle': variable['histtitle'],
+                            'sidevarname': '_mass',
+                            'sidexlow': 0.44,
+                            'sidexhigh': 0.56,
+                            'sidenbins': 30,
+                            'normvariable': norm['normvariable'],
+                            'normrange': norm['normrange'],
+                            'eventtreename': 'nimloth'
+                            })
+                if bckmode['type']=='default':
+                    optionsdict['extracut'] = variable['extracut']
+                if options.testing:
                     # run on a subselection of eras only
-                    #eralist = [eralist[0]]
+                    eralist = [eralist[0]]
                     # run on a subselection of events only
-		    optionsdict['reductionfactor'] = 100
+                    optionsdict['reductionfactor'] = 100
 
 		for era in eralist:
 		    # make a job submission script for this era with these plot options
-		    thishistdir = os.path.join(options.outputdir,era['label'],subfolder)
+		    thishistdir = os.path.join(os.path.join(options.outputdir),
+                                               era['label'],subfolder)
 		    if os.path.exists(thishistdir):
 			os.system('rm -r '+thishistdir)
 		    os.makedirs(thishistdir)
@@ -123,7 +126,9 @@ for varname in varnamedict:
 		    for option in optionsdict.keys():
 			optionstring += " '"+option+"="+str(optionsdict[option])+"'"
                     optionstring += " 'doextrainfos=True'"
-		    
+                    extrainfos = 'K^{0}_{S} candidates'+',{},{}'.format(bckmode['info'],norm['info'])
+                    optionstring += " 'extrainfos={}'".format(extrainfos)		   
+ 
 		    # make commands
                     cmds = []
                     cmds.append('cd ../')

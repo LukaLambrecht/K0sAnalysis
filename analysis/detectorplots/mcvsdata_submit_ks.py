@@ -17,9 +17,9 @@ from mcvsdata_getfiles import getfiles
 ### global settings
 options = []
 options.append( opt.Option('filedir', vtype='path') )
+options.append( opt.Option('version') )
 options.append( opt.Option('testing', vtype='bool', default=False) )
-options.append( opt.Option('includelist', vtype='list',
-                    default=['2016','20172018']) )
+options.append( opt.Option('includelist', vtype='list', default=['default']) )
 options.append( opt.Option('outputdir', default=os.path.abspath('output_test')) )
 options = opt.OptionCollection( options )
 if len(sys.argv)==1:
@@ -31,67 +31,91 @@ else:
     print('Found following configuration:')
     print(options)
 
-filemode = 'old' # hard-coded setting to run on either new or old convention
+# manage input arguments to get files
+includelist = options.includelist
+if 'default' in includelist:
+    if options.version=='run2preul':
+        includelist = ([
+          '2016',
+          '2017',
+          '2018',
+          '20172018'
+        ])
+    elif options.version=='run2ul':
+        includelist = ([
+          '2016PreVFP',
+          '2016PostVFP',
+          '2016',
+          '2017',
+          '2018',
+          '20172018'
+        ])
+kwargs = {}
+if options.version=='run2preul':
+    kwargs['filemode'] = 'old' # hard-coded setting to run on either new or old convention
 
 ### fill eralist with files to run on and related properties
-eralist = getfiles(options.filedir, options.includelist,
-            filemode=filemode, check_exist=True)
+eralist = getfiles( options.filedir, includelist, options.version,
+                    check_exist=True, **kwargs)
 
 ### fill plotlist with properties of plots to make
-plotlist = []
-varnamedict = ({
-	    'rpv':{'variablename':'_KsRPV',
-                   'xaxtitle':'#Delta_{2D} (cm)',
-		   'histtitle':''}
-		})
-bckmodedict = ({
-            #'bckdefault':'default',
-	    'bcksideband':'sideband'
-		})
-extracut = 'bool(2>1)'
-# note: extracut will only be applied in case of no background subtraction and mainly for testing,
-#	not recommended to be used.
-binsdict = ({
-	'finebins':json.dumps(list(np.linspace(0,20,num=40,endpoint=True)),separators=(',',':')),
-	    })
-normdict = ({
-	'norm2':{'type':2,'normrange':''},
-	'norm3small':{'type':3,'normrange':json.dumps([0.,0.5],separators=(',',':'))},
-	    })
+variables = ['rpv']
+settings = ({
+  'rpv': {'variablename':'_RPV', 'xaxtitle':'#Delta_{2D} (cm)', 'histtitle':'',
+          'bckmodes': {
+            #'bckdefault': {'type':'default', 'info':'Background not subtracted'},
+            'bcksideband': {'type':'sideband', 'info': 'Background subtracted'}
+          },
+          'extracut': 'bool(2>1)',
+          # note: extracut will only be applied in case of no background subtraction
+          # and mainly for testing, not recommended to be used.
+          'bins': {
+            'finebins':json.dumps(list(np.linspace(0,20,num=41,endpoint=True)),separators=(',',':')),
+          },
+          'normalization': {
+            'norm3small':{'type':3, 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
+                          'normvariable': '_RPV', 'normrange':json.dumps([0.,0.5],separators=(',',':'))},
+          },
+
+  }
+})
 
 ### loop over configurations
-for varname in varnamedict:
-    for bckmode in bckmodedict:
-	for norm in normdict:
-	    for bins in binsdict:
-		subfolder = '{}_{}_{}_{}'.format(varname,bckmode,norm,bins)
-		optionsdict = ({ 'varname': varnamedict[varname]['variablename'],
+for varname in variables:
+    variable = settings[varname]
+    for bckmodename, bckmode in variable['bckmodes'].items():
+        for normname, norm in variable['normalization'].items():
+            for binname, bins in variable['bins'].items():
+                subfolder = '{}_{}_{}_{}'.format(varname, bckmodename, normname, binname)
+		optionsdict = ({ 'varname': variable['variablename'],
                             'treename': 'laurelin',
-                            'bck_mode': bckmodedict[bckmode],
+                            'bck_mode': bckmode['type'],
                             'extracut': '',
-                            'normalization': normdict[norm]['type'],
-                            'xaxistitle': varnamedict[varname]['xaxtitle'],
+                            'normalization': norm['type'],
+                            'xaxistitle': variable['xaxtitle'],
                             'yaxistitle': 'Reconstructed vertices',
-                            'bins': binsdict[bins],
-                            'histtitle': varnamedict[varname]['histtitle'],
-			    'sidevarname': '_KsInvMass',
+                            'bins': bins,
+                            'histtitle': variable['histtitle'],
+			    'sidevarname': '_mass',
 			    'sidexlow': 0.44,
 			    'sidexhigh': 0.56,
 			    'sidenbins': 30,
-			    'normrange': normdict[norm]['normrange'],
+                            'normvariable': norm['normvariable'],
+			    'normrange': norm['normrange'],
 			    'eventtreename': 'nimloth'
 			    })
-		if bckmodedict[bckmode]=='default':
-		    optionsdict['extracut']=extracut
+		if bckmode['type']=='default':
+		    optionsdict['extracut']=variable['extracut']
 		if options.testing:
                     # run on a subselection of eras only
-                    #eralist = [eralist[0]]
+                    eralist = [eralist[0]]
                     # run on a subselection of events only
 		    optionsdict['reductionfactor'] = 100
 
 		for era in eralist:
 		    # make a job submission script for this era with these plot options
-		    thishistdir = os.path.join(options.outputdir,era['label'],subfolder)
+		    thishistdir = os.path.join(os.path.abspath(options.outputdir),
+                                               era['label'],subfolder)
 		    if os.path.exists(thishistdir):
 			os.system('rm -r '+thishistdir)
 		    os.makedirs(thishistdir)
@@ -105,10 +129,13 @@ for varname in varnamedict:
 		    optionstring += " 'outfile="+os.path.join(thishistdir,'figure.png')+"'"
 		    for option in optionsdict.keys():
 			optionstring += " '"+option+"="+str(optionsdict[option])+"'"
-                    optionstring += " 'doextrainfos=True'"
-                    if era['label']=='2016': optionstring += " 'do2016pixel=True'"
-                    if era['label']=='20172018': optionstring += " 'do20172018pixel=True'"
+                    if '2016' in era['label']: optionstring += " 'do2016pixel=True'"
+                    if '2017' in era['label']: optionstring += " 'do20172018pixel=True'"
+                    if '2018' in era['label']: optionstring += " 'do20172018pixel=True'"
                     optionstring += " 'logy=False'"
+                    optionstring += " 'doextrainfos=True'"
+                    extrainfos = 'K^{0}_{S} candidates'+',{},{}'.format(bckmode['info'],norm['info'])
+                    optionstring += " 'extrainfos={}'".format(extrainfos)
 		    
 		    # make commands
                     cmds = []
