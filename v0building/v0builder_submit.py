@@ -2,75 +2,53 @@
 # Python script to prepare and submit V0 building jobs #
 ########################################################
 # note: the entire folder structure in inputdir will be copied to output dir.
-# note: can be used with both v0builder.py and v0builder2.py, see command line args.
 
+
+# import external modules
 import os
 import sys
+import argparse
+# import framework modules
 sys.path.append('../tools')
 import condortools as ct
+CMSSW = '/user/llambrec/CMSSW_12_4_6'
 import listtools as lt
 import sampletools as st
-import optiontools as opt
 
 
-# parse input arguments
-options = []
-options.append( opt.Option('inputdir', vtype='path') )
-options.append( opt.Option('outputdir', vtype='path') )
-options.append( opt.Option('selection_name', default='legacy') )
-options.append( opt.Option('v0builder', default='v0builder2.py') )
-options.append( opt.Option('runmode', default='condor') )
-options = opt.OptionCollection( options )
-if len(sys.argv)==1:
-    print('Use with following options:')
-    print(options)
-    sys.exit()
-else:
-    options.parse_options( sys.argv[1:] )
-    print('Found following configuration:')
-    print(options)
-
-# check v0builder
-python = 'python'
-v0builder = 'v0builder.py'
-cmssw = '/user/llambrec/CMSSW_10_2_20'
-if options.v0builder=='v0builder.py': pass
-elif options.v0builder=='v0builder2.py':
-    python = 'python3'
-    v0builder = 'v0builder2.py'
-    cmssw = '/user/llambrec/CMSSW_12_4_6'
-else: raise Exception('ERROR: v0builder {} not recognized.'.format(options.v0builder))
+# read command line arguments
+parser = argparse.ArgumentParser( description = 'Perform V0 candidate selection' )
+parser.add_argument('-i', '--inputdir', required=True, type=os.path.abspath)
+parser.add_argument('-o', '--outputdir', required=True, type=os.path.abspath)
+parser.add_argument('-s', '--selection', default='legacy')
+parser.add_argument('--runmode', default='condor', choices=['local', 'condor'])
+args = parser.parse_args()
 
 # check selection_name
 allowed_selections = [
   'legacy',
-  'legacy_loosenhits',
-  'legacy_nonhits',
-  'legacy_highpt',
-  'ivf'
 ]
-if options.selection_name not in allowed_selections:
-    print('### ERROR ###: selection '+options.selection_name+' not recognized.')
-    sys.exit()
+if args.selection_name not in allowed_selections:
+    raise Exception('ERROR: selection '+args.selection_name+' not recognized.')
 
 # check if input directory exists
-if not os.path.exists(options.inputdir):
-    print('### ERROR ###: input directory '+options.inputdir+' does not seem to exist')
+if not os.path.exists(args.inputdir):
+    print('### ERROR ###: input directory '+args.inputdir+' does not seem to exist')
     sys.exit()
 
+# gather input files
 inputfiles = {}
 ninputfiles = 0
-# loop over input files
-for root,dirs,files in os.walk(options.inputdir):
+# loop over input directory
+for root,dirs,files in os.walk(args.inputdir):
     for dirname in dirs:
 	dirname = os.path.join(root,dirname)
-	#if 'MiniAOD' in dirname: continue # temp to do only sim or only data
-	#if(not '2016' in dirname or 'Summer' in dirname): continue # temp
 	flist = [f for f in os.listdir(dirname) if f[-5:]=='.root']
 	if len(flist)>0: 
-	    inputfiles[os.path.relpath(dirname,options.inputdir)] = sorted(flist)
+	    inputfiles[os.path.relpath(dirname,args.inputdir)] = sorted(flist)
 	    ninputfiles += len(flist)
 
+# print input files and ask for confirmation
 print('found following input files:')
 for dirname in inputfiles.keys():
     print('    '+dirname)
@@ -86,7 +64,7 @@ workdir = os.getcwd()
 cmds = []
 # loop over input directories
 for indirname in inputfiles.keys():
-    outdirname = os.path.join(options.outputdir, indirname)
+    outdirname = os.path.join(args.outputdir, indirname)
     # clean outputdir if it exists, else create it
     if os.path.exists(outdirname):
 	os.system('rm -r '+outdirname)
@@ -94,16 +72,18 @@ for indirname in inputfiles.keys():
     # loop over input files
     for inputfile in inputfiles[indirname]:
 	outputfile = os.path.join(outdirname,inputfile.replace('.root','_selected.root'))
-	inputfile = os.path.join(options.inputdir,indirname,inputfile)
+	inputfile = os.path.join(args.inputdir,indirname,inputfile)
         # make command
-        cmd = python + ' ' + v0builder
-	cmd += ' '+inputfile+' '+outputfile+' -1 '+options.selection_name
+        cmd = 'python3 v0builder.py'
+	cmd += ' -i {}'.format(inputfile)
+        cmd += ' -o {}'.format(outputfile)
+        cmd += ' -s {}'.format(args.selection)
         cmds.append(cmd)
 
 # submit jobs
-if options.runmode=='local':
+if args.runmode=='local':
     for cmd in cmds:
         print(cmd)
         os.system(cmd)
-elif options.runmode=='condor':
+elif args.runmode=='condor':
     ct.submitCommandsAsCondorCluster('cjob_v0builder', cmds, cmssw_version=cmssw)

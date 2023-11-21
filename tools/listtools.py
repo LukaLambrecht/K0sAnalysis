@@ -8,13 +8,13 @@ def split(inputlist,partsize):
     outputlist = []
     begin = 0
     while begin<len(inputlist):
-	end = begin+partsize
-	if end>=len(inputlist):
-	    outputlist.append(inputlist[begin:])
-	    break
-	else:
-	    outputlist.append(inputlist[begin:end])
-	    begin = end
+        end = begin+partsize
+        if end>=len(inputlist):
+            outputlist.append(inputlist[begin:])
+            break
+        else:
+            outputlist.append(inputlist[begin:end])
+            begin = end
     return outputlist
 
 ###########################################################

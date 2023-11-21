@@ -4,210 +4,202 @@
 # note: will only work on files that have been processed with the custom ntuplizer
 #       (e.g. using the V0Analyzer module)
 #       and that have been processed with the skimmer in the ../skimming directory!
-# note: kept for later reference, but recommended to use v0builder2.py instead
-#       (with uproot instead of PyROOT)
+# note: use with CMSSW_12_X and python3, for the uproot module to be available!
 
+
+# import external modules
 import sys
 import os
-import ROOT
-import math
+import argparse
 import numpy as np
-from array import array
-from v0object import *
+import uproot
+import awkward as ak
+import vector
+# import framework modules
+from v0selections import cospointing
+from v0selections import selection
 
-# write starting tag (for automatic crash checking)
-sys.stderr.write('###starting###\n')
 
-if len(sys.argv)!=5:
-    print('ERROR: wrong number of command line arguments.')
-    print('       expected arguments:')
-    print('         - input_file')
-    print('         - output_file')
-    print('         - nevents')
-    print('         - selection')
-    sys.exit()
+if __name__=='__main__':
 
-input_file_path = os.path.abspath(sys.argv[1])
-output_file_path = sys.argv[2]
-nevents = int(sys.argv[3])
-selection_name = sys.argv[4]
+  # write starting tag (for automatic crash checking)
+  sys.stderr.write('###starting###\n')
 
-# check selection_name
-allowed_selections = [
-  'legacy',
-  'legacy_loosenhits',
-  'legacy_nonhits',
-  'legacy_highpt',
-  'ivf'
-]
-if selection_name not in allowed_selections:
-    print('### ERROR ###: selection '+selection_name+' not recognized.')
-    sys.exit()
+  # read command line arguments
+  parser = argparse.ArgumentParser( description = 'Perform V0 candidate selection' )
+  parser.add_argument('-i', '--inputfile', required=True, type=os.path.abspath)
+  parser.add_argument('-o', '--outputfile', required=True, type=os.path.abspath)
+  parser.add_argument('-s', '--selection', default='legacy')
+  parser.add_argument('-n', '--nevents', default=-1, type=int)
+  args = parser.parse_args()
 
-# open input file and read tree
-inf = ROOT.TFile.Open(input_file_path)
-intree = inf.Get("blackJackAndHookers/blackJackAndHookersTree")
-try:
-    maxevents = intree.GetEntries()
-    if nevents <= 0: nevents = maxevents 
-    else: nevents = min(nevents,maxevents)
-except:
-    print('### ERROR ###: GetEntries method failed on input file.')
-    print('               probably file was not closed properly.')
-    exit()
+  # check selection_name
+  allowed_selections = [
+    'legacy',
+  ]
+  if args.selection not in allowed_selections:
+    raise Exception('ERROR: selection '+args.selection+' not recognized.')
 
-# try to read hCounter and set isdata to True if attempt fails
-isdata = False
-hcounter = inf.Get("blackJackAndHookers/hCounter")
-ntrueint = inf.Get("blackJackAndHookers/nTrueInteractions")
-try:
-    test = hcounter.GetBinContent(1)
-    test = ntrueint.GetBinContent(1)
-except:
-    print('note: no valid hCounter or nTrueInt found in this file, assuming this is data...')
-    isdata = True
+  # open input file
+  with uproot.open(args.inputfile) as f:
+    fkeys = [key.split(';')[0] for key in f.keys()]
+    tree = f["blackJackAndHookers"]["blackJackAndHookersTree"]
+
+    # read counter histograms
+    isdata = False
+    hcounterkey = "blackJackAndHookers/hCounter"
+    ntrueintkey = "blackJackAndHookers/nTrueInteractions"
+    if( hcounterkey not in fkeys or ntrueintkey not in fkeys ):
+        print('No valid hCounter or nTrueInt found in this file, assuming this is data...')
+        isdata = True
+    else:
+        hcounter = f[hcounterkey]
+        ntrueint = f[ntrueintkey]
     
-# open output file and make trees
-outf = ROOT.TFile(output_file_path,"recreate")
-laurelin = ROOT.TTree("laurelin","") # data structure for Kshort variables
-telperion = ROOT.TTree("telperion","") # data structure for Lambda variables
-celeborn = ROOT.TTree("celeborn","") # data structure for muon variables
-nimloth = ROOT.TTree("nimloth","") # data structure for event variables
-fillvalue = array('f',[0.])
+    # define branches to read from input file
+    branchnames = ['_nimloth_Mll', '_nimloth_nJets',
+                   '_beamSpotX', '_beamSpotY', '_beamSpotZ',
+                   '_primaryVertexX', '_primaryVertexY', '_primaryVertexZ',
+                   '_celeborn_lPt', '_celeborn_lEta', '_celeborn_lPhi', '_celeborn_lCharge']
+    if not isdata: branchnames += ['_weight', '_nTrueInt']
+    for b in tree.keys():
+        if b.startswith('_V0'): branchnames.append(b)
 
-# define branches
-# event variable branches (simply copy from skimmed ntuples)
-nimloth_variables = ['_nimloth_Mll','_nimloth_nJets',
-			'_beamSpotX','_beamSpotY','_beamSpotZ',
-			'_primaryVertexX','_primaryVertexY','_primaryVertexZ']
-for varname in nimloth_variables: nimloth.Branch(varname,fillvalue,str(varname+'/F'))
-# muon variable branches (flatten and copy from skimmed ntuples)
-# note: up to now both leptons are taken together, but easily extendable
-celeborn_variables = ['_celeborn_lPt','_celeborn_lEta','_celeborn_lPhi','_celeborn_lCharge']
-for varname in celeborn_variables: celeborn.Branch(varname,fillvalue,str(varname+'/F'))
-# K0s variable branches
-laurelin_variables = (['_mass','_vertexX','_vertexY','_vertexZ','_RPV','_RBS',
-			'_pt','_ptSum','_eta','_phi',
-			'_nHitsPos','_nHitsNeg','_ptPos','_ptNeg','_trackdR'])
-for varname in laurelin_variables: laurelin.Branch(varname,fillvalue,str(varname+'/F'))
-# Lambda0 variable branches
-# note: up to now Lambda0 and Lambda0Bar are taken together
-telperion_variables = (['_mass','_vertexX','_vertexY','_vertexZ','_RPV','_RBS',
-			'_pt','_ptSum','_eta','_phi',
-			'_nHitsPos','_nHitsNeg','_ptPos','_ptNeg','_trackdR'])
-for varname in telperion_variables: telperion.Branch(varname,fillvalue,str(varname+'/F'))
-# add extra branch for event weight and number of interactions to all trees
-if not isdata:
-    nimloth.Branch('_weight',fillvalue,str('_weight/F'))
-    celeborn.Branch('_weight',fillvalue,str('_weight/F'))
-    laurelin.Branch('_weight',fillvalue,str('_weight/F'))
-    telperion.Branch('_weight',fillvalue,str('_weight/F'))
-    nimloth.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
-    celeborn.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
-    laurelin.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
-    telperion.Branch('_nTrueInt',fillvalue,str('_nTrueInt/F'))
+    # read the data
+    entry_stop = None
+    if( args.nevents>0 and args.nevents<tree.num_entries ): entry_stop = args.nevents
+    msg = 'Tree is found to have {} entries'.format(tree.num_entries)
+    msg += ' of which {} will be read'.format(entry_stop if entry_stop is not None 
+           else tree.num_entries)
+    print(msg)
+    print('Reading branches')
+    sys.stdout.flush()
+    sys.stderr.flush()
+    branches = tree.arrays(branchnames, entry_stop=entry_stop)
 
-# loop over input tree
-print('starting event loop for '+str(nevents)+' events...')
-for i in range(nevents):
-    intree.GetEntry(i)
-    if(i>0 and i%10000==0): 
-	print('processed {} of {} events'.format(i,nevents))
+  # make masks for V0 types
+  ksmask = (branches['_V0Type']==1)
+  lmask = (branches['_V0Type']==2)
+  lbarmask = (branches['_V0Type']==3)
+  lmask = (lmask | lbarmask)
 
-    # fill nimloth and celeborn
-    for varname in nimloth_variables:
-	fillvalue[0] = getattr(intree,varname); nimloth.GetBranch(varname).Fill()
-    for varname in celeborn_variables:
-	fillvalue[0] = getattr(intree,varname)[0]; celeborn.GetBranch(varname).Fill()
-	fillvalue[0] = getattr(intree,varname)[1]; celeborn.GetBranch(varname).Fill()
+  # define extra variables
+  print('Constructing auxiliary variables')
+  
+  # pointing angle wrt primary vertex
+  cospointingPV = cospointing(branches, reference='primaryVertex')
+  
+  # pointing angle wrt beam spot
+  cospointingBS = cospointing(branches, reference='beamSpot')
+  
+  # sum of track pt
+  ptSum = branches['_V0PtPos'] + branches['_V0PtNeg']
+
+  # deltaR between tracks
+  posp4 = vector.zip({
+    'pt': branches['_V0PtPos'],
+    'eta': branches['_V0EtaPos'],
+    'phi': branches['_V0PhiPos'],
+    'mass': 0.
+  })
+  negp4 = vector.zip({
+    'pt': branches['_V0PtNeg'],
+    'eta': branches['_V0EtaNeg'],
+    'phi': branches['_V0PhiNeg'],
+    'mass': 0.
+  })
+  trackdR = posp4.deltaR(negp4)
+
+  # make masks for quality selections
+  print('Performing selections')
+  extra = {
+    'cospointingPV': cospointingPV,
+    'cospointingBS': cospointingBS
+  }
+  selmask = selection(branches, args.selection, extra=extra)
+
+  # fill nimloth
+  print('Filling per-event tree')
+  nimloth = {}
+  nimlothvars = [
+    '_nimloth_Mll', '_nimloth_nJets',
+    '_beamSpotX', '_beamSpotY', '_beamSpotZ',
+    '_primaryVertexX', '_primaryVertexY', '_primaryVertexZ'
+  ]
+  if not isdata: nimlothvars += ['_weight', '_nTrueInt']
+  for var in nimlothvars: nimloth[var] = branches[var]
+
+  # fill celeborn
+  print('Filling per-lepton tree')
+  celeborn = {}
+  celebornvars = [
+    '_celeborn_lPt', '_celeborn_lEta', '_celeborn_lPhi', '_celeborn_lCharge'
+  ]
+  for var in celebornvars: celeborn[var] = ak.flatten(branches[var])
+  if not isdata:
+    celeborn['_weight'] = np.repeat(branches['_weight'], 2)
+    celeborn['_nTrueInt'] = np.repeat(branches['_nTrueInt'], 2)
+
+  # fill laurelin
+  print('Filling K0s tree')
+  laurelin = {}
+  laurelinmask = (ksmask & selmask)
+  laurelin['_mass'] = ak.flatten(branches['_V0InvMass'][laurelinmask])
+  laurelin['_vertexX'] = ak.flatten(branches['_V0X'][laurelinmask])
+  laurelin['_vertexY'] = ak.flatten(branches['_V0Y'][laurelinmask])
+  laurelin['_vertexZ'] = ak.flatten(branches['_V0Z'][laurelinmask])
+  laurelin['_RPV'] = ak.flatten(branches['_V0RPV'][laurelinmask])
+  laurelin['_RBS'] = ak.flatten(branches['_V0RBS'][laurelinmask])
+  laurelin['_RPVSig'] = ak.flatten(branches['_V0RPVSig'][laurelinmask])
+  laurelin['_RBSSig'] = ak.flatten(branches['_V0RBSSig'][laurelinmask])
+  laurelin['_pt'] = ak.flatten(branches['_V0Pt'][laurelinmask])
+  laurelin['_ptSum'] = ak.flatten(ptSum[laurelinmask])
+  laurelin['_eta'] = ak.flatten(branches['_V0Eta'][laurelinmask])
+  laurelin['_phi'] = ak.flatten(branches['_V0Phi'][laurelinmask])
+  laurelin['_nHitsPos'] = ak.flatten(branches['_V0NHitsPos'][laurelinmask])
+  laurelin['_nHitsNeg'] = ak.flatten(branches['_V0NHitsNeg'][laurelinmask])
+  laurelin['_ptPos'] = ak.flatten(branches['_V0PtPos'][laurelinmask])
+  laurelin['_ptNeg'] = ak.flatten(branches['_V0PtNeg'][laurelinmask])
+  laurelin['_trackdR'] = ak.flatten(trackdR[laurelinmask])
+  if not isdata:
+    laurelin['_weight'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_weight'] )
+    laurelin['_nTrueInt'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_nTrueInt'] )
+
+  # fill telperion
+  print('Filling Lambda tree')
+  telperion = {}
+  telperionmask = (lmask & selmask)
+  telperion['_mass'] = ak.flatten(branches['_V0InvMass'][telperionmask])
+  telperion['_vertexX'] = ak.flatten(branches['_V0X'][telperionmask])
+  telperion['_vertexY'] = ak.flatten(branches['_V0Y'][telperionmask])
+  telperion['_vertexZ'] = ak.flatten(branches['_V0Z'][telperionmask])
+  telperion['_RPV'] = ak.flatten(branches['_V0RPV'][telperionmask])
+  telperion['_RBS'] = ak.flatten(branches['_V0RBS'][telperionmask])
+  telperion['_RPVSig'] = ak.flatten(branches['_V0RPVSig'][telperionmask])
+  telperion['_RBSSig'] = ak.flatten(branches['_V0RBSSig'][telperionmask])
+  telperion['_pt'] = ak.flatten(branches['_V0Pt'][telperionmask])
+  telperion['_ptSum'] = ak.flatten(ptSum[telperionmask])
+  telperion['_eta'] = ak.flatten(branches['_V0Eta'][telperionmask])
+  telperion['_phi'] = ak.flatten(branches['_V0Phi'][telperionmask])
+  telperion['_nHitsPos'] = ak.flatten(branches['_V0NHitsPos'][telperionmask])
+  telperion['_nHitsNeg'] = ak.flatten(branches['_V0NHitsNeg'][telperionmask])
+  telperion['_ptPos'] = ak.flatten(branches['_V0PtPos'][telperionmask])
+  telperion['_ptNeg'] = ak.flatten(branches['_V0PtNeg'][telperionmask])
+  telperion['_trackdR'] = ak.flatten(trackdR[telperionmask])
+  if not isdata:
+    telperion['_weight'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_weight'] )
+    telperion['_nTrueInt'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_nTrueInt'] )
+
+  # write output trees to file
+  print('Writing trees to output file')
+  with uproot.recreate(args.outputfile) as f:
+    f['nimloth'] = nimloth
+    f['celeborn'] = celeborn
+    f['laurelin'] = laurelin
+    f['telperion'] = telperion
     if not isdata:
-	fillvalue[0] = getattr(intree,'_weight')
-	nimloth.GetBranch('_weight').Fill()
-	celeborn.GetBranch('_weight').Fill()
-	celeborn.GetBranch('_weight').Fill()
-	fillvalue[0] = getattr(intree,'_nTrueInt')
-	nimloth.GetBranch('_nTrueInt').Fill()
-        celeborn.GetBranch('_nTrueInt').Fill()
-        celeborn.GetBranch('_nTrueInt').Fill()
+        f['hCounter'] = hcounter
+        f['nTrueInteractions'] = ntrueint
 
-    # get collection of V0's from event	
-    v0collection = V0Collection(); v0collection.initFromTreeEntry(intree)
-    k0scollection = v0collection.getK0sCollection();
-    lambdacollection = v0collection.getLambda0Collection() + v0collection.getLambda0BarCollection()
-
-    # do additional selections here
-    extra = {} # make dict of extra variables needed for selections
-    extra['primaryVertex'] = (	getattr(intree,'_primaryVertexX'),
-				getattr(intree,'_primaryVertexY'),
-				getattr(intree,'_primaryVertexZ') )
-    extra['beamSpot'] = (   getattr(intree,'_beamSpotX'),
-			    getattr(intree,'_beamSpotY'),
-			    getattr(intree,'_beamSpotZ') )
-    k0scollection.applySelection( selection_name, extra )
-    lambdacollection.applySelection( selection_name, extra )
-
-    # fill laurelin
-    for k0s in k0scollection:
-	fillvalue[0] = k0s.mass; laurelin.GetBranch('_mass').Fill()
-	fillvalue[0] = k0s.vertex[0]; laurelin.GetBranch('_vertexX').Fill()
-	fillvalue[0] = k0s.vertex[1]; laurelin.GetBranch('_vertexY').Fill()
-	fillvalue[0] = k0s.vertex[2]; laurelin.GetBranch('_vertexZ').Fill()
-	RPV = np.sqrt(	np.power(k0s.vertex[0]-getattr(intree,'_primaryVertexX'),2)
-			+np.power(k0s.vertex[1]-getattr(intree,'_primaryVertexY'),2) )
-	fillvalue[0] = RPV; laurelin.GetBranch('_RPV').Fill()
-	RBS = np.sqrt(  np.power(k0s.vertex[0]-getattr(intree,'_beamSpotX'),2)
-                        +np.power(k0s.vertex[1]-getattr(intree,'_beamSpotY'),2) )
-	fillvalue[0] = RBS; laurelin.GetBranch('_RBS').Fill()
-	fillvalue[0] = k0s.fourmomentum.Pt(); laurelin.GetBranch('_pt').Fill()
-	sumpt = k0s.postrack.fourmomentum.Pt() + k0s.negtrack.fourmomentum.Pt() 
-	fillvalue[0] = sumpt; laurelin.GetBranch('_ptSum').Fill()
-	fillvalue[0] = k0s.fourmomentum.Eta(); laurelin.GetBranch('_eta').Fill()
-	fillvalue[0] = k0s.fourmomentum.Phi(); laurelin.GetBranch('_phi').Fill()
-	fillvalue[0] = k0s.postrack.nhits; laurelin.GetBranch('_nHitsPos').Fill()
-	fillvalue[0] = k0s.negtrack.nhits; laurelin.GetBranch('_nHitsNeg').Fill()
-	fillvalue[0] = k0s.postrack.fourmomentum.Pt(); laurelin.GetBranch('_ptPos').Fill()
-	fillvalue[0] = k0s.negtrack.fourmomentum.Pt(); laurelin.GetBranch('_ptNeg').Fill()
-	fillvalue[0] = k0s.trackdR(); laurelin.GetBranch('_trackdR').Fill()
-	if not isdata: 
-	    fillvalue[0] = getattr(intree,'_weight'); laurelin.GetBranch('_weight').Fill()
-	    fillvalue[0] = getattr(intree,'_nTrueInt'); laurelin.GetBranch('_nTrueInt').Fill()
-
-    # fill telperion
-    for l0 in lambdacollection:
-        fillvalue[0] = l0.mass; telperion.GetBranch('_mass').Fill()
-        fillvalue[0] = l0.vertex[0]; telperion.GetBranch('_vertexX').Fill()
-        fillvalue[0] = l0.vertex[1]; telperion.GetBranch('_vertexY').Fill()
-        fillvalue[0] = l0.vertex[2]; telperion.GetBranch('_vertexZ').Fill()
-        RPV = np.sqrt(  np.power(l0.vertex[0]-getattr(intree,'_primaryVertexX'),2)
-                        +np.power(l0.vertex[1]-getattr(intree,'_primaryVertexY'),2) 
-                        +np.power(l0.vertex[2]-getattr(intree,'_primaryVertexZ'),2) )
-        fillvalue[0] = RPV; telperion.GetBranch('_RPV').Fill()
-        RBS = np.sqrt(  np.power(l0.vertex[0]-getattr(intree,'_beamSpotX'),2)
-                        +np.power(l0.vertex[1]-getattr(intree,'_beamSpotY'),2) 
-                        +np.power(l0.vertex[2]-getattr(intree,'_beamSpotZ'),2) )
-        fillvalue[0] = RBS; telperion.GetBranch('_RBS').Fill()
-	fillvalue[0] = l0.fourmomentum.Pt(); telperion.GetBranch('_pt').Fill()
-        sumpt = l0.postrack.fourmomentum.Pt() + l0.negtrack.fourmomentum.Pt()        
-        fillvalue[0] = sumpt; telperion.GetBranch('_ptSum').Fill()
-        fillvalue[0] = l0.fourmomentum.Eta(); telperion.GetBranch('_eta').Fill()
-        fillvalue[0] = l0.fourmomentum.Phi(); telperion.GetBranch('_phi').Fill()
-	fillvalue[0] = l0.postrack.nhits; telperion.GetBranch('_nHitsPos').Fill()
-        fillvalue[0] = l0.negtrack.nhits; telperion.GetBranch('_nHitsNeg').Fill()
-	fillvalue[0] = l0.postrack.fourmomentum.Pt(); telperion.GetBranch('_ptPos').Fill()
-	fillvalue[0] = l0.negtrack.fourmomentum.Pt(); telperion.GetBranch('_ptNeg').Fill()
-	fillvalue[0] = l0.trackdR(); telperion.GetBranch('_trackdR').Fill()
-	if not isdata: 
-	    fillvalue[0] = getattr(intree,'_weight'); telperion.GetBranch('_weight').Fill()
-	    fillvalue[0] = getattr(intree,'_nTrueInt'); telperion.GetBranch('_nTrueInt').Fill()
-
-# write output trees to file
-nimloth.SetEntries(); nimloth.Write()
-celeborn.SetEntries(); celeborn.Write()
-laurelin.SetEntries(); laurelin.Write()
-telperion.SetEntries(); telperion.Write()
-if not isdata:
-    hcounter.Write()
-    ntrueint.Write()
-outf.Close()
-# write closing tag (for automatic crash checkiing)
-sys.stderr.write('###done###\n')
+  # write closing tag (for automatic crash checkiing)
+  sys.stderr.write('###done###\n')
