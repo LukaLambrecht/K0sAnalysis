@@ -1,6 +1,9 @@
 /*
 Custom analyzer class for finding secondary vertices corresponding to Light Neutral Hadron (V0) decays.
 */
+
+// include header
+// note: all other includes are defined in the header
 #include "heavyNeutrino/multilep/interface/V0Analyzer.h"
 
 // constructor //
@@ -14,25 +17,38 @@ V0Analyzer::~V0Analyzer(){
 
 // beginJob //
 void V0Analyzer::beginJob(TTree* outputTree){
+    // initialize branches in the output tree
 
-    // beamspot and primary vertex variables
+    // beamspot position
     outputTree->Branch("_beamSpotX", &_beamSpotX, "_beamSpotX/D");
     outputTree->Branch("_beamSpotY", &_beamSpotY, "_beamSpotY/D");
     outputTree->Branch("_beamSpotZ", &_beamSpotZ, "_beamSpotZ/D");
+    // primary vertex position and position uncertainty
     outputTree->Branch("_primaryVertexX", &_primaryVertexX, "_primaryVertexX/D");
     outputTree->Branch("_primaryVertexY", &_primaryVertexY, "_primaryVertexY/D");
     outputTree->Branch("_primaryVertexZ", &_primaryVertexZ, "_primaryVertexZ/D");
+    outputTree->Branch("_primaryVertexXUnc", &_primaryVertexXUnc, "_primaryVertexXUnc/D");
+    outputTree->Branch("_primaryVertexYUnc", &_primaryVertexYUnc, "_primaryVertexYUnc/D");
+    outputTree->Branch("_primaryVertexZUnc", &_primaryVertexZUnc, "_primaryVertexZUnc/D");
     // V0 compound variables
     // - ID variables
     outputTree->Branch("_nV0s", &_nV0s, "_nV0s/i");
     outputTree->Branch("_V0InvMass", &_V0InvMass, "_V0InvMass[_nV0s]/D");
     outputTree->Branch("_V0Type", &_V0Type, "_V0Type[_nV0s]/i");
-    // - vertex position and distance
+    // - vertex position and position uncertainty
     outputTree->Branch("_V0X", &_V0X, "_V0X[_nV0s]/D");
     outputTree->Branch("_V0Y", &_V0Y, "_V0Y[_nV0s]/D");
     outputTree->Branch("_V0Z", &_V0Z, "_V0Z[_nV0s]/D");
+    outputTree->Branch("_V0XUnc", &_V0XUnc, "_V0XUnc[_nV0s]/D");
+    outputTree->Branch("_V0YUnc", &_V0YUnc, "_V0YUnc[_nV0s]/D");
+    outputTree->Branch("_V0ZUnc", &_V0ZUnc, "_V0ZUnc[_nV0s]/D");
+    // - radial distance, uncertainty and significance
     outputTree->Branch("_V0RPV", &_V0RPV, "_V0RPV[_nV0s]/D");
     outputTree->Branch("_V0RBS", &_V0RBS, "_V0RBS[_nV0s]/D");
+    outputTree->Branch("_V0RPVUnc", &_V0RPVUnc, "_V0RPVUnc[_nV0s]/D");
+    outputTree->Branch("_V0RBSUnc", &_V0RBSUnc, "_V0RBSUnc[_nV0s]/D");
+    outputTree->Branch("_V0RPVSig", &_V0RPVSig, "_V0RPVSig[_nV0s]/D");
+    outputTree->Branch("_V0RBSSig", &_V0RBSSig, "_V0RBSSig[_nV0s]/D");
     // - momentum and direction
     outputTree->Branch("_V0Px", &_V0Px, "_V0Px[_nV0s]/D");
     outputTree->Branch("_V0Py", &_V0Py, "_V0Py[_nV0s]/D");
@@ -40,14 +56,13 @@ void V0Analyzer::beginJob(TTree* outputTree){
     outputTree->Branch("_V0Pt", &_V0Pt, "_V0Pt[_nV0s]/D");
     outputTree->Branch("_V0Eta", &_V0Eta, "_V0Eta[_nV0s]/D");
     outputTree->Branch("_V0Phi", &_V0Phi, "_V0Phi[_nV0s]/D");
-    // - other
+    // - point of closest approach
     outputTree->Branch("_V0DCA", &_V0DCA, "_V0DCA[_nV0s]/D");
     outputTree->Branch("_V0PCAX", &_V0PCAX, "_V0PCAX[_nV0s]/D");
     outputTree->Branch("_V0PCAY", &_V0PCAY, "_V0PCAY[_nV0s]/D");
     outputTree->Branch("_V0PCAZ", &_V0PCAZ, "_V0PCAZ[_nV0s]/D");
+    // - other
     outputTree->Branch("_V0VtxNormChi2", &_V0VtxNormChi2, "_V0VtxNormChi2[_nV0s]/D");
-    outputTree->Branch("_V0RSigPV", &_V0RSigPV, "_V0RSigPV[_nV0s]/D");
-    outputTree->Branch("_V0RSigBS", &_V0RSigBS, "_V0RSigBS[_nV0s]/D");
     // V0 decay track variables
     // - momentum and direction
     outputTree->Branch("_V0PxPos", &_V0PxPos, "_V0PxPos[_nV0s]/D");
@@ -65,6 +80,8 @@ void V0Analyzer::beginJob(TTree* outputTree){
     // - track quality variables
     outputTree->Branch("_V0NHitsPos", &_V0NHitsPos, "_V0NHitsPos[_nV0s]/D");
     outputTree->Branch("_V0NHitsNeg", &_V0NHitsNeg, "_V0NHitsNeg[_nV0s]/D");
+    outputTree->Branch("_V0NormChi2Pos", &_V0NormChi2Pos, "_V0NormChi2Pos[_nV0s]/D");
+    outputTree->Branch("_V0NormChi2Neg", &_V0NormChi2Neg, "_V0NormChi2Neg[_nV0s]/D");
     outputTree->Branch("_V0D0Pos", &_V0D0Pos, "_V0D0Pos[_nV0s]/D");
     outputTree->Branch("_V0DzPos", &_V0DzPos, "_V0DzPos[_nV0s]/D");
     outputTree->Branch("_V0D0Neg", &_V0D0Neg, "_V0D0Neg[_nV0s]/D");
@@ -87,10 +104,15 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     iEvent.getByToken(multilepAnalyzer->beamSpotToken, beamSpotHandle);
     MagneticField* bfield = new OAEParametrizedMagneticField("3_8T");
 
-    // store primary vertex and beamspot position
+    // store primary vertex position and position uncertainty
     _primaryVertexX = primaryVertex.position().x();
     _primaryVertexY = primaryVertex.position().y();
     _primaryVertexZ = primaryVertex.position().z();
+    _primaryVertexXUnc = primaryVertex.xError();
+    _primaryVertexYUnc = primaryVertex.yError();
+    _primaryVertexZUnc = primaryVertex.zError();
+
+    // store beamspot position
     _beamSpotX = beamSpotHandle->position().x();
     _beamSpotY = beamSpotHandle->position().y();
     _beamSpotZ = beamSpotHandle->position().z();
@@ -99,14 +121,22 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     std::vector<reco::Track> seltracks;
     for(const pat::PackedCandidate pc: *packedCandidates){
 	if(pc.hasTrackDetails()){
-	    reco::Track tr = *pc.bestTrack();
+	    reco::Track tr;
+	    //tr = *pc.bestTrack();
+	    // fix for non-positive definite covariance,
+	    // see https://twiki.cern.ch/twiki/bin/viewauth/CMS/TrackingPOGRecommendations
+	    tr = pc.pseudoPosDefTrack();
             std::unordered_map<std::string, double> temp = getTrackVariables(tr,beamSpotHandle,bfield);
 	    if(temp["pass"]>0.5) seltracks.push_back(tr);
         }
     }
     for(const pat::PackedCandidate pc : *lostTracks){
 	if(pc.hasTrackDetails()){
-	    reco::Track tr = *pc.bestTrack();
+	    reco::Track tr;
+	    //tr = *pc.bestTrack();
+	    // fix for non-positive definite covariance,
+            // see https://twiki.cern.ch/twiki/bin/viewauth/CMS/TrackingPOGRecommendations
+	    tr = pc.pseudoPosDefTrack();
 	    std::unordered_map<std::string, double> temp = getTrackVariables(tr,beamSpotHandle,bfield);
 	    if(temp["pass"]>0.5) seltracks.push_back(tr);
 	}
@@ -115,8 +145,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     // initialize number of V0s
     _nV0s = 0;
 
-    // combine selected tracks into V0 candidates and write properties
-    // (see help method below)
+    // loop over pairs of tracks
     for(unsigned i=0; i<seltracks.size(); i++){
         for(unsigned j=i+1; j<seltracks.size(); j++){
             const reco::Track tr1 = seltracks.at(i);
@@ -126,51 +155,62 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
 	    // that presumably has something to do with the kalman fitter
 	    std::unordered_map<std::string, double> temp;
 	    try{
-		temp = VZeroFitter(tr1,tr2,beamSpotHandle,primaryVertex,bfield,iEvent);
+		// combine pair of tracks into a V0 vertex
+		// (see help function below)
+		temp = VZeroFitter(tr1, tr2, beamSpotHandle, primaryVertex, bfield, iEvent);
 	    } catch(...){ continue; }
 
-	    if(temp["type"]<0.5) continue;
+	    // if no valid type was found, continue without writing a new V0 candidate
+	    if(temp.at("type")<0.5) continue;
 
-	    _V0InvMass[_nV0s] = temp["invmass"];
-	    _V0Type[_nV0s] = temp["type"];
-	    _V0X[_nV0s] = temp["vtxx"];
-	    _V0Y[_nV0s] = temp["vtxy"];
-	    _V0Z[_nV0s] = temp["vtxz"];
-	    _V0RPV[_nV0s] = temp["vtxr_pv"];
-	    _V0RBS[_nV0s] = temp["vtxr_bs"];
-	    _V0Px[_nV0s] = temp["px"];
-            _V0Py[_nV0s] = temp["py"];
-            _V0Pz[_nV0s] = temp["pz"];
-            _V0Pt[_nV0s] = temp["pt"];
-	    _V0Eta[_nV0s] = temp["eta"];
-	    _V0Phi[_nV0s] = temp["phi"];
-	    _V0DCA[_nV0s] = temp["dca"];
-	    _V0PCAX[_nV0s] = temp["pcax"];
-	    _V0PCAY[_nV0s] = temp["pcay"];
-	    _V0PCAZ[_nV0s] = temp["pcaz"];
-	    _V0VtxNormChi2[_nV0s] = temp["vtxnormchi2"];
-	    _V0RSigPV[_nV0s] = temp["d0sig_pv"];
-	    _V0RSigBS[_nV0s] = temp["d0sig_bs"];
-	    _V0PxPos[_nV0s] = temp["pxpos"];
-	    _V0PyPos[_nV0s] = temp["pypos"];
-	    _V0PzPos[_nV0s] = temp["pzpos"];
-	    _V0PtPos[_nV0s] = temp["ptpos"];
-	    _V0PxNeg[_nV0s] = temp["pxneg"];
-	    _V0PyNeg[_nV0s] = temp["pyneg"];
-	    _V0PzNeg[_nV0s] = temp["pzneg"];
-	    _V0PtNeg[_nV0s] = temp["ptneg"];
-	    _V0EtaPos[_nV0s] = temp["etapos"];
-            _V0EtaNeg[_nV0s] = temp["etaneg"];
-	    _V0PhiPos[_nV0s] = temp["phipos"];
-	    _V0PhiNeg[_nV0s] = temp["phineg"];
-	    _V0NHitsPos[_nV0s] = temp["nhitspos"];
-	    _V0NHitsNeg[_nV0s] = temp["nhitsneg"];
-	    _V0D0Pos[_nV0s] = temp["d0pos"];
-	    _V0DzPos[_nV0s] = temp["dzpos"];
-	    _V0D0Neg[_nV0s] = temp["d0neg"];
-	    _V0DzNeg[_nV0s] = temp["dzneg"];
-	    _V0IsoPos[_nV0s] = temp["isopos"];
-	    _V0IsoNeg[_nV0s] = temp["isoneg"];
+	    // write V0 properties
+	    _V0InvMass[_nV0s] = temp.at("invmass");
+	    _V0Type[_nV0s] = temp.at("type");
+	    _V0X[_nV0s] = temp.at("vtxx");
+	    _V0Y[_nV0s] = temp.at("vtxy");
+	    _V0Z[_nV0s] = temp.at("vtxz");
+	    _V0XUnc[_nV0s] = temp.at("vtxxunc");
+            _V0YUnc[_nV0s] = temp.at("vtxyunc");
+            _V0ZUnc[_nV0s] = temp.at("vtxzunc");
+	    _V0RPV[_nV0s] = temp.at("vtxr_pv");
+	    _V0RBS[_nV0s] = temp.at("vtxr_bs");
+	    _V0RPVUnc[_nV0s] = temp.at("vtxrunc_pv");
+            _V0RBSUnc[_nV0s] = temp.at("vtxrunc_bs");
+	    _V0RPVSig[_nV0s] = temp.at("vtxrsig_pv");
+            _V0RBSSig[_nV0s] = temp.at("vtxrsig_bs");
+	    _V0Px[_nV0s] = temp.at("px");
+            _V0Py[_nV0s] = temp.at("py");
+            _V0Pz[_nV0s] = temp.at("pz");
+            _V0Pt[_nV0s] = temp.at("pt");
+	    _V0Eta[_nV0s] = temp.at("eta");
+	    _V0Phi[_nV0s] = temp.at("phi");
+	    _V0DCA[_nV0s] = temp.at("dca");
+	    _V0PCAX[_nV0s] = temp.at("pcax");
+	    _V0PCAY[_nV0s] = temp.at("pcay");
+	    _V0PCAZ[_nV0s] = temp.at("pcaz");
+	    _V0VtxNormChi2[_nV0s] = temp.at("vtxnormchi2");
+	    _V0PxPos[_nV0s] = temp.at("pxpos");
+	    _V0PyPos[_nV0s] = temp.at("pypos");
+	    _V0PzPos[_nV0s] = temp.at("pzpos");
+	    _V0PtPos[_nV0s] = temp.at("ptpos");
+	    _V0PxNeg[_nV0s] = temp.at("pxneg");
+	    _V0PyNeg[_nV0s] = temp.at("pyneg");
+	    _V0PzNeg[_nV0s] = temp.at("pzneg");
+	    _V0PtNeg[_nV0s] = temp.at("ptneg");
+	    _V0EtaPos[_nV0s] = temp.at("etapos");
+            _V0EtaNeg[_nV0s] = temp.at("etaneg");
+	    _V0PhiPos[_nV0s] = temp.at("phipos");
+	    _V0PhiNeg[_nV0s] = temp.at("phineg");
+	    _V0NHitsPos[_nV0s] = temp.at("nhitspos");
+	    _V0NHitsNeg[_nV0s] = temp.at("nhitsneg");
+	    _V0NormChi2Pos[_nV0s] = temp.at("normchi2pos");
+	    _V0NormChi2Neg[_nV0s] = temp.at("normchi2neg");
+	    _V0D0Pos[_nV0s] = temp.at("d0pos");
+	    _V0DzPos[_nV0s] = temp.at("dzpos");
+	    _V0D0Neg[_nV0s] = temp.at("d0neg");
+	    _V0DzNeg[_nV0s] = temp.at("dzneg");
+	    _V0IsoPos[_nV0s] = temp.at("isopos");
+	    _V0IsoNeg[_nV0s] = temp.at("isoneg");
 
 	    ++_nV0s; 
             if(_nV0s == nV0s_max) break;
@@ -181,8 +221,11 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
 }
 
 std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
-	const reco::Track& tr, edm::Handle<reco::BeamSpot> beamSpotHandle,
+	const reco::Track& tr,
+	edm::Handle<reco::BeamSpot> beamSpotHandle,
 	MagneticField* bfield){
+    // get properties of an individual track
+    // (and do preliminary selection)
 
     std::unordered_map<std::string, double> outputmap = {
 	{"loosequality",0.}, 
@@ -196,11 +239,8 @@ std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
     outputmap["loosequality"] = (tr.quality(reco::TrackBase::qualityByName("loose")))? 1.: 0.;
     if(outputmap["loosequality"] < 0.5) return outputmap;
     outputmap["normchi2"] = tr.normalizedChi2();
-    //if(outputmap["normchi2"] > 5.) return outputmap;
     outputmap["nvalidhits"] = tr.numberOfValidHits();
-    //if(outputmap["nvalidhits"] < 6) return outputmap;
     outputmap["pt"] = tr.pt();
-    //if(outputmap["pt"] < 0.5) return outputmap;
     // special for impact parameter: use proper extrapolation to beamspot
     FreeTrajectoryState initialFTS = trajectoryStateTransform::initialFreeState(tr, bfield);
     TSCBLBuilderNoMaterial blsBuilder;
@@ -214,7 +254,8 @@ std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
 }
 
 double V0Analyzer::getTrackRelIso(const reco::Track& tr, const edm::Event& iEvent){
-    // still to check if this works correctly or if there isn't a better way!
+    // calculate relative isolation of a track
+    // (still to check if this works correctly or if there isn't a better way)
     edm::Handle<std::vector<pat::PackedCandidate>> packedCandidates;
     iEvent.getByToken(multilepAnalyzer->packedCandidatesToken, packedCandidates);
     edm::Handle<std::vector<pat::PackedCandidate>> lostTracks;
@@ -244,24 +285,22 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
 						const edm::Event& iEvent){
     // FIT AND SELECT V0 VERTICES FROM TWO TRACKS AND CALCULATE PROPERTIES
     std::unordered_map<std::string, double> outputmap = { 
-	    // vertex variables
 	    {"type",-1.},{"invmass",0.},
-	    {"vtxx",0.}, {"vtxy",0.}, {"vtxz",0.}, 
-	    {"vtxr_pv",0.}, {"vtxr_bs",0.}, 
-	    // (a little superfluous to store already at this level, maybe remove later)
-	    // (however, need them anyway for significance calculation)
+	    {"vtxx",0.}, {"vtxy",0.}, {"vtxz",0.},
+	    {"vtxxunc",0.}, {"vtxyunc",0.}, {"vtxzunc",0.},
+	    {"vtxr_pv",0.}, {"vtxr_bs",0.},
+	    {"vtxrunc_pv",0.}, {"vtxrunc_bs",0.},
+	    {"vtxrsig_pv",0.}, {"vtxrsig_bs",0.},
 	    {"px",0.}, {"py",0.}, {"pz",0.}, {"pt",0.},
 	    {"eta",0.},{"phi",0.},
-	    // variables to perform selection on (in order of appearance)
 	    {"dca",0.}, {"pcax",0.}, {"pcay",0.}, {"pcaz",0.}, 
 	    {"vtxnormchi2",0.},
-	    {"d0sig_pv",0.}, {"d0sig_bs",0.},
-	    // track variables 
 	    {"pxpos",0.}, {"pypos",0.}, {"pzpos",0.}, {"ptpos",0.}, 
 	    {"pxneg",0.}, {"pyneg",0.}, {"pzneg",0.}, {"ptneg",0.}, 
 	    {"etapos",0.}, {"etaneg",0.},
 	    {"phipos",0.}, {"phineg",0.},
 	    {"nhitspos",0.}, {"nhitsneg",0.},
+	    {"normchi2pos",0.}, {"normchi2neg",0.},
 	    {"d0pos",0.}, {"dzpos",0.}, {"d0neg",0.}, {"dzneg",0.},
 	    {"isopos",0.}, {"isoneg",0.}
     };
@@ -279,8 +318,8 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     outputmap["dca"] = dca;
     GlobalPoint cxpt = capp.crossingPoint();
     if(dca < 0. or dca > 1.) return outputmap;
-    if(std::sqrt(cxpt.x()*cxpt.x() + cxpt.y()*cxpt.y())>120. // default: 120.
-        or std::abs(cxpt.z())>300.) return outputmap; // default: 300.
+    if(std::sqrt(cxpt.x()*cxpt.x() + cxpt.y()*cxpt.y())>120.
+        or std::abs(cxpt.z())>300.) return outputmap;
     outputmap["pcax"] = cxpt.x();
     outputmap["pcay"] = cxpt.y();
     outputmap["pcaz"] = cxpt.z();
@@ -305,46 +344,53 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     TransientVertex v0vtx = vtxFitter.vertex(transtracks);
     // condition: vertex must be valid
     if(!v0vtx.isValid()) return outputmap;
-    // condition: chi squared of fit must be small (default: 7.)
+    // condition: chi squared of fit must be small
     if(v0vtx.normalisedChiSquared()>15.) return outputmap;
     if(v0vtx.normalisedChiSquared()<0.) return outputmap;
     outputmap["vtxnormchi2"] = v0vtx.normalisedChiSquared();
     // calculate refitted tracks for further selection
     std::vector<reco::TransientTrack> refittedTracks;
     if(v0vtx.hasRefittedTracks()) refittedTracks = v0vtx.refittedTracks();
-    else return outputmap; // should not happen when using option true in vtxFitter.
-    // calculate vertex position, beamspot position and primary vertex position
+    else return outputmap; // should not happen when using option true in vtxFitter
+    // convert TransientVertex to RecoVertex for later use
+    reco::Vertex v0recovtx = v0vtx;
+    // store vertex position to output map
+    outputmap["vtxx"] = v0recovtx.position().x();
+    outputmap["vtxy"] = v0recovtx.position().y();
+    outputmap["vtxz"] = v0recovtx.position().z();
+    outputmap["vtxxunc"] = v0recovtx.xError();
+    outputmap["vtxyunc"] = v0recovtx.yError();
+    outputmap["vtxzunc"] = v0recovtx.zError();
+    // convert vertex, beamspot and primary vertex position to GlobalPoints for later use
     GlobalPoint vtxXYZ(v0vtx.position().x(), v0vtx.position().y(), v0vtx.position().z());
-    outputmap["vtxx"] = vtxXYZ.x();
-    outputmap["vtxy"] = vtxXYZ.y();
-    outputmap["vtxz"] = vtxXYZ.z();
     GlobalPoint beamSpotXYZ(beamSpotHandle->position().x(),
 			      beamSpotHandle->position().y(),
 			      beamSpotHandle->position().z());
     GlobalPoint primaryVertexXYZ(primaryVertex.position().x(),
     				primaryVertex.position().y(),
     				primaryVertex.position().z());
-    reco::Vertex v0recovtx = v0vtx;
-    // calculate transverse significance with respect to beamspot
-    ROOT::Math::SVector<double, 3> vtxd0vec_bs(vtxXYZ.x()-beamSpotXYZ.x(), 
-						    vtxXYZ.y()-beamSpotXYZ.y(), 0.);
-    double vtxd0_bs = ROOT::Math::Mag(vtxd0vec_bs);
+    // calculate transverse displacement (+ unc and sig) with respect to the beamspot
+    ROOT::Math::SVector<double, 3> vtxrvec_bs(vtxXYZ.x()-beamSpotXYZ.x(), 
+						vtxXYZ.y()-beamSpotXYZ.y(), 0.);
+    double vtxr_bs = ROOT::Math::Mag(vtxrvec_bs);
     ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3>> totalcovmat_bs = 
 			beamSpotHandle->rotatedCovariance3D() + v0recovtx.covariance();
-    double vtxd0sigma_bs = sqrt(ROOT::Math::Similarity(totalcovmat_bs, vtxd0vec_bs))/vtxd0_bs;
-    double vtxd0sig_bs = vtxd0_bs/vtxd0sigma_bs;
-    outputmap["d0sig_bs"] = vtxd0sig_bs; 
-    outputmap["vtxr_bs"] = vtxd0_bs;
-    // calculate transverse significance with respect to primary vertex
-    ROOT::Math::SVector<double, 3> vtxd0vec_pv(vtxXYZ.x()-primaryVertexXYZ.x(), 
+    double vtxrunc_bs = sqrt(ROOT::Math::Similarity(totalcovmat_bs, vtxrvec_bs))/vtxr_bs;
+    double vtxrsig_bs = vtxr_bs/vtxrunc_bs;
+    outputmap["vtxr_bs"] = vtxr_bs;
+    outputmap["vtxrunc_bs"] = vtxrunc_bs;
+    outputmap["vtxrsig_bs"] = vtxrsig_bs;
+    // calculate transverse displacement (+ unc and sig) with respect to primary vertex
+    ROOT::Math::SVector<double, 3> vtxrvec_pv(vtxXYZ.x()-primaryVertexXYZ.x(), 
 						vtxXYZ.y()-primaryVertexXYZ.y(), 0.);
-    double vtxd0_pv = ROOT::Math::Mag(vtxd0vec_pv);
+    double vtxr_pv = ROOT::Math::Mag(vtxrvec_pv);
     ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3>> totalcovmat_pv = 
 			primaryVertex.covariance() + v0recovtx.covariance();
-    double vtxd0sigma_pv = sqrt(ROOT::Math::Similarity(totalcovmat_pv, vtxd0vec_pv))/vtxd0_pv;
-    double vtxd0sig_pv = vtxd0_pv/vtxd0sigma_pv;
-    outputmap["d0sig_pv"] = vtxd0sig_pv;
-    outputmap["vtxr_pv"] = vtxd0_pv;
+    double vtxrunc_pv = sqrt(ROOT::Math::Similarity(totalcovmat_pv, vtxrvec_pv))/vtxr_pv;
+    double vtxrsig_pv = vtxr_pv/vtxrunc_pv;
+    outputmap["vtxr_pv"] = vtxr_pv;
+    outputmap["vtxrunc_pv"] = vtxrunc_pv;
+    outputmap["vtxrsig_pv"] = vtxrsig_pv;
     // apply cut on inner hit position with respect to vertex position (ONLY IN RECO!)
     /*if(tr1.innerOk()){
         reco::Vertex::Point inpos1 = tr1.innerPosition();
@@ -399,7 +445,8 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     outputmap["eta"] = totalP.eta();
     outputmap["phi"] = totalP.phi();
     // (optional) condition: cosine of pointing angle must be close to one (not default)
-    // store both with respect to beamspot and primary vertex!
+    // note: now commented out since it can be easily recalculated and used in selections
+    //       in downstream stages of the analysis.
     /*double px = totalP.x(); double py = totalP.y();
     double x = v0vtx.position().x()-primaryVertexXYZ.x();
     double y = v0vtx.position().y()-primaryVertexXYZ.y();
@@ -423,11 +470,14 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     double LambdaInvMass = LambdaP4.M();
     math::XYZTLorentzVector LambdaBarP4(totalP.x(),totalP.y(),totalP.z(),LambdaBarETot);
     double LambdaBarInvMass = LambdaBarP4.M();
-    // condition: mass must be close to V0hort mass (default 0.07) or Lambda mass (default 0.05)
+    // condition: mass must be close to Ks mass (default 0.07) or Lambda mass (default 0.05)
     if(std::abs(KsInvMass-ksmass) > 0.07 and std::abs(LambdaInvMass-lambdamass) > 0.05
 		and std::abs(LambdaBarInvMass-lambdamass) > 0.05) return outputmap;
+    // fill track properties
     outputmap["nhitspos"] = postrack.numberOfValidHits();
     outputmap["nhitsneg"] = negtrack.numberOfValidHits();
+    outputmap["normchi2pos"] = postrack.normalizedChi2();
+    outputmap["normchi2neg"] = negtrack.normalizedChi2();
     reco::TrackBase::Point refPoint(primaryVertex.position().x(),
 					primaryVertex.position().y(),
 					primaryVertex.position().z());

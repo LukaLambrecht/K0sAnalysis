@@ -1,6 +1,7 @@
 /*
 Custom analyzer class for finding secondary vertices corresponding to light neutral hadron (V0) decays.
 */
+
 #ifndef V0_ANALYZER_H
 #define V0_ANALYZER_H
 
@@ -68,13 +69,17 @@ class V0Analyzer {
     static constexpr double jpsimass = 3.0969;
     // Root tree variable declarations
     static const unsigned nV0s_max = 50;
-    // beamspot and primary vertex position
+    // beamspot position
     double _beamSpotX;
     double _beamSpotY;
     double _beamSpotZ;
+    // primary vertex position and position uncertainty
     double _primaryVertexX;
     double _primaryVertexY;
     double _primaryVertexZ;
+    double _primaryVertexXUnc;
+    double _primaryVertexYUnc;
+    double _primaryVertexZUnc;
     // variables from customized V0 fitter
     unsigned _nV0s = 0;    
     double _V0InvMass[nV0s_max];
@@ -82,8 +87,15 @@ class V0Analyzer {
     double _V0X[nV0s_max];
     double _V0Y[nV0s_max];
     double _V0Z[nV0s_max];
+    double _V0XUnc[nV0s_max];
+    double _V0YUnc[nV0s_max];
+    double _V0ZUnc[nV0s_max];
     double _V0RPV[nV0s_max];
     double _V0RBS[nV0s_max];
+    double _V0RPVUnc[nV0s_max];
+    double _V0RBSUnc[nV0s_max];
+    double _V0RPVSig[nV0s_max];
+    double _V0RBSSig[nV0s_max];
     double _V0Px[nV0s_max];
     double _V0Py[nV0s_max];
     double _V0Pz[nV0s_max];
@@ -95,8 +107,6 @@ class V0Analyzer {
     double _V0PCAY[nV0s_max];
     double _V0PCAZ[nV0s_max];
     double _V0VtxNormChi2[nV0s_max];
-    double _V0RSigPV[nV0s_max];
-    double _V0RSigBS[nV0s_max];
     double _V0PxPos[nV0s_max];
     double _V0PyPos[nV0s_max];
     double _V0PzPos[nV0s_max];
@@ -111,6 +121,8 @@ class V0Analyzer {
     double _V0PhiNeg[nV0s_max];
     double _V0NHitsPos[nV0s_max];
     double _V0NHitsNeg[nV0s_max];
+    double _V0NormChi2Pos[nV0s_max];
+    double _V0NormChi2Neg[nV0s_max];
     double _V0D0Pos[nV0s_max];
     double _V0DzPos[nV0s_max];
     double _V0D0Neg[nV0s_max];
