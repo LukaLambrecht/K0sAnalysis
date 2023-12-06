@@ -18,7 +18,7 @@ from six.moves import input
 # import framework modules
 sys.path.append('../tools')
 import condortools as ct
-CMSSW = '/user/llambrec/CMSSW_10_2_20'
+CMSSW = '/user/llambrec/CMSSW_12_4_6'
 import listtools as lt
 import sampletools as st
 
@@ -31,6 +31,8 @@ if __name__=='__main__':
   parser.add_argument('-o', '--outputdir', required=True, type=os.path.abspath)
   parser.add_argument('-s', '--skimmer', default='skim_ztomumu')
   parser.add_argument('-n', '--nfilesperjob', default=5, type=int)
+  parser.add_argument('--recoverytag', default=None)
+  parser.add_argument('--runmode', default='condor', choices=['local', 'condor'])
   args = parser.parse_args()
 
   # check if samplelist exists
@@ -42,6 +44,39 @@ if __name__=='__main__':
   if not os.path.exists(exe):
     raise Exception('ERROR: skimmer '+exe+' does not seem to exist')
 
+  # define help function to find all files in a sample directory
+  def get_files(sampledir):
+    # check if sample directory exists
+    if not os.path.exists(sampledir):
+        print('### WARNING ###: directory '+sampledir+' does not seem to exist;')
+        print('                 continue ignoring this directory? (y/n)')
+        go = input()
+        if go=='y': return
+        else: sys.exit()
+    # check if this directory has multiple subdirectories;
+    # this would correspond to multiple processings of the same dataset,
+    # in which case choose most recent one.
+    if len(os.listdir(sampledir))==0:
+        print('### WARNING ###: directory '+sampledir+' is empty;')
+        print('                 continue ignoring this directory? (y/n)')
+        go = input()
+        if go=='y': return
+        else: sys.exit()
+    if len(os.listdir(sampledir))>1:
+        print('### WARNING ###: directory '+sampledir+' has multiple subdirectories;')
+        print('                 choosing most recent processing of this dataset.')
+        subdir = sorted(os.listdir(sampledir))[-1]
+    else: subdir = os.listdir(sampledir)[0]
+    thisinputdir = os.path.join(sampledir,subdir)
+    thisfiles = []
+    # list all root files in this directory
+    print('Finding all files in sample {}.'.format(thisinputdir))
+    for root,dirs,files in os.walk(thisinputdir):
+        for fname in files:
+            if fname[-5:]=='.root':
+                thisfiles.append(os.path.join(root,fname))
+    return (thisinputdir, thisfiles)
+
   # find input files for all samples
   inputfiles = []
   ninputfiles = 0
@@ -50,43 +85,40 @@ if __name__=='__main__':
   print('Found {} samples in sample list.'.format(len(samples_info)))
   for i,sampleinfo in enumerate(samples_info):
     line = sampleinfo['line']
-    # check if line corresponds to a valid input directory
-    if not os.path.exists(line):
-        print('### WARNING ###: line '+line+' does not correspond to a valid input directory;')
-        print('                 continue ignoring this line? (y/n)')
-        go = input()
-        if go=='y': continue
-        else: sys.exit()
-    # check if this directory has multiple subdirectories;
-    # this would correspond to multiple processings of the same dataset,
-    # in which case choose most recent one.
-    if len(os.listdir(line))==0:
-        print('### WARNING ###: directory '+line+' is empty;')
-        print('                 continue ignoring this directory? (y/n)')
-        go = input()
-        if go=='y': continue
-        else: sys.exit()
-    if len(os.listdir(line))>1:
-        print('### WARNING ###: directory '+line+' has multiple subdirectories;')
-        print('                 choosing most recent processing of this dataset.')
-        subdir = sorted(os.listdir(line))[-1]
-    else: subdir = os.listdir(line)[0]
-    thisinputdir = os.path.join(line,subdir)
-    thisfiles = []
-    # list all root files in this directory
-    print('Finding all files in sample {}.'.format(thisinputdir))
-    for root,dirs,files in os.walk(thisinputdir):
-        for fname in files:
-            if fname[-5:]=='.root':
-                thisfiles.append(os.path.join(os.path.relpath(root,thisinputdir),fname))
+    thisinputdir, thisfiles = get_files(line)
     print('Found {} files.'.format(len(thisfiles)))
     inputfiles.append({})
-    inputfiles[i]['inputdir'] = thisinputdir
-    inputfiles[i]['files'] = thisfiles
-    inputfiles[i]['outputdir'] = os.path.join(args.outputdir,
+    inputfiles[-1]['inputdir'] = thisinputdir
+    inputfiles[-1]['files'] = thisfiles
+    inputfiles[-1]['outputdir'] = os.path.join(args.outputdir,
                                    sampleinfo['sample_name']+'_'+sampleinfo['version_name'])
     ninputfiles += len(thisfiles)
     ndirs += 1
+    # find recovery task
+    if args.recoverytag is not None:
+      recoverydir = line+'_'+args.recoverytag
+      if os.path.exists(recoverydir):
+          recoverydir, recoveryfiles = get_files(recoverydir)
+          print('Found {} additional files in recovery task'.format(len(recoveryfiles)))
+          inputfiles.append({})
+          inputfiles[-1]['inputdir'] = recoverydir
+          inputfiles[-1]['files'] = recoveryfiles
+          inputfiles[-1]['outputdir'] = os.path.join(args.outputdir,
+            sampleinfo['sample_name']+'_'+sampleinfo['version_name']+'_'+args.recoverytag)
+          ninputfiles += len(recoveryfiles)
+          ndirs += 1
+
+  # optional checks
+  dochecks = False
+  if dochecks:
+    for inputstruct in inputfiles:
+      for f in inputstruct['files']:
+        if not os.path.exists(f):
+          print('ERROR: file {} does not exist'.format(f))
+        basename = os.path.basename(f)
+        skimname, fn = basename.replace('.root','').split('_',1)
+        try: fn = int(fn)
+        except: print('WARNING: unexpected file name {}'.format(f))
 
   print('Found a total of {} input files in {} directories'.format(ninputfiles,ndirs))
   print('Summary of skimming jobs:')
@@ -101,7 +133,6 @@ if __name__=='__main__':
   # loop over samples
   workdir = os.getcwd()
   for inputstruct in inputfiles:
-    thisinputdir = inputstruct['inputdir']
     thisoutputdir = inputstruct['outputdir']
     # check if output directory exists; if so, clean it
     if os.path.exists(thisoutputdir):
@@ -109,7 +140,7 @@ if __name__=='__main__':
     # make output directory
     os.makedirs(thisoutputdir)
     # get input files and split in partitions
-    thisinputfiles = [os.path.join(thisinputdir,f) for f in inputstruct['files']]
+    thisinputfiles = inputstruct['files']
     thisinputfiles = lt.split(thisinputfiles,args.nfilesperjob)
     # loop over partitions
     for counter, partlist in enumerate(thisinputfiles):
@@ -122,7 +153,7 @@ if __name__=='__main__':
             cmds.append(cmd)
             tempfiles.append(temp_file_path)
         # make hadd command for this job
-        cmd = 'hadd '+os.path.join(thisoutputdir, 'skimmed_'+str(counter)+'.root')
+        cmd = 'hadd -f '+os.path.join(thisoutputdir, 'skimmed_'+str(counter)+'.root')
         for temp_file_path in tempfiles: cmd += ' '+temp_file_path
         cmds.append(cmd)
         # make commands to remove temporary files for this job
@@ -130,4 +161,9 @@ if __name__=='__main__':
             cmd = 'rm '+temp_file_path
             cmds.append(cmd)
         # submit job
-        ct.submitCommandsAsCondorJob('cjob_skim', cmds, cmssw_version=CMSSW)
+        if args.runmode=='local':
+          for cmd in cmds:
+            print(cmd)
+            os.system(cmd)
+        elif args.runmode=='condor':
+          ct.submitCommandsAsCondorJob('cjob_skim', cmds, cmssw_version=CMSSW)
