@@ -31,6 +31,7 @@ if __name__=='__main__':
   parser.add_argument('-o', '--outputfile', required=True, type=os.path.abspath)
   parser.add_argument('-s', '--selection', default='legacy')
   parser.add_argument('-n', '--nevents', default=-1, type=int)
+  parser.add_argument('--transfer', default=False, action='store_true')
   args = parser.parse_args()
 
   # check selection_name
@@ -39,6 +40,25 @@ if __name__=='__main__':
   ]
   if args.selection not in allowed_selections:
     raise Exception('ERROR: selection '+args.selection+' not recognized.')
+
+  # handle case of transfering input file (instead of reading it directly)
+  if args.transfer:
+    # set temporary directory where to transfer to
+    tmpdir = '/tmp'
+    if 'TMPDIR' in os.environ: tmpdir = os.environ['TMPDIR']
+    # set new input file name
+    tmpfile = args.inputfile.strip('/').replace('/','_')
+    tmpfile = os.path.join(tmpdir, tmpfile)
+    # do the transfer
+    cmd = 'cp {} {}'.format(args.inputfile, tmpfile)
+    print('Transfering input file to {}...'.format(tmpdir))
+    print(cmd)
+    os.system(cmd)
+    print('Done transfering input file.')
+    args.inputfile = tmpfile
+    # set new output file name
+    origoutputfile = args.outputfile
+    args.outputfile = tmpfile.replace('.root','_out.root')
 
   # open input file
   with uproot.open(args.inputfile) as f:
@@ -160,6 +180,8 @@ if __name__=='__main__':
   laurelin['_nHitsNeg'] = ak.flatten(branches['_V0NHitsNeg'][laurelinmask])
   laurelin['_ptPos'] = ak.flatten(branches['_V0PtPos'][laurelinmask])
   laurelin['_ptNeg'] = ak.flatten(branches['_V0PtNeg'][laurelinmask])
+  laurelin['_normChi2Pos'] = ak.flatten(branches['_V0NormChi2Pos'][laurelinmask])
+  laurelin['_normChi2Neg'] = ak.flatten(branches['_V0NormChi2Neg'][laurelinmask])
   laurelin['_trackdR'] = ak.flatten(trackdR[laurelinmask])
   if not isdata:
     laurelin['_weight'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_weight'] )
@@ -185,6 +207,8 @@ if __name__=='__main__':
   telperion['_nHitsNeg'] = ak.flatten(branches['_V0NHitsNeg'][telperionmask])
   telperion['_ptPos'] = ak.flatten(branches['_V0PtPos'][telperionmask])
   telperion['_ptNeg'] = ak.flatten(branches['_V0PtNeg'][telperionmask])
+  telperion['_normChi2Pos'] = ak.flatten(branches['_V0NormChi2Pos'][telperionmask])
+  telperion['_normChi2Neg'] = ak.flatten(branches['_V0NormChi2Neg'][telperionmask])
   telperion['_trackdR'] = ak.flatten(trackdR[telperionmask])
   if not isdata:
     telperion['_weight'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_weight'] )
@@ -200,6 +224,19 @@ if __name__=='__main__':
     if not isdata:
         f['hCounter'] = hcounter
         f['nTrueInteractions'] = ntrueint
+
+  # handle case of transfering output file
+  if args.transfer:
+    # move output to destination
+    cmd = 'mv {} {}'.format(args.outputfile, origoutputfile)
+    print('Transfering output file...')
+    print(cmd)
+    os.system(cmd)
+    print('Done transfering output file.')
+    # remove temporary file
+    cmd = 'rm {}'.format(tmpfile)
+    print('Removing temporary file {}'.format(tmpfile))
+    os.system(cmd)
 
   # write closing tag (for automatic crash checkiing)
   sys.stderr.write('###done###\n')

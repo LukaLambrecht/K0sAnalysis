@@ -33,6 +33,8 @@ def selection_legacy( branches, extra=None ):
     & (branches['_V0NHitsNeg'] >= 6)
     & (branches['_V0PtPos'] > 1.)
     & (branches['_V0PtNeg'] > 1.)
+    & (branches['_V0NormChi2Pos'] < 5.)
+    & (branches['_V0NormChi2Neg'] < 5.)
     & (branches['_V0DCA'] < 0.2)
     & (branches['_V0VtxNormChi2'] < 7)
     & (extra['cospointingPV'] > 0.99)

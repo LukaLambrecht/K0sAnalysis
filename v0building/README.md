@@ -11,5 +11,6 @@ The script `merge.py` can be used to merge the files resulting from the v0buildi
 
 ### On CMSSW releases
 This code does not depend on the specifics of a CMSSW release.
-However, a CMSSW release should still be sourced before compiling to have access to shared software.
-One has to use `12_X` (with `python3`) should work (specifically for the imports of `uproot` and `awkward`).
+However, a CMSSW release should still be sourced to have access to shared software.
+In detail, `12_X` (with `python3`) should work (specifically for the imports of `uproot` and `awkward`);
+other versions have not yet been tested.
