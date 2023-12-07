@@ -17,18 +17,18 @@ def addpuscale(infilename,year):
     if(year not in ['2016','2017','2018']):
         print('### ERROR ###: could not interpret argument: '+year)
         print('               (supposed to represent data taking year)')
-	return None        
+        return None        
 
     ### open the PU hist for data
     gpath = '/storage_mnt/storage/user/llambrec/K0sAnalysis/pureweighting'
     pudata = ROOT.TFile.Open(os.path.join(gpath,'dataPuHist_'+year+'Inclusive_central.root'))
     try:
-	puhist = pudata.Get('pileup')
-	_ = puhist.GetBinContent(0)
+        puhist = pudata.Get('pileup')
+        _ = puhist.GetBinContent(0)
     except:
-	print('### ERROR ###: pileup profile in data could not be loaded.')
-	print('               Check if file is present in '+gpath)
-	return None
+        print('### ERROR ###: pileup profile in data could not be loaded.')
+        print('               Check if file is present in '+gpath)
+        return None
     puhist.SetDirectory(ROOT.gROOT)
     puhist.Scale(1./puhist.GetSumOfWeights())
     pudata.Close()
@@ -36,12 +36,12 @@ def addpuscale(infilename,year):
     ### open the nTrueInteractions for MC
     mcfile = ROOT.TFile.Open(infilename,'update')
     try:
-	inthist = mcfile.Get('nTrueInteractions')
-	_ = inthist.GetBinContent(0)
+        inthist = mcfile.Get('nTrueInteractions')
+        _ = inthist.GetBinContent(0)
     except:
-	print('### ERROR ###: interactions profile in simulation could not be loaded.')
-	print('               Check if the correct histogram is present in the input file.')
-	return None
+        print('### ERROR ###: interactions profile in simulation could not be loaded.')
+        print('               Check if the correct histogram is present in the input file.')
+        return None
     inthist.SetDirectory(ROOT.gROOT)
     inthist.Scale(1./inthist.GetSumOfWeights())
 
@@ -50,11 +50,11 @@ def addpuscale(infilename,year):
     scalehist.Divide(inthist)
     scalehist.SetName('PUScale')
     if 'PUScale' in mcfile.GetListOfKeys():
-	print('### ERROR ###: a pileup scale is already present in the input file.')
-	return None
+        print('### ERROR ###: a pileup scale is already present in the input file.')
+        return None
     else:
-	print('writing PUScale to file...')
-	scalehist.Write()
+        print('writing PUScale to file...')
+        scalehist.Write()
     mcfile.Close()
 
 def getpuscale(ntrueint,scalehist):

@@ -2,12 +2,14 @@
 # some small tools for working with histograms and lists of histograms #
 ########################################################################
 
+import sys
 import os
 import math
 import numpy as np
 from array import array
 import ROOT
-import listtools as lt
+sys.path.append('../')
+import tools.listtools as lt
 
 ### histogram reading and loading ###
 
@@ -26,13 +28,13 @@ def loadallhistograms(histfile):
         except:
             print('### WARNING ###: key "'+str(key.GetName())+'" does not correspond to valid hist.')
             continue
-	hist.SetName(key.GetName())
-	histlist.append(hist)
+        hist.SetName(key.GetName())
+        histlist.append(hist)
     f.Close()
     return histlist
 
 def loadhistograms(histfile,mustcontainall=[],mustcontainone=[],
-			    maynotcontainall=[],maynotcontainone=[]):
+                            maynotcontainall=[],maynotcontainone=[]):
     ### read a root file containing histograms and load all histograms to a list
     # with selection already included at this stage
     # (instead of loading all and then selecting with methods below)
@@ -41,9 +43,9 @@ def loadhistograms(histfile,mustcontainall=[],mustcontainone=[],
     histlist = []
     keylist = f.GetListOfKeys()
     for key in keylist:
-	if not lt.subselect_string(key.GetName(),
-		mustcontainone=mustcontainone,mustcontainall=mustcontainall,
-		maynotcontainone=maynotcontainone,maynotcontainall=maynotcontainall): continue
+        if not lt.subselect_string(key.GetName(),
+                mustcontainone=mustcontainone,mustcontainall=mustcontainall,
+                maynotcontainone=maynotcontainone,maynotcontainall=maynotcontainall): continue
         hist = f.Get(key.GetName())
         # check if histogram is readable
         try:
@@ -52,7 +54,7 @@ def loadhistograms(histfile,mustcontainall=[],mustcontainone=[],
             hist.SetDirectory(0)
         except:
             print('WARNING in loadhistograms: key "'+str(key.GetName())
-		    +'" does not correspond to valid hist.')
+                    +'" does not correspond to valid hist.')
             continue
         histlist.append(hist)
     f.Close()
@@ -62,11 +64,11 @@ def loadhistograms(histfile,mustcontainall=[],mustcontainone=[],
 ### histogram subselection ###
 
 def selecthistograms(histlist,mustcontainone=[],mustcontainall=[],
-			maynotcontainone=[],maynotcontainall=[]):
+                        maynotcontainone=[],maynotcontainall=[]):
     idlist = [hist.GetName() for hist in histlist]
     (indlist,selhistlist) = lt.subselect_objects(histlist,idlist,
-	mustcontainone=mustcontainone,mustcontainall=mustcontainall,
-	maynotcontainone=maynotcontainone,maynotcontainall=maynotcontainall)
+        mustcontainone=mustcontainone,mustcontainall=mustcontainall,
+        maynotcontainone=maynotcontainone,maynotcontainall=maynotcontainall)
     return (indlist,selhistlist)
 
 ### histogram clipping ###
@@ -90,10 +92,10 @@ def clipallhistograms(histfile,mustcontainall=[],clipboundary=0):
     ### apply cliphistogram on all histograms in a file
     histlist = loadallhistograms(histfile)
     if len(mustcontainall)==0:
-	cliphistograms(histlist,clipboundary=clipboundary)
+        cliphistograms(histlist,clipboundary=clipboundary)
     else:
-	(indlist,_) = selecthistograms(histlist,mustcontainall=mustcontainall)
-	for index in indlist: cliphistogram(histlist[index],clipboundary=clipboundary)
+        (indlist,_) = selecthistograms(histlist,mustcontainall=mustcontainall)
+        for index in indlist: cliphistogram(histlist[index],clipboundary=clipboundary)
     tempfilename = histfile[:-5]+'_temp.root'
     f = ROOT.TFile.Open(tempfilename,'recreate')
     for hist in histlist:
@@ -158,33 +160,33 @@ def binperbinmaxvar( histlist, nominalhist ):
     maxhist.Reset()
     nbins = maxhist.GetNbinsX()
     for i in range(0,nbins+2):
-	nomval = nominalhist.GetBinContent(i)
-	varvals = np.zeros(len(histlist))
-	for j in range(len(histlist)):
-	    varvals[j] = abs(histlist[j].GetBinContent(i)-nomval)
-	maxhist.SetBinContent(i,np.amax(varvals))
+        nomval = nominalhist.GetBinContent(i)
+        varvals = np.zeros(len(histlist))
+        for j in range(len(histlist)):
+            varvals[j] = abs(histlist[j].GetBinContent(i)-nomval)
+        maxhist.SetBinContent(i,np.amax(varvals))
     return maxhist
     
 def rootsumsquare( histlist ):
     ### return a histogram that is the root-sum-square of all histograms in histlist.
     # check the input list
     if( len(histlist)<1 ):
-	print('### ERROR ###: at least one histogram required for rootsumsquare')
-	return None
+        print('### ERROR ###: at least one histogram required for rootsumsquare')
+        return None
     res = histlist[0].Clone()
     res.Reset()
     nbins = res.GetNbinsX()
     bincontents = np.zeros(nbins+2)
     for hist in histlist:
-	if( hist.GetNbinsX()!=nbins ):
-	    print('### ERROR ###: histograms are not compatible for summing in quadrature')
-	    return None
-	thisbincontents = np.zeros(nbins+2)
-	for i in range(0,nbins+2): thisbincontents[i] = hist.GetBinContent(i)
-	bincontents += np.power(thisbincontents,2)
+        if( hist.GetNbinsX()!=nbins ):
+            print('### ERROR ###: histograms are not compatible for summing in quadrature')
+            return None
+        thisbincontents = np.zeros(nbins+2)
+        for i in range(0,nbins+2): thisbincontents[i] = hist.GetBinContent(i)
+        bincontents += np.power(thisbincontents,2)
     bincontents = np.sqrt(bincontents)
     for i in range(0,nbins+2):
-	res.SetBinContent(i,bincontents[i])
+        res.SetBinContent(i,bincontents[i])
     return res
 
 ### printing ###
@@ -194,14 +196,14 @@ def printhistogram(hist,rangeinfo=False,naninfo=False):
     print('### {} ###'.format(hist.GetName()))
     for i in range(0,hist.GetNbinsX()+2):
         bininfo = '  -----------\n'
-	bininfo += '  bin number: {}\n'.format(i)
-	if rangeinfo:
-	    bininfo += '  bin range: {} -> {}\n'.format(hist.GetBinLowEdge(i),
+        bininfo += '  bin number: {}\n'.format(i)
+        if rangeinfo:
+            bininfo += '  bin range: {} -> {}\n'.format(hist.GetBinLowEdge(i),
                                             hist.GetBinLowEdge(i)+hist.GetBinWidth(i))
         bininfo += '  content: {}\n'.format(hist.GetBinContent(i))
-	if naninfo:
-	    bininfo += '    (isnan: {})\n'.format(math.isnan(hist.GetBinContent(i)))
-	    bininfo += '    (isinf: {})\n'.format(math.isinf(hist.GetBinContent(i)))
+        if naninfo:
+            bininfo += '    (isnan: {})\n'.format(math.isnan(hist.GetBinContent(i)))
+            bininfo += '    (isinf: {})\n'.format(math.isinf(hist.GetBinContent(i)))
         bininfo += '  error: {}\n'.format(hist.GetBinError(i))
         print(bininfo)
 
@@ -209,33 +211,33 @@ def printhistogram2d(hist,rangeinfo=False,naninfo=False):
 
     print('### {} ###'.format(hist.GetName()))
     for i in range(0,hist.GetNbinsX()+2):
-	for j in range(0,hist.GetNbinsY()+2):
-	    bininfo = '  -----------\n'
-	    bininfo += '  bin number: {}/{}'.format(i,j)
-	    if rangeinfo:
-		bininfo += '  bin x-range: {} -> {}\n'.format(hist.GetXaxis().GetBinLowEdge(i),
+        for j in range(0,hist.GetNbinsY()+2):
+            bininfo = '  -----------\n'
+            bininfo += '  bin number: {}/{}'.format(i,j)
+            if rangeinfo:
+                bininfo += '  bin x-range: {} -> {}\n'.format(hist.GetXaxis().GetBinLowEdge(i),
                                             hist.GetXaxis().GetBinLowEdge(i)
-					    +hist.GetXaxis().GetBinWidth(i))
-		bininfo += '  bin y-range: {} -> {}\n'.format(hist.GetYaxis().GetBinLowEdge(j),
+                                            +hist.GetXaxis().GetBinWidth(i))
+                bininfo += '  bin y-range: {} -> {}\n'.format(hist.GetYaxis().GetBinLowEdge(j),
                                             hist.GetYaxis().GetBinLowEdge(j)
                                             +hist.GetYaxis().GetBinWidth(j))
-	    bininfo += '  content: {}\n'.format(hist.GetBinContent(i,j))
-	    if naninfo:
-		bininfo += '    (isnan: {})\n'.format(math.isnan(hist.GetBinContent(i,j)))
-		bininfo += '    (isinf: {})\n'.format(math.isinf(hist.GetBinContent(i,j)))
-	    bininfo += '  error: {}\n'.format(hist.GetBinError(i,j))
-	    print(bininfo)
-	
+            bininfo += '  content: {}\n'.format(hist.GetBinContent(i,j))
+            if naninfo:
+                bininfo += '    (isnan: {})\n'.format(math.isnan(hist.GetBinContent(i,j)))
+                bininfo += '    (isinf: {})\n'.format(math.isinf(hist.GetBinContent(i,j)))
+            bininfo += '  error: {}\n'.format(hist.GetBinError(i,j))
+            print(bininfo)
+        
 def printhistograms( histfile, mustcontainall=[], mustcontainone=[],
-				maynotcontainall=[], maynotcontainone=[],
-				naninfo=False ):
+                                maynotcontainall=[], maynotcontainone=[],
+                                naninfo=False ):
     allhists = loadallhistograms(histfile)
     selhists = selecthistograms(allhists,mustcontainone=mustcontainone,
-					mustcontainall=mustcontainall,
-					maynotcontainone=maynotcontainone,
-					maynotcontainall=maynotcontainall)[1]
+                                        mustcontainall=mustcontainall,
+                                        maynotcontainone=maynotcontainone,
+                                        maynotcontainall=maynotcontainall)[1]
     for hist in selhists:
-	printhistogram(hist,naninfo=naninfo)
+        printhistogram(hist,naninfo=naninfo)
 
 ### transforming axis binning ###
 
@@ -261,21 +263,21 @@ def make_equal_width_2d( hist, keeplabels=True ):
     newhist.SetTitle(hist.GetTitle())
     # fill new histogam
     for i in range(nxbins+2):
-	for j in range(nybins+2):
-	    newhist.SetBinContent(i,j,hist.GetBinContent(i,j))
-	    newhist.SetBinError(i,j,hist.GetBinError(i,j))
+        for j in range(nybins+2):
+            newhist.SetBinContent(i,j,hist.GetBinContent(i,j))
+            newhist.SetBinError(i,j,hist.GetBinError(i,j))
     # change labels to original bin labels
     if keeplabels:
         xax = newhist.GetXaxis()
         xax.SetNdivisions(nxbins,0,0,ROOT.kFALSE)
         yax = newhist.GetYaxis()
         yax.SetNdivisions(nybins,0,0,ROOT.kFALSE)
-	for i in range(nxbins+2):
+        for i in range(nxbins+2):
             #print('setting x-axis label for bin {} to {}'.format(i,origxax.GetBinLowEdge(i)))
-	    newhist.GetXaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origxax.GetBinLowEdge(i)))
-	for i in range(nybins+2):
+            newhist.GetXaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origxax.GetBinLowEdge(i)))
+        for i in range(nybins+2):
             #print('setting y-axis label for bin {} to {}'.format(i,origyax.GetBinLowEdge(i)))
-	    newhist.GetYaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origyax.GetBinLowEdge(i)))
+            newhist.GetYaxis().ChangeLabel(i,-1,-1,-1,-1,-1,str(origyax.GetBinLowEdge(i)))
     return (newhist,newxbins,newybins)
 
 def transform_to_equal_width( value, origax ):

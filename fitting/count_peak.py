@@ -7,10 +7,9 @@ import ROOT
 import sys
 import os
 import numpy as np
-sys.path.append(os.path.abspath('../tools'))
-import fittools as ft
-sys.path.append(os.path.abspath('../plotting'))
-import plotfit as pft
+sys.path.append(os.path.abspath('../'))
+import tools.fittools as ft
+import plotting.plotfit as pft
 
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 def count_peak(hist,label,extrainfo,gargs,mode='subtract'):

@@ -159,13 +159,13 @@ def setTDRstyle():
 ############################################################
 
 def drawLumi(pad,
-		cmstext="CMS",
-		cmstext_size_factor=0.8, 
-		cmstext_offset=0.03,
-		extratext="Preliminary",
+                cmstext="CMS",
+                cmstext_size_factor=0.8, 
+                cmstext_offset=0.03,
+                extratext="Preliminary",
                 lumitext="<lumi> fb^{-1} (13 TeV)",
-		lumitext_size_factor=0.6,
-		lumitext_offset=0.01,
+                lumitext_size_factor=0.6,
+                lumitext_offset=0.01,
                 cms_in_grid=True):
 
     pad.Update()
@@ -229,10 +229,10 @@ def loadallhistograms(histfile):
         try:
             nentries = hist.GetEntries() # maybe replace by more histogram-specific function
             nbins = hist.GetNbinsX()
-	    hist.SetDirectory(0)
+            hist.SetDirectory(0)
         except:
             print('### WARNING ###: key "'+str(key.GetName())+'" does not correspond to valid hist.')
-	    continue
+            continue
         # add hist to list
         histlist.append(hist)
     f.Close()
