@@ -52,7 +52,7 @@ for root,dirs,files in os.walk(args.inputdir):
 
 # print input files and ask for confirmation
 print('found following input files:')
-for dirname in inputfiles.keys():
+for dirname in sorted(inputfiles.keys()):
     print('    '+dirname)
     for f in inputfiles[dirname]:
         print('        '+f)
@@ -65,7 +65,7 @@ if not go=='y':
 workdir = os.getcwd()
 cmds = []
 # loop over input directories
-for indirname in inputfiles.keys():
+for indirname in sorted(inputfiles.keys()):
     outdirname = os.path.join(args.outputdir, indirname)
     # clean outputdir if it exists, else create it
     if os.path.exists(outdirname):

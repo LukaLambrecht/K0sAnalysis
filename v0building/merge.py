@@ -32,14 +32,32 @@ if __name__=='__main__':
                           if fnmatch(f, args.key) ])
             if len(filelist)>=1: indirs[thisdir] = filelist
 
-    for indir in indirs.keys():
-        print('now running on {} ({} files)'.format(indir, len(indirs[indir])))
+    # printouts for testing
+    print('Found following directories for merging:')
+    for indir in sorted(indirs.keys()):
+        print('  - {} ({} files)'.format(indir, len(indirs[indir])))
+
+    # loop over input directories
+    for indir in sorted(indirs.keys()):
+        print('Now running on {} ({} files)'.format(indir, len(indirs[indir])))
         outfile = os.path.join(indir, args.outputfile)
         if os.path.exists(outfile):
-            if args.force: os.system('rm '+outfile)
+            msg = 'WARNIING: output file {} already exists;'.format(outfile)
+            if args.force:
+                msg += ' removing and recreating it (since --force was set to True)'
+                print(msg)
+                os.system('rm '+outfile)
             else:
-                msg = 'WARNING: output file {} already exists,'.format(outfile)
-                msg += ' skipping this merge.'
+                msg += ' skipping this merge (since --force was set to False)'
                 print(msg)
                 continue
-        mt.mergefiles(indirs[indir], outfile, removeinput=args.remove_input, runjob=False)
+        # handle case of only one input file
+        inputfiles = indirs[indir]
+        if len(inputfiles)==1:
+            cmd = 'mv {} {}'.format(inputfiles[0], outfile)
+            print('Found only one input file in this directory, renaming to output file.')
+            print(cmd)
+            os.system(cmd)
+            continue
+        # now general case of multiple files
+        mt.mergefiles(inputfiles, outfile, removeinput=args.remove_input, runjob=False)
