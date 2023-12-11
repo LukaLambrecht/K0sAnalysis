@@ -8,7 +8,7 @@
   "yaxtitle": "Number of candidates"
 },
 {
-  "name": "_RSigPV",
+  "name": "_RPVSig",
   "xlow": 0.0,
   "xhigh": 600.0,
   "nbins": 80,

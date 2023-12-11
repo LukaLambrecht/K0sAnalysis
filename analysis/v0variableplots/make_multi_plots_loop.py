@@ -5,12 +5,11 @@
 import sys
 import os
 import argparse
-sys.path.append(os.path.abspath('../../tools'))
-import condortools as ct
-# WARNING: job submission does not yet work,
-# due to issues with spaces in arguments and the escaping of quotes.
-sys.path.append(os.path.abspath('../'))
-from mcvsdata_getfiles import getfiles
+from six.moves import input
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'../..')))
+import tools.condortools as ct
+from analysis.mcvsdata_getfiles import getfiles
+CMSSW='/user/llambrec/CMSSW_12_4_6'
 
 if __name__=='__main__':
 
@@ -27,8 +26,12 @@ if __name__=='__main__':
   # other settings (hard-coded)
   v0types = ['ks', 'la']
   treenamedict = {'ks':'laurelin', 'la':'telperion'}
-  variabledict = {'ks': os.path.abspath('../../variables/variables_ks_new.json'),
-                  'la': os.path.abspath('../../variables/variables_la_new.json')}
+  if args.version=='run2preul':
+    variabledict = {'ks': os.path.abspath('../../variables/variables_ks_old.json'),
+                    'la': os.path.abspath('../../variables/variables_la_old.json')}
+  elif args.version=='run2ul':
+    variabledict = {'ks': os.path.abspath('../../variables/variables_ks_new.json'),
+                    'la': os.path.abspath('../../variables/variables_la_new.json')}
   outputdict = {'ks': 'ksplots',
                 'la': 'laplots'}
   colors = None
@@ -56,7 +59,7 @@ if __name__=='__main__':
   if os.path.exists(args.outputdir):
     print('WARNING: output directory {} already exists.'.format(args.outputdir))
     print('Clean it? (y/n)')
-    go = raw_input()
+    go = input()
     if not go == 'y': sys.exit()
     os.system('rm -r {}'.format(args.outputdir))
   os.makedirs(args.outputdir)
@@ -89,18 +92,22 @@ if __name__=='__main__':
         thisinputfile = thisinputfiles[0]['file']
         thisinputlabel = thisinputfiles[0]['label']
         inputfiles.append( thisinputfile )
-        inputlabels.append( '\'{}\''.format(thisinputlabel) )
+        inputlabels.append( thisinputlabel )
 
     # make command
-    cmd = 'python make_multi_plots.py'
+    cmd = 'python3 make_multi_plots.py'
     cmd += ' --inputfiles {}'.format(' '.join(inputfiles))
-    cmd += ' --inputlabels {}'.format(' '.join(inputlabels))
+    if args.runmode=='local': inputlabelsarg = ' '.join(['\'{}\''.format(el) for el in inputlabels])
+    if args.runmode=='condor': inputlabelsarg = ' '.join([el.replace(' ','-') for el in inputlabels])
+    cmd += ' --inputlabels {}'.format(inputlabelsarg)
     cmd += ' --outputdir {}'.format(outputdir)
     cmd += ' --nprocess {}'.format(args.nprocess)
     if args.normalize: cmd += ' --normalize'
     cmd += ' --treename {}'.format(treename)
     cmd += ' --variables {}'.format(variables)
-    cmd += ' --extrainfos \'{}\''.format(extrainfos)
+    if args.runmode=='local': extrainfosarg = '\'{}\''.format(extrainfos)
+    if args.runmode=='condor': extrainfosarg = extrainfos.replace(' ','-')
+    cmd += ' --extrainfos {}'.format(extrainfosarg)
     if colors is not None: cmd += ' --colors {}'.format(colors)
     cmds.append(cmd)
 
@@ -111,4 +118,4 @@ if args.runmode=='local':
     os.system(cmd)
 elif args.runmode=='condor':
   ct.submitCommandsAsCondorCluster('cjob_make_multi_plots_loop', cmds,
-    cmssw_version='/user/llambrec/CMSSW_10_2_20')
+    cmssw_version=CMSSW)

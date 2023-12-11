@@ -57,7 +57,7 @@ if __name__=='__main__':
     # not yet stored but can be calculated on the fly
     if variables[1]['name'] == '_RPVUnc':
       values2 = (tree['_RPV'].array(library='np', entry_stop=args.nprocess) / 
-                 tree['_RSigPV'].array(library='np', entry_stop=args.nprocess))
+                 tree['_RPVSig'].array(library='np', entry_stop=args.nprocess))
     else: values2 = tree[variables[1]['name']].array(library='np', entry_stop=args.nprocess)
     mass = tree['_mass'].array(library='np', entry_stop=args.nprocess)
 
@@ -79,7 +79,7 @@ if __name__=='__main__':
   # parse extra info
   extrainfos = None
   if args.extrainfos is not None:
-    extrainfos = args.extrainfos.split(',')
+    extrainfos = args.extrainfos.replace('-',' ').split(',')
 
   # define plot settings
   xaxtitle = variables[0].get('xaxtitle',None)

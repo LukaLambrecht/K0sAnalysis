@@ -36,7 +36,7 @@ if __name__=='__main__':
   # parse extra info
   extrainfos = None
   if args.extrainfos is not None:
-    extrainfos = args.extrainfos.split(',')
+    extrainfos = args.extrainfos.replace('-',' ').split(',')
 
   # make output directory
   if not os.path.exists(args.outputdir):
@@ -71,7 +71,7 @@ if __name__=='__main__':
         xaxtitle=xaxtitle, yaxtitle=yaxtitle, title=title,
         topmargin=0.1,
         drawoptions='hist e',
-        do_cms_text=True,
+        do_cms_text=True, extracmstext='Preliminary',
         extrainfos=extrainfos, infoleft=infoleft )
 
     # same with log scale

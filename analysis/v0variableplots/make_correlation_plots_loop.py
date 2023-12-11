@@ -5,12 +5,12 @@
 import sys
 import os
 import argparse
-sys.path.append(os.path.abspath('../../tools'))
-import condortools as ct
-# WARNING: job submission does not yet work,
-# due to issues with spaces in arguments and the escaping of quotes.
-sys.path.append(os.path.abspath('../'))
-from mcvsdata_getfiles import getfiles
+from six.moves import input
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'../..')))
+import tools.condortools as ct
+from analysis.mcvsdata_getfiles import getfiles
+CMSSW='/user/llambrec/CMSSW_12_4_6'
+
 
 if __name__=='__main__':
 
@@ -53,7 +53,7 @@ if __name__=='__main__':
   if os.path.exists(args.outputdir):
     print('WARNING: output directory {} already exists.'.format(args.outputdir))
     print('Clean it? (y/n)')
-    go = raw_input()
+    go = input()
     if not go == 'y': sys.exit()
     os.system('rm -r {}'.format(args.outputdir))
   os.makedirs(args.outputdir)
@@ -70,7 +70,7 @@ if __name__=='__main__':
           msg += ' (found {})'.format(thisinputfiles)
           raise Exception(msg)
         inputfile = thisinputfiles[0]['file']
-	inputlabel = thisinputfiles[0]['label']
+        inputlabel = thisinputfiles[0]['label']
 
         # make extra info
         extrainfos = []
@@ -94,7 +94,9 @@ if __name__=='__main__':
         cmd += ' --nprocess {}'.format(args.nprocess)
         cmd += ' --treename {}'.format(treename)
         cmd += ' --variables {}'.format(variables)
-        cmd += ' --extrainfos \'{}\''.format(','.join(extrainfos))
+        extrainfosarg = ','.join(extrainfos)
+        extrainfosarg = extrainfosarg.replace(' ','-')
+        cmd += ' --extrainfos {}'.format(extrainfosarg)
         if dopixel: cmd += ' --{}'.format(pixelarg)
         cmds.append(cmd)
 
@@ -105,4 +107,4 @@ if args.runmode=='local':
     os.system(cmd)
 elif args.runmode=='condor':
   ct.submitCommandsAsCondorCluster('cjob_make_correlation_plots_loop', cmds,
-    cmssw_version='/user/llambrec/CMSSW_10_2_20')
+    cmssw_version=CMSSW)

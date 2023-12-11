@@ -6,7 +6,7 @@ import ROOT
 import sys
 import os
 sys.path.append('../')
-import tools.plottools as pt
+import plotting.plottools as pt
 
 def plot_fit(hist,figname,fitfunc=None,backfit=None,
              label=None,paramdict=None,xaxtitle=None,yaxtitle=None,
@@ -30,9 +30,9 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
         labelfont = 4; labelsize = 30
         axtitlefont = 4; axtitlesize = 35
         infofont = 4; infosize = 25
-        legendfont = 4; legendsize = 25
+        legendfont = 4; legendsize = 30
         c1.SetBottomMargin(0.1)
-        c1.SetTopMargin(0.05)
+        c1.SetTopMargin(0.06)
         c1.SetLeftMargin(0.15)
         if label is None: label = 'histogram'
 
@@ -46,6 +46,7 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
         hist.SetStats(False)
         hist.SetLineColor(ROOT.kBlue)
         hist.SetLineWidth(2)
+        hist.SetMarkerSize(0)
         hist.Sumw2()
         leg.AddEntry(hist,label,"l")
         hist.Draw()
@@ -83,7 +84,7 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
             backfit.SetLineWidth(3)
             backfit.SetLineStyle(ROOT.kDashed)
             backfit.Draw("SAME")
-            leg.AddEntry(backfit,'background fit','l')
+            leg.AddEntry(backfit,'Background fit','l')
             leg.Draw()
 
         # draw fitted function
@@ -91,7 +92,7 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
             fitfunc.SetLineColor(ROOT.kRed)
             fitfunc.SetLineWidth(3)
             fitfunc.Draw("SAME")
-            leg.AddEntry(fitfunc,'total fit','l')
+            leg.AddEntry(fitfunc,'Total fit','l')
             leg.Draw()
 
             # display additional info
@@ -117,7 +118,7 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
 
         # title
         lumitext = '' if lumi==0 else '{0:.1f} '.format(float(lumi)/1000) + 'fb^{-1} (13 TeV)'
-        pt.drawLumi(c1,extratext="Preliminary", lumitext=lumitext)
+        pt.drawLumi(c1, extratext="Preliminary", lumitext=lumitext)
 
         c1.Update()
         c1.SaveAs(figname)

@@ -36,17 +36,19 @@ if __name__=='__main__':
   dolegend = True
   if len(args.inputlabels)==0:
     dolegend = False
-    args.inputlabels = ['']*len(args.inputfiles)
-  if len(args.inputlabels)!=len(args.inputfiles):
+    inputlabels = ['']*len(args.inputfiles)
+  elif len(args.inputlabels)!=len(args.inputfiles):
     print('WARNING: number of labels does not correspond to number of hists.')
     print('Will ignore labels and not make a legend.')
     dolegend = False
-    args.inputlabels = ['']*len(args.inputfiles)
+    inputlabels = ['']*len(args.inputfiles)
+  else:
+    inputlabels = [el.replace('-',' ') for el in args.inputlabels]
 
   # parse extra info
   extrainfos = None
   if args.extrainfos is not None:
-    extrainfos = args.extrainfos.split(',')
+    extrainfos = args.extrainfos.replace('-',' ').split(',')
 
   # parse colors
   colorlist = None
@@ -91,7 +93,7 @@ if __name__=='__main__':
     plotmultihistograms( histlist,
             figname=outputfile, title=title, xaxtitle=xaxtitle, yaxtitle=yaxtitle,
             normalize=args.normalize,
-            dolegend=dolegend, labellist=args.inputlabels,
+            dolegend=dolegend, labellist=inputlabels,
             colorlist=colorlist,
             ymaxlinfactor=1.8,
             drawoptions='hist e',
@@ -103,7 +105,7 @@ if __name__=='__main__':
             figname=logoutputfile, title=title, xaxtitle=xaxtitle, yaxtitle=yaxtitle,
             normalize=args.normalize,
             logy=True, yminlogfactor=0.2, ymaxlogfactor=100,
-            dolegend=dolegend, labellist=args.inputlabels,
+            dolegend=dolegend, labellist=inputlabels,
             colorlist=colorlist,
             drawoptions='hist e',
             extrainfos=extrainfos, infosize=None, infoleft=infoleft, infotop=infotop)

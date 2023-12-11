@@ -17,7 +17,7 @@ def fillvarfromtree( tree,
                      weightvar = None, 
                      nprocess = -1,
                      label = None,
-		     extraselection = None ):
+                     extraselection = None ):
     # filling histogram from a given tree
 
     # make output histogram
@@ -34,9 +34,9 @@ def fillvarfromtree( tree,
         if( i%10000==0 ):
             print('number of processed events: '+str(i))
         tree.GetEntry(i)
-	# apply additional selection
-	if extraselection is not None:
-	    if not eval(extraselection): continue
+        # apply additional selection
+        if extraselection is not None:
+            if not eval(extraselection): continue
         # determine weight for this entry
         weight = 1
         if weightvar is not None: weight = getattr(tree,weightvar)
@@ -89,10 +89,10 @@ if __name__=='__main__':
         print(options)
     
     hist = fillvarfromtreefile( options.finloc, options.treename, options.varname, 
-				xlow=options.xlow, xhigh=options.xhigh, nbins=options.nbins,
+                                xlow=options.xlow, xhigh=options.xhigh, nbins=options.nbins,
                                 weightvar=options.weightvarname, 
-				nprocess=options.nprocess,
-				extraselection=options.extraselection)
+                                nprocess=options.nprocess,
+                                extraselection=options.extraselection)
     shp.plotsinglehistogram( hist, options.outfilename,
-	xaxtitle=options.xaxtitle, yaxtitle=options.yaxtitle, title=options.title,
+        xaxtitle=options.xaxtitle, yaxtitle=options.yaxtitle, title=options.title,
         topmargin=0.1 )

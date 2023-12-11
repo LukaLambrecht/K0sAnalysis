@@ -191,26 +191,32 @@ def drawLumi(pad,
     latex.SetTextAngle(0);
     latex.SetTextColor(ROOT.kBlack);
 
+    # draw CMS text
     latex.SetTextFont(61);
     latex.SetTextAlign(11);
     latex.SetTextSize(CMSTextSize);
     latex.SetText(0,0,'CMS')
-    #cmsX = latex.GetXsize(); # does not seem to work properly
-    cmsX = CMSTextSize*2*(1-rfrac) # phenomenological alternative
     # old style: cms label outside of frame:
-    if not cms_in_grid: latex.DrawLatex(lmargin+0.03, 1 - tmargin + CMSTextVerticalOffset,cmstext);
+    if not cms_in_grid: latex.DrawLatex(lmargin+0.01, 1 - tmargin + CMSTextVerticalOffset,cmstext);
     # new style: cms label inside frame:
     else: latex.DrawLatex( lmargin+0.03, 1-tmargin-CMSTextVerticalOffset-CMSTextSize,cmstext)
 
+    # get width of the text we just drew
+    cmsX = latex.GetXsize();
+    # the above is in pad coordinates, but we need NDC coordinates
+    cmsX = cmsX / (pad.GetUxmax() - pad.GetUxmin())
+
+    # draw extra text
     extraTextSize = CMSTextSize*0.8
     latex.SetTextFont(52);
     latex.SetTextSize(extraTextSize);
     latex.SetTextAlign(11);
-    if not cms_in_grid: latex.DrawLatex(lmargin+0.03 + 1.2*cmsX,
+    if not cms_in_grid: latex.DrawLatex(lmargin+0.01 + 1.0*cmsX,
                         1-tmargin+CMSTextVerticalOffset, extratext);
-    else: latex.DrawLatex(lmargin+0.03 + 1.2*cmsX,
+    else: latex.DrawLatex(lmargin+0.03 + 1.0*cmsX,
             1-tmargin-CMSTextVerticalOffset-CMSTextSize, extratext);
 
+    # draw lumi
     latex.SetTextFont(42);
     latex.SetTextAlign(31);
     latex.SetTextSize(lumiTextSize);

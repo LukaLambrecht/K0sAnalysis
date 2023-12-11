@@ -6,57 +6,55 @@ import ROOT
 import sys
 import os
 import numpy as np
-import plottools as pt
-sys.path.append(os.path.abspath('../tools'))
-import histtools as ht
+import argparse
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+import plotting.plottools as pt
+import tools.histtools as ht
+
 
 def loadobjects(histfile, histdim=1):
-    ### load all objects, i.e. histograms and other relevant variables
+    ### load all objects, i.e. histograms and other relevant info
     print('loading histograms')
     f = ROOT.TFile.Open(histfile)
     res = {}
     # load normalization
-    normalization = int(f.Get("normalization")[0])
+    normalization = f.Get("normalization").GetTitle()
     res['normalization'] = normalization
-    if(normalization==3):
+    if(normalization in ['range']):
         normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
         res['normrange'] = normrange
         normvariable = f.Get("normvariable").GetTitle()
         res['normvariable'] = normvariable
     # load luminosity
     try:
-	lumi = f.Get("lumi")[0]
-	res['lumi'] = lumi
+        lumi = f.Get("lumi")[0]
+        res['lumi'] = lumi
     except:
-	print('WARNING: could not find luminosity value...')
+        print('WARNING: could not find luminosity value...')
         lumi = 0
         res['lumi'] = 0
     # load background mode
     try:
-        bckmode = int(f.Get("bckmode")[0])
-        res['bckmode'] = None
-        if bckmode==1: res['bckmode'] = 'default'
-        if bckmode==2: res['bckmode'] = 'sideband'
+        bkgmode = f.Get("bkgmode").GetTitle()
+        res['bkgmode'] = bkgmode
     except:
-        print('WARNING: could not find bckmode value...')
-        res['bckmode'] = None
-    # load v0type
+        print('WARNING: could not find bkgmode value...')
+        res['bkgmode'] = None
+    # load treename
     try:
-        v0type = int(f.Get("v0type")[0])
-        res['v0type'] = None
-        if v0type==1: res['v0type'] = 'ks'
-        if v0type==2: res['v0type'] = 'la'
+        treename = f.Get("treename").GetTitle()
+        res['treename'] = treename
     except:
-        print('WARNING: could not find v0type value...')
-        res['v0type'] = None
+        print('WARNING: could not find treename value...')
+        res['treename'] = None
     # load meta-info
     if histdim==1:
-        varname = f.Get('varname').GetTitle()
+        varname = f.Get('variable').GetTitle()
         res['varname'] = varname
     elif histdim==2:
-        xvarname = f.Get('xvarname').GetTitle()
+        xvarname = f.Get('variable').GetTitle()
         res['xvarname'] = xvarname
-        yvarname = f.Get('yvarname').GetTitle()
+        yvarname = f.Get('yvariable').GetTitle()
         res['yvarname'] = yvarname
     # load histograms
     histlist = ht.loadallhistograms(histfile)
@@ -79,64 +77,18 @@ def loadobjects(histfile, histdim=1):
     # get bins
     testhist = None
     if len(mchistlist)>0:
-	testhist = mchistlist[0]
+        testhist = mchistlist[0]
     elif len(datahistlist)>0:
-	testhist = datahistlist[0]
+        testhist = datahistlist[0]
     if testhist is not None:
         if histdim==1:
-	    bins = testhist.GetXaxis().GetXbins()
-	    res['bins'] = bins
+            bins = testhist.GetXaxis().GetXbins()
+            res['bins'] = bins
         elif histdim==2:
             xbins = testhist.GetXaxis().GetXbins()
             ybins = testhist.GetYaxis().GetXbins()
             res['xbins'] = xbins
             res['ybins'] = ybins 
-    return res
-
-def loadobjects_old(histfile):
-    ### same as above, but for older files
-    # WARNING: only implemented to quickly make work for one specific file type,
-    #          not guaranteed to work on all older files
-    print('loading histograms')
-    f = ROOT.TFile.Open(histfile)
-    res = {}
-    # load normalization and related paramters
-    normalization = int(f.Get("normalization")[0])
-    res['normalization'] = normalization
-    if(normalization==3):
-        normrange = (f.Get("normrange")[0],f.Get("normrange")[1])
-        res['normrange'] = normrange
-    if(normalization==1):
-        lumi = f.Get("lumi")[0]
-        res['lumi'] = lumi
-    else:
-        lumi = 0
-        res['lumi'] = 0
-    # load histograms
-    histlist = ht.loadallhistograms(histfile)
-    mchistlist = []
-    datahistlist = []
-    for hist in histlist:
-        if 'mc' in hist.GetName():
-            mchistlist.append(hist)
-        elif 'data' in hist.GetName():
-            datahistlist.append(hist)
-        else:
-            print('### WARNING ###: histogram type not recognized: '+hist.GetName())
-            print('                 skipping it...')
-    print('found '+str(len(datahistlist))+' data files and '
-            +str(len(mchistlist))+' simulation files.')
-    res['mchistlist'] = mchistlist
-    res['datahistlist'] = datahistlist
-    # get bins
-    testhist = None
-    if len(mchistlist)>0:
-        testhist = mchistlist[0]
-    elif len(datahistlist)>0:
-        testhist = datahistlist[0]
-    if testhist is not None:
-        bins = testhist.GetXaxis().GetXbins()
-        res['bins'] = bins
     return res
 
 def ratiototxt(histnum,histdenom,outfilename):
@@ -146,7 +98,7 @@ def ratiototxt(histnum,histdenom,outfilename):
     histratio = histnum.Clone()
     histratio.Divide(histdenom)
     for i in range(1,histratio.GetSize()-1):
-	outtxtfile.write(str(i)+'\t'+str(histratio.GetBinContent(i))
+        outtxtfile.write(str(i)+'\t'+str(histratio.GetBinContent(i))
                          +'\t'+str(histratio.GetBinError(i))+'\n')
     outtxtfile.close()
 
@@ -171,9 +123,11 @@ def getminmax(datahist, mchist, yaxlog, margin=True):
     return (histmin, histmax)
 
 def plotmcvsdata(mchistlist, datahistlist, outfile,
-		xaxistitle='', yaxistitle='', title='',
-		colorlist=None,
-		logy=False, drawrange=None, lumistr='', dotxt=False,
+                xaxtitle='', yaxtitle='', title='',
+                colorlist=None,
+                logy=False, drawrange=None,
+                extracmstext='', lumistr='',
+                dotxt=False,
                 extrainfos=[], infosize=None, infoleft=None, infotop=None,
                 do2016pixel=False, do20172018pixel=False ):
     # optional input args:
@@ -203,21 +157,21 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     if infotop is None: infotop = 0.8
     xlow = datahistlist[0].GetBinLowEdge(1)
     xhigh = (datahistlist[0].GetBinLowEdge(datahistlist[0].GetNbinsX())
-		+ datahistlist[0].GetBinWidth(datahistlist[0].GetNbinsX()))
+                + datahistlist[0].GetBinWidth(datahistlist[0].GetNbinsX()))
     statcolor = ROOT.kOrange
     statfillstyle = 1001
     stattransparency = 0.5
     if colorlist is None: 
-	colorlist = ([ROOT.kAzure-4,ROOT.kAzure+6,ROOT.kViolet,ROOT.kMagenta-9,
-		      ROOT.kRed,ROOT.kPink-9,ROOT.kBlue+1])
-	# (shades of blue and purple)
-	#colorlist = ([ROOT.kGreen+1,ROOT.kCyan-7,ROOT.kAzure-4,ROOT.kViolet, 
-	#         ROOT.kMagenta-9,ROOT.kRed-4,ROOT.kYellow])
-	# (bright, high contrast)
+        colorlist = ([ROOT.kAzure-4,ROOT.kAzure+6,ROOT.kViolet,ROOT.kMagenta-9,
+                      ROOT.kRed,ROOT.kPink-9,ROOT.kBlue+1])
+        # (shades of blue and purple)
+        #colorlist = ([ROOT.kGreen+1,ROOT.kCyan-7,ROOT.kAzure-4,ROOT.kViolet, 
+        #         ROOT.kMagenta-9,ROOT.kRed-4,ROOT.kYellow])
+        # (bright, high contrast)
 
     ### Create pad and containers for stacked and summed histograms
     pad1.cd()
-    pad1.SetBottomMargin(0.0)
+    pad1.SetBottomMargin(0.02)
     pad1.SetLeftMargin(0.15)
     pad1.SetTopMargin(0.12)
     pad1.SetTicks(1,1)
@@ -227,9 +181,10 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     mchistsum = mchistlist[0].Clone()
     mchistsum.Reset()
     mchistsum.SetStats(False)
+    mchistsum.SetMarkerSize(0)
 
     ### Declare legend
-    leg = ROOT.TLegend(0.4,0.65,0.9,0.85)
+    leg = ROOT.TLegend(0.5, 0.65, 0.9, 0.85)
     leg.SetTextFont(10*legendfont+3)
     leg.SetTextSize(legendsize)
     leg.SetNColumns(2)
@@ -237,14 +192,15 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
 
     ### Add MC histograms
     for i,hist in enumerate(mchistlist):
-	hist.SetStats(False)
-	hist.SetLineColor(ROOT.kBlack)
-	hist.SetLineWidth(1)
-	hist.SetFillColor(colorlist[i])
-	hist.SetFillStyle(1001)
-	leg.AddEntry(hist,hist.GetTitle(),"f")
-	mcstack.Add(hist)
-	mchistsum.Add(hist)
+        hist.SetStats(False)
+        hist.SetLineColor(ROOT.kBlack)
+        hist.SetLineWidth(1)
+        hist.SetMarkerSize(0)
+        hist.SetFillColor(colorlist[i])
+        hist.SetFillStyle(1001)
+        leg.AddEntry(hist,hist.GetTitle(),"f")
+        mcstack.Add(hist)
+        mchistsum.Add(hist)
 
     ### Add data histograms
     # sum of all data
@@ -277,10 +233,11 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     yax.SetNdivisions(8,4,0,ROOT.kTRUE)
     yax.SetLabelFont(10*labelfont+3)
     yax.SetLabelSize(labelsize)
-    yax.SetTitle(yaxistitle)
-    yax.SetTitleFont(10*axtitlefont+3)
-    yax.SetTitleSize(axtitlesize)
-    yax.SetTitleOffset(1.5)
+    if yaxtitle is not None:
+        yax.SetTitle(yaxtitle)
+        yax.SetTitleFont(10*axtitlefont+3)
+        yax.SetTitleSize(axtitlesize)
+        yax.SetTitleOffset(1.5)
     mcstack.Draw("HIST")
 
     ### Summed histogram layout
@@ -296,21 +253,22 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
 
     ### Draw normalization range if needed
     if( drawrange is not None ):
-	lines = []
-	for xval in drawrange:
-	    lines.append(ROOT.TLine(xval,ymin,xval,ymax))
-	    lines[-1].SetLineStyle(9)
-	    lines[-1].Draw()
+        lines = []
+        for xval in drawrange:
+            lines.append(ROOT.TLine(xval,ymin,xval,ymax))
+            lines[-1].SetLineStyle(9)
+            lines[-1].Draw()
 
     ### Title and other information displays
     leg.Draw()
     # title
-    ttitle = ROOT.TLatex()	
-    ttitle.SetTextFont(10*titlefont+3)
-    ttitle.SetTextSize(titlesize)
-    ttitle.DrawLatexNDC(0.15,0.92,title)
-    pt.drawLumi(pad1,cmstext_size_factor=0.5,extratext="",
-			lumitext=lumistr,lumitext_size_factor=0.4,lumitext_offset=0.02)
+    if title is not None:
+        ttitle = ROOT.TLatex()        
+        ttitle.SetTextFont(10*titlefont+3)
+        ttitle.SetTextSize(titlesize)
+        ttitle.DrawLatexNDC(0.15,0.92,title)
+    pt.drawLumi(pad1, cmstext_size_factor=0.5, extratext=extracmstext,
+                lumitext=lumistr, lumitext_size_factor=0.4, lumitext_offset=0.02)
 
     ### Draw extra info
     tinfo = ROOT.TLatex()
@@ -322,9 +280,9 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
 
     # temp for testing:
     #for i in range(1,mchistsum.GetNbinsX()):
-    #	print('bin '+str(i)+' of '+str(mchistsum.GetNbinsX()))
-    #	print(hist0.GetBinContent(i))
-    #	print(mchistsum.GetBinContent(i))
+    #        print('bin '+str(i)+' of '+str(mchistsum.GetNbinsX()))
+    #        print(hist0.GetBinContent(i))
+    #        print(mchistsum.GetBinContent(i))
 
     # draw vertical lines for 2016 pixel detector
     if do2016pixel:
@@ -369,22 +327,22 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         adhocymax = ymax*0.7
         adhocymaxdl4 = ymax*0.4
       dl1 = ROOT.TLine(2.9,adhocymin,
-	            2.9,adhocymax)
+                    2.9,adhocymax)
       dl1.SetLineWidth(linewidth); dl1.SetLineColor(linecolor)
       dl1.SetLineStyle(linestyle)
       dl1.Draw()
       dl2 = ROOT.TLine(6.8,adhocymin,
-	            6.8,adhocymax)
+                    6.8,adhocymax)
       dl2.SetLineWidth(linewidth); dl2.SetLineColor(linecolor)
       dl2.SetLineStyle(linestyle)
       dl2.Draw()
       dl3 = ROOT.TLine(10.9,adhocymin,
-	            10.9,adhocymax)
+                    10.9,adhocymax)
       dl3.SetLineWidth(linewidth); dl3.SetLineColor(linecolor)
       dl3.SetLineStyle(linestyle)
       dl3.Draw()
       dl4 = ROOT.TLine(16.0,adhocymin,
-	            16.0,adhocymaxdl4)
+                    16.0,adhocymaxdl4)
       dl4.SetLineWidth(linewidth); dl4.SetLineColor(linecolor)
       dl4.SetLineStyle(linestyle)
       dl4.Draw()
@@ -409,10 +367,10 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     ### Divide simulation by itself to obtain expected uncertainty
     histratio2 = mchistsum.Clone()
     for i in range(1,histratio2.GetSize()-1):
-	denom = mchistsum.GetBinContent(i)
-	if not denom==0: # if zero, do nothing
-	    histratio2.SetBinContent(i,histratio2.GetBinContent(i)/denom)
-	    histratio2.SetBinError(i,histratio2.GetBinError(i)/denom)
+        denom = mchistsum.GetBinContent(i)
+        if not denom==0: # if zero, do nothing
+            histratio2.SetBinContent(i,histratio2.GetBinContent(i)/denom)
+            histratio2.SetBinError(i,histratio2.GetBinError(i)/denom)
     histratio2.SetStats(False)
     histratio2.SetTitle("")
     histratio2.SetLineWidth(0)
@@ -424,10 +382,11 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     xax.SetNdivisions(10,4,0,ROOT.kTRUE)
     xax.SetLabelFont(10*labelfont+3)
     xax.SetLabelSize(labelsize)
-    xax.SetTitle(xaxistitle)
-    xax.SetTitleFont(10*axtitlefont+3)
-    xax.SetTitleSize(axtitlesize)
-    xax.SetTitleOffset(3.)
+    if xaxtitle is not None:
+        xax.SetTitle(xaxtitle)
+        xax.SetTitleFont(10*axtitlefont+3)
+        xax.SetTitleSize(axtitlesize)
+        xax.SetTitleOffset(3.)
     # Y-axis layout
     #histratio2.SetMinimum(0.88)
     #histratio2.SetMaximum(1.12)
@@ -446,13 +405,13 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     ### Divide data by simulation
     histratio = hist0.Clone()
     for i in range(1,histratio.GetSize()-1):
-	denom = mchistsum.GetBinContent(i)
-	if not denom==0: 
-	    histratio.SetBinContent(i,histratio.GetBinContent(i)/denom)
-	    histratio.SetBinError(i,histratio.GetBinError(i)/denom)
-	else: # if zero: set numerator to zero as well as no sensible comparison can be made
-	    histratio.SetBinContent(i,0)
-	    histratio.SetBinError(i,0)
+        denom = mchistsum.GetBinContent(i)
+        if not denom==0: 
+            histratio.SetBinContent(i,histratio.GetBinContent(i)/denom)
+            histratio.SetBinError(i,histratio.GetBinError(i)/denom)
+        else: # if zero: set numerator to zero as well as no sensible comparison can be made
+            histratio.SetBinContent(i,0)
+            histratio.SetBinError(i,0)
     histratio.SetStats(False)
     histratio.Draw("SAME E1")
     c1.Update()
@@ -476,71 +435,50 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
 
     ## write ratio to txt file if requested
     if dotxt:
-	txtoutfile = outfile.split('.')[0]+'_ratio.txt'
-	ratiototxtfile(hist0,mchistsum,txtoutfile)
+        txtoutfile = outfile.split('.')[0]+'_ratio.txt'
+        ratiototxtfile(hist0,mchistsum,txtoutfile)
 
 if __name__=='__main__':
 
     sys.stderr.write('###starting###\n')
-    # configure input parameters (hard-coded)
-    histfile = '/storage_mnt/storage/user/llambrec/K0sAnalysis/histograms/'
-    histfile += 'test.root'
-    # (file to read histograms)
-    outfile = '/storage_mnt/storage/user/llambrec/K0sAnalysis/histograms/'
-    outfile += 'test.png'
-    # (file to save figure to)
-    title = r'K^{0}_{S} vertex radial distance'
-    xaxistitle = 'radial distance (cm)' # set x axis title
-    yaxistitle = 'number of vertices' # set y axis title of upper graph
-    # optional arguments
-    logy = True
-    doextrainfos = False
-    extrainfos = []
-    do2016pixel = False
-    do20172018pixel = False
 
-    # configure input parameters (from command line for submission script)
-    cmdargs = sys.argv[1:]
-    if len(cmdargs)>0:
-        coreargs = {'histfile':False, 'histtitle':False, 'xaxistitle':False,
-                    'yaxistitle':False, 'outfile':False }
-        for arg in cmdargs:
-            argname,argval = arg.split('=')
-            # required arguments
-            if argname == 'histfile': histfile = argval; coreargs['histfile']=True
-            elif argname == 'histtitle': title = argval; coreargs['histtitle']=True
-            elif argname == 'xaxistitle': xaxistitle = argval; coreargs['xaxistitle']=True
-            elif argname == 'yaxistitle': yaxistitle = argval; coreargs['yaxistitle']=True
-            elif argname == 'outfile': outfile = argval; coreargs['outfile']=True
-            # optional arguments
-            elif argname == 'logy': logy = (argval.lower()=='true')
-            elif argname == 'doextrainfos': doextrainfos = (argval.lower()=='true')
-            elif argname == 'extrainfos': extrainfos = argval
-            elif argname == 'do2016pixel': do2016pixel = (argval.lower()=='true')
-            elif argname == 'do20172018pixel': do20172018pixel = (argval.lower()=='true')
-        if False in coreargs.values():
-            print('### ERROR ###: the following core arguments were not defined:')
-            for key in coreargs.keys():
-                if(coreargs[key]==False): print(key)
-            sys.exit()
+    # read command-line arguments
+    parser = argparse.ArgumentParser( description = 'Plot histograms' )
+    # general arguments
+    parser.add_argument('-i', '--histfile', required=True, type=os.path.abspath)
+    parser.add_argument('-o', '--outputfile', required=True)
+    # arguments for axes formatting
+    parser.add_argument('--title', default=None)
+    parser.add_argument('--xaxtitle', default=None)
+    parser.add_argument('--yaxtitle', default=None)
+    # other arguments
+    parser.add_argument('--logy', default=False, action='store_true')
+    parser.add_argument('--extracmstext', default=None)
+    parser.add_argument('--doextrainfos', default=False, action='store_true')
+    parser.add_argument('--extrainfos', default=None)
+    parser.add_argument('--do2016pixel', default=False, action='store_true')
+    parser.add_argument('--do20172018pixel', default=False, action='store_true')
+    args = parser.parse_args()
 
-    indict = loadobjects(histfile)
-    #indict = loadobjects_old(histfile) # WARNING: temporarily changed to loadobjects_old!
+    # load objects from input file   
+    indict = loadobjects(args.histfile)
     
     # configure other parameters based on input
     varname = indict['varname']
     normrange = None
     normvariable = None
-    if indict['normalization'] == 3:
+    if indict['normalization'] == 'range':
       normrange = indict['normrange']
       normvariable = indict['normvariable']
       if varname!=normvariable: normrange = None # disable drawing norm range if variables dont match
     lumistr = ''
     if indict['lumi'] > 0: 
-	lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
+        lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
+    extracmstext = ''
+    if args.extracmstext is not None: extracmstext = args.extracmstext
     colorlist = []
     for hist in indict['mchistlist']:
-	if '2016' in hist.GetTitle():
+        if '2016' in hist.GetTitle():
           if '2016B' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
           elif '2016C' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
           elif '2016D' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
@@ -551,47 +489,59 @@ if __name__=='__main__':
           elif '2016H' in hist.GetTitle(): colorlist.append(ROOT.kAzure-9)
           elif '2016PostVFP' in hist.GetTitle(): colorlist.append(ROOT.kAzure-9)
           else: colorlist.append(ROOT.kAzure-4)
-	elif '2017' in hist.GetTitle(): colorlist.append(ROOT.kAzure+6)
-	elif '2018' in hist.GetTitle(): colorlist.append(ROOT.kViolet)
-	else:
-	    print('WARNING: histogram title could not be associated with a color')
-	    colorlist.append(ROOT.kBlack)
+        elif '2017' in hist.GetTitle(): colorlist.append(ROOT.kAzure+6)
+        elif '2018' in hist.GetTitle(): colorlist.append(ROOT.kViolet)
+        else:
+            print('WARNING: histogram title could not be associated with a color')
+            colorlist.append(ROOT.kBlack)
 
     # make extra info
-    if doextrainfos:
-      if len(extrainfos)==0:
+    extrainfos = []
+    if args.doextrainfos:
+      if args.extrainfos is None:
         extrainfos = []
-        if( indict['v0type'] is not None ):
-          v0type = indict['v0type']
-          if v0type.lower()=='ks':
+        if( indict['treename'] is not None ):
+          treename = indict['treename']
+          if treename=='laurelin':
             extrainfos.append('K^{0}_{S} candidates')
-          elif v0type.lower()=='la':
+          elif treename=='telperion':
             extrainfos.append('#Lambda^{0} candidates')
-        if( indict['bckmode'] is not None ):
-          bckmode = indict['bckmode']
-          if bckmode.lower()=='default':
+          else:
+            msg = 'WARNING: unrecognized treename {}'.format(treename)
+            print(msg)
+        if( indict['bkgmode'] is not None ):
+          bkgmode = indict['bkgmode']
+          if bkgmode.lower()=='none':
             extrainfos.append('Background not subtracted')
-          elif bckmode.lower()=='sideband':
+          elif bkgmode.lower()=='sideband':
             extrainfos.append('Background subtracted')
+          else:
+            msg = 'WARNING: unrecognized bkgmode {}'.format(bkgmode)
+            print(msg)
         if( indict['normalization'] is not None ):
           norm = indict['normalization']
-          if norm==1:
+          if norm.lower()=='none':
+            extrainfos.append('Not normalized')
+          elif norm=='lumi':
             extrainfos.append('Normalized to luminosity')
-          if norm==2:
+          elif norm=='yield':
             extrainfos.append('Normalized to data')
-          if norm==3:
+          elif norm=='range':
             extrainfos.append('Normalized in range')
-          if norm==4:
+          elif norm=='eventyield':
             extrainfos.append('Normalized to data events')
+          else:
+            msg = 'WARNING: unrecognized normalization {}'.format(norm)
+            print(msg)
       else:
-        extrainfos = extrainfos.split(',')
+        extrainfos = args.extrainfos.split(',')
     
-    plotmcvsdata(indict['mchistlist'],indict['datahistlist'],outfile,
-		    xaxistitle=xaxistitle,yaxistitle=yaxistitle,title=title,
-		    colorlist=colorlist,
-		    logy=logy,drawrange=normrange,
-		    lumistr=lumistr,dotxt=False,
+    plotmcvsdata(indict['mchistlist'], indict['datahistlist'], args.outputfile,
+                    xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle, title=args.title,
+                    colorlist=colorlist,
+                    logy=args.logy, drawrange=normrange,
+                    lumistr=lumistr, extracmstext=extracmstext, dotxt=False,
                     extrainfos=extrainfos, infosize=15, infoleft=0.6, infotop=0.65,
-                    do2016pixel=do2016pixel, do20172018pixel=do20172018pixel )
+                    do2016pixel=args.do2016pixel, do20172018pixel=args.do20172018pixel )
 
     sys.stderr.write('###done###\n')

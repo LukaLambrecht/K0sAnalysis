@@ -5,23 +5,24 @@
 import ROOT
 import sys
 import os
-import plottools as pt
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+import plotting.plottools as pt
 
 def plotsinglehistogram(hist, figname, 
                 title=None, xaxtitle=None, yaxtitle=None, 
-	        label=None, color=None, logy=False, drawoptions='',
+                label=None, color=None, logy=False, drawoptions='',
                 ymaxlinfactor=1.8, yminlogfactor=0.2, ymaxlogfactor=100,
-	        do_cms_text=False, lumitext='', extralumitext='',
-	        topmargin=None, bottommargin=None,
-	        leftmargin=None, rightmargin=None,
-	        xaxlabelfont=None, xaxlabelsize=None,
-		yaxmin=None, yaxmax=None,
-	        writebincontent=False, bincontentfont=None, 
-	        bincontentsize=None, bincontentfmt=None,
-		extrainfos=[], infosize=None, infoleft=None, infotop=None ):
+                do_cms_text=False, lumitext='', extracmstext='',
+                topmargin=None, bottommargin=None,
+                leftmargin=None, rightmargin=None,
+                xaxlabelfont=None, xaxlabelsize=None,
+                yaxmin=None, yaxmax=None,
+                writebincontent=False, bincontentfont=None, 
+                bincontentsize=None, bincontentfmt=None,
+                extrainfos=[], infosize=None, infoleft=None, infotop=None ):
     ### drawing a single histogram
     # - label: string for the legend entry for this histogram.
-    #	note: if label is 'auto', the implicit title of the TH1 will be used.
+    #        note: if label is 'auto', the implicit title of the TH1 will be used.
     # - drawoptions: string passed to TH1.Draw.
     #   use "HIST" for histogram style (no error bars)
     #       "E" for error bars
@@ -85,12 +86,12 @@ def plotsinglehistogram(hist, figname,
 
     ### make the legend
     if label is not None:
-	leg = ROOT.TLegend(plegendbox[0],plegendbox[1],plegendbox[2],plegendbox[3])
-	leg.SetTextFont(10*legendfont+3)
-	leg.SetFillColor(ROOT.kWhite)
-	leg.SetBorderSize(1)
-	if label=='auto': label = hist.GetTitle()
-	leg.AddEntry(hist,label,"l")
+        leg = ROOT.TLegend(plegendbox[0],plegendbox[1],plegendbox[2],plegendbox[3])
+        leg.SetTextFont(10*legendfont+3)
+        leg.SetFillColor(ROOT.kWhite)
+        leg.SetBorderSize(1)
+        if label=='auto': label = hist.GetTitle()
+        leg.AddEntry(hist,label,"l")
     hist.Draw(drawoptions)
 
     ### X-axis layout
@@ -99,10 +100,10 @@ def plotsinglehistogram(hist, figname,
     xax.SetLabelFont(10*xaxlabelfont+3)
     xax.SetLabelSize(xaxlabelsize)
     if xaxtitle is not None: 
-	xax.SetTitle(xaxtitle)
-	xax.SetTitleFont(10*axtitlefont+3)
-	xax.SetTitleSize(axtitlesize)
-	xax.SetTitleOffset(1.2)
+        xax.SetTitle(xaxtitle)
+        xax.SetTitleFont(10*axtitlefont+3)
+        xax.SetTitleSize(axtitlesize)
+        xax.SetTitleOffset(1.2)
     ### Y-axis layout
     histmin = hist.GetMinimum()
     histmax = hist.GetMaximum()
@@ -124,25 +125,25 @@ def plotsinglehistogram(hist, figname,
     yax.SetLabelFont(10*yaxlabelfont+3)
     yax.SetLabelSize(yaxlabelsize)
     if yaxtitle is not None: 
-	yax.SetTitle(yaxtitle)
-	yax.SetTitleFont(10*axtitlefont+3)
-	yax.SetTitleSize(axtitlesize)
-	yax.SetTitleOffset(2.)
+        yax.SetTitle(yaxtitle)
+        yax.SetTitleFont(10*axtitlefont+3)
+        yax.SetTitleSize(axtitlesize)
+        yax.SetTitleOffset(2.)
     hist.Draw(drawoptions)
 
     # title
     # note: use of title is not recommended
     if title is not None:
-    	ttitle = ROOT.TLatex()	
-    	ttitle.SetTextFont(10*titlefont+3)
-    	ttitle.SetTextSize(titlesize)
-    	titlebox = (0.15,0.95)
+            ttitle = ROOT.TLatex()        
+            ttitle.SetTextFont(10*titlefont+3)
+            ttitle.SetTextSize(titlesize)
+            titlebox = (0.15,0.95)
 
     # draw all objects
     hist.Draw(drawoptions)
     ROOT.gPad.RedrawAxis()
     if do_cms_text: pt.drawLumi(pad1, cmstext_size_factor=0.4, 
-                      extratext=extralumitext, lumitext=lumitext)
+                      extratext=extracmstext, lumitext=lumitext)
     if label is not None: leg.Draw("same")
     if title is not None: ttitle.DrawLatexNDC(titlebox[0],titlebox[1],title)
 
@@ -156,15 +157,15 @@ def plotsinglehistogram(hist, figname,
 
     # write bin contents
     if writebincontent:
-	bintext = ROOT.TLatex()
-	bintext.SetTextAlign(21)
-	bintext.SetTextFont(bincontentfont)
-	bintext.SetTextSize(bincontentsize)
-	for i in range(1, hist.GetNbinsX()+1):
-	    xcoord  = hist.GetXaxis().GetBinCenter(i)
-	    ycoord  = hist.GetBinContent(i)+hist.GetBinErrorUp(i)
-	    printvalue = hist.GetBinContent(i)
-	    bintext.DrawLatex(xcoord, ycoord+0.05, bincontentfmt.format(printvalue))
+        bintext = ROOT.TLatex()
+        bintext.SetTextAlign(21)
+        bintext.SetTextFont(bincontentfont)
+        bintext.SetTextSize(bincontentsize)
+        for i in range(1, hist.GetNbinsX()+1):
+            xcoord  = hist.GetXaxis().GetBinCenter(i)
+            ycoord  = hist.GetBinContent(i)+hist.GetBinErrorUp(i)
+            printvalue = hist.GetBinContent(i)
+            bintext.DrawLatex(xcoord, ycoord+0.05, bincontentfmt.format(printvalue))
 
     c1.SaveAs(figname.split('.')[0]+'.png')
     #c1.SaveAs(figname.split('.')[0]+'.eps')
