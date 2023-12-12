@@ -23,9 +23,21 @@ if __name__=='__main__':
   # hard-coded settings
   preuldir = '/pnfs/iihe/cms/store/user/llambrec/k0sanalysisdata/preulfiles/'
   uldir = '/pnfs/iihe/cms/store/user/llambrec/k0sanalysisdata/ulfiles/selected_new/'
-  controlconfig = 'config_controlvars.'
 
   cmds = []
 
   # control variable plots
-  python3 mcvsdata_submit.py -i /pnfs/iihe/cms/store/user/llambrec/k0sanalysisdata/ulfiles/selected_new/ -v run2ul -c config_controlvars_ul.py -o output_20231212_controlvars_ul --runmode condor 
+  if args.docontrol:
+    if args.dopreul:
+      cmd = 'python3 mcvsdata_submit.py -i {}'.format(preuldir)
+      cmd += ' -o output_{}_controlvars_preul'.format(args.datetag)
+      cmd += ' -v run2preul -c config_controlvars_preul.py --runmode condor'
+      cmds.append(cmd)
+    if args.doul:
+      cmd = 'python3 mcvsdata_submit.py -i {}'.format(uldir)
+      cmd += ' -o output_{}_controlvars_ul'.format(args.datetag)
+      cmd += ' -v run2ul -c config_controlvars_ul.py --runmode condor'
+      cmds.append(cmd)
+
+  # run all commands
+  for cmd in cmds: os.system(cmd)

@@ -17,7 +17,7 @@ from array import array
 # import framework modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 from fitting.count_peak import count_peak_unbinned
-import pureweighting.addpuscale as pu
+from reweighting.pileup.pileupreweighter import PileupReweighter
 
 
 if __name__=='__main__':
@@ -138,7 +138,10 @@ if __name__=='__main__':
                     hcountername='hCounter',
                     sidevariable=None,
                     label=None,
-                    nentries=None):
+                    nentries=None,
+                    year=None, # for reweighter
+                    campaign=None # for reweighter 
+                   ):
     # input: - single input file (+ tree name within that file)
     #        - variable (name in the tree + binning)
     # output: histogram in the form of two numpy arrays
@@ -167,9 +170,9 @@ if __name__=='__main__':
       # get main tree and manage number of entries
       tree = f[treename]
       nentries_reweight = 1.
-      #if( nentries is not None and nentries>0 and nentries<tree.num_entries ):
-      #  nentries_reweight = tree.num_entries / nentries
-      #else: nentries = tree.num_entries
+      if( nentries is not None and nentries>0 and nentries<tree.num_entries ):
+        nentries_reweight = tree.num_entries / nentries
+      else: nentries = tree.num_entries
       msg = 'Tree {} was found to have {} entries,'.format(treename, tree.num_entries)
       msg += ' of which {} will be read (using reweighting factor {}).'.format(nentries, nentries_reweight)
       print(msg)
@@ -178,9 +181,17 @@ if __name__=='__main__':
       if isdata: weights = np.ones(nentries)
       else:
         weights = tree[weightvarname].array(library='np', entry_stop=nentries)
-        print(weights[:10])
         weights = weights / sumweights * xsection * lumi
       weights = weights * nentries_reweight
+
+      # do reweighting
+      if not isdata:
+        print('Doing pileup reweighting...')
+        pileupreweighter = PileupReweighter(campaign, year)
+        pileupreweighter.initsample(inputfile)
+        ntrueint = tree['_nTrueInt'].array(library='np', entry_stop=nentries)
+        pileupreweight = pileupreweighter.getreweight(ntrueint)
+        weights = np.multiply(weights, pileupreweight)
 
       # if no variable was specified, return sum of weights
       if variable is None:
@@ -263,12 +274,6 @@ if __name__=='__main__':
             counts[i,j] = npeak
             errors[i,j] = nerror
 
-    print(len(varvalues))
-    print(sum(counts))
-    print(lumi)
-    print(xsection)
-    print(sumweights)
-
     # remove superfluous dimension for one-dimensional arrays
     if dim==1:
       counts = counts[:,0]
@@ -300,7 +305,8 @@ if __name__=='__main__':
                        isdata=False, xsection=xsection, lumi=lumi,
                        sidevariable=sidevariable,
                        label=simdict['label'].strip(' .'),
-                       nentries=args.nprocess)
+                       nentries=args.nprocess,
+                       year=simdict['year'], campaign=simdict['campaign'])
     simdict['counts'] = counts
     simdict['errors'] = errors
 
@@ -345,7 +351,8 @@ if __name__=='__main__':
                     isdata=False, xsection=xsection, lumi=lumi,
                     label=simdict['label'].strip(' .')+'_normrange',
                     sidevariable=sidevariable,
-                    nentries=args.nprocess)
+                    nentries=args.nprocess,
+                    year=simdict['year'], campaign=simdict['campaign'])
       if len(counts)!=1:
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
