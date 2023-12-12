@@ -1,6 +1,6 @@
-##################################################################
-# Fill and plot MC vs data histograms for some control variables #
-##################################################################
+#######################################
+# Fill and plot MC vs data histograms #
+#######################################
 
 import os
 import sys
@@ -43,7 +43,7 @@ if __name__=='__main__':
           'run2'
         ])
   elif 'perera' in includelist:
-    if args..version=='run2preul':
+    if args.version=='run2preul':
       includelist = ['2016B','2016C','2016D','2016E','2016F','2016G','2016H']
     elif args.version=='run2ul':
       includelist = ([
@@ -147,7 +147,7 @@ if __name__=='__main__':
             # make command for filling
             cmds = []
             histfile = os.path.join(thisvardir, 'histograms.root')
-            outputfile = os.path.join(thisvardir, 'plot.png')
+            outputfile = os.path.join(thisvardir, '{}.png'.format(varname))
             cmd = 'python3 mcvsdata_fill.py'
             cmd += ' -i {}'.format(configjson)
             cmd += ' -t {}'.format(variable['treename'])
@@ -167,12 +167,11 @@ if __name__=='__main__':
             # add args for secondary variable
             if 'yvariablename' in variable.keys(): cmd += ' --yvariable {}'.format(yvarjson)
             cmds.append(cmd)
-            # make command for plotting
+            # make basic command for plotting
             exe = 'mcvsdataplotter.py'
             if 'yvariablename' in variable.keys(): exe = 'mcvsdataplotter2d.py'
             cmd = 'python3 ../plotting/{}'.format(exe)
             cmd += ' -i {}'.format(histfile)
-            cmd += ' -o {}'.format(outputfile)
             cmd += ' --xaxtitle \'{}\''.format(variable['xaxtitle'])
             cmd += ' --yaxtitle \'{}\''.format(variable['yaxtitle'])
             cmd += ' --extracmstext Preliminary'
@@ -183,9 +182,14 @@ if __name__=='__main__':
             if doextrainfos:
               cmd += ' --doextrainfos'
               cmd += ' --extrainfos \'{}\''.format(','.join(extrainfos))
-            if( 'yaxlog' in variable.keys() and variable['yaxlog'] ):
-              cmd += ' --logy'
-            cmds.append(cmd)
+            # first variation: default
+            cmd1 = cmd + ' -o {}'.format(outputfile)
+            cmds.append(cmd1)
+            # second variation: y-axis in log scale (only for 1D plots)
+            if exe=='mcvsdataplotter.py':
+              cmd2 = cmd + ' -o {}'.format(outputfile.replace('.png','_log.png'))
+              cmd2 += ' --logy'
+              cmds.append(cmd2)
             # run or submit commands
             scriptname = 'cjob_mcvsdata_submit.sh'
             if args.runmode=='local':

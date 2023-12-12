@@ -73,9 +73,9 @@ if __name__=='__main__':
     raise Exception(msg)
 
   # check luminosity
-  lumi = sum([sample['luminosity'] for sample in simin])
+  totallumi = sum([sample['luminosity'] for sample in simin])
   lumitest = sum([sample['luminosity'] for sample in datain])
-  if( abs(lumitest-lumi)/float(lumi)>0.001 ):
+  if( abs(lumitest-totallumi)/float(totallumi)>0.001 ):
     print('WARNING: total luminosity for data and simulation do not agree!')
     print(' (luminosity values for data are only used for plot labels;')
     print(' the values for simulations are used in event weighting and to calculate the sum)')
@@ -151,6 +151,7 @@ if __name__=='__main__':
     # note: if variable is None, return sum of weights and corresponding error
 
     # open the file and read hcounter
+    print('Now running on file {}...'.format(inputfile))
     with uproot.open(inputfile) as f:
       sumweights = 1 # default case for data, overwritten for simulation below
       puscale = None # to implement later
@@ -166,15 +167,20 @@ if __name__=='__main__':
       # get main tree and manage number of entries
       tree = f[treename]
       nentries_reweight = 1.
-      if( nentries is not None and nentries>0 and nentries<tree.num_entries ):
-        nentries_reweight = tree.num_entries / nentries
-      else: nentries = tree.num_entries
+      #if( nentries is not None and nentries>0 and nentries<tree.num_entries ):
+      #  nentries_reweight = tree.num_entries / nentries
+      #else: nentries = tree.num_entries
+      msg = 'Tree {} was found to have {} entries,'.format(treename, tree.num_entries)
+      msg += ' of which {} will be read (using reweighting factor {}).'.format(nentries, nentries_reweight)
+      print(msg)
 
       # get weights
       if isdata: weights = np.ones(nentries)
       else:
         weights = tree[weightvarname].array(library='np', entry_stop=nentries)
+        print(weights[:10])
         weights = weights / sumweights * xsection * lumi
+      weights = weights * nentries_reweight
 
       # if no variable was specified, return sum of weights
       if variable is None:
@@ -202,7 +208,7 @@ if __name__=='__main__':
       # get the secondary variable
       yvarvalues = tree[yvariable['variable']].array(library='np', entry_stop=nentries)
       ynanmask = np.isnan(yvarvalues)
-      yrangemask = ((yvarvalues > yvariable['bins'][0]) & (yvarvalues < yvariable['bins'][-1]))
+      yrangemask = ((yvarvalues >= yvariable['bins'][0]) & (yvarvalues <= yvariable['bins'][-1]))
       totalmask = (totalmask & (~ynanmask) & yrangemask)
 
       # case of no background subtraction
@@ -256,6 +262,12 @@ if __name__=='__main__':
                                 plotdir=args.sideplotdir)
             counts[i,j] = npeak
             errors[i,j] = nerror
+
+    print(len(varvalues))
+    print(sum(counts))
+    print(lumi)
+    print(xsection)
+    print(sumweights)
 
     # remove superfluous dimension for one-dimensional arrays
     if dim==1:
@@ -415,7 +427,7 @@ if __name__=='__main__':
     normvariable_st.Write()
   # write luminosity
   lumi_st = ROOT.TVectorD(1)
-  lumi_st[0] = lumi
+  lumi_st[0] = totallumi
   lumi_st.Write("lumi")
   # write background mode
   bkgmode_st = ROOT.TNamed('bkgmode', str(args.bkgmode))

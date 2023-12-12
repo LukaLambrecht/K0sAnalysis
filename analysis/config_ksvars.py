@@ -6,7 +6,6 @@ config = ({
             'yaxtitle': 'Reconstructed vertices',
             'treename': 'laurelin',
             'extrainfos': ['K^{0}_{S} candidates'],
-            'yaxlog': True,
             'bkgmodes': {
               'bkgdefault': {'type':None, 'info':'Background not subtracted'},
               'bkgsideband': {'type':'sideband', 'info': 'Background subtracted'}
@@ -29,7 +28,6 @@ config = ({
                'yaxtitle': 'Reconstructed vertices',
                'treename': 'laurelin',
                'extrainfos': ['K^{0}_{S} candidates'],
-               'yaxlog': True,
                'bkgmodes': {
                  'bkgsideband': {'type':'sideband', 'info': 'Background subtracted'}
                },

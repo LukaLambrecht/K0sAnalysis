@@ -9,7 +9,7 @@ import sys
 import os
 import numpy as np
 from array import array
-sys.path.append(os.path.abspath('../'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 import tools.fittools as ft
 import plotting.plotfit as pft
 
