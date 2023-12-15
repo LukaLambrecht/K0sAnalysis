@@ -122,10 +122,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     for(const pat::PackedCandidate pc: *packedCandidates){
 	if(pc.hasTrackDetails()){
 	    reco::Track tr;
-	    //tr = *pc.bestTrack();
-	    // fix for non-positive definite covariance,
-	    // see https://twiki.cern.ch/twiki/bin/viewauth/CMS/TrackingPOGRecommendations
-	    tr = pc.pseudoPosDefTrack();
+	    tr = *pc.bestTrack();
             std::unordered_map<std::string, double> temp = getTrackVariables(tr,beamSpotHandle,bfield);
 	    if(temp["pass"]>0.5) seltracks.push_back(tr);
         }
@@ -133,10 +130,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     for(const pat::PackedCandidate pc : *lostTracks){
 	if(pc.hasTrackDetails()){
 	    reco::Track tr;
-	    //tr = *pc.bestTrack();
-	    // fix for non-positive definite covariance,
-            // see https://twiki.cern.ch/twiki/bin/viewauth/CMS/TrackingPOGRecommendations
-	    tr = pc.pseudoPosDefTrack();
+	    tr = *pc.bestTrack();
 	    std::unordered_map<std::string, double> temp = getTrackVariables(tr,beamSpotHandle,bfield);
 	    if(temp["pass"]>0.5) seltracks.push_back(tr);
 	}
@@ -220,6 +214,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     delete bfield;
 }
 
+
 std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
 	const reco::Track& tr,
 	edm::Handle<reco::BeamSpot> beamSpotHandle,
@@ -229,18 +224,12 @@ std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
 
     std::unordered_map<std::string, double> outputmap = {
 	{"loosequality",0.}, 
-	{"normchi2",0.},
-	{"nvalidhits",0.},
-	{"pt",0.},
 	{"transip",0.},
 	{"pass",0.} // combined flag for final selection
     };
     // set variables and apply minimal selection
     outputmap["loosequality"] = (tr.quality(reco::TrackBase::qualityByName("loose")))? 1.: 0.;
     if(outputmap["loosequality"] < 0.5) return outputmap;
-    outputmap["normchi2"] = tr.normalizedChi2();
-    outputmap["nvalidhits"] = tr.numberOfValidHits();
-    outputmap["pt"] = tr.pt();
     // special for impact parameter: use proper extrapolation to beamspot
     FreeTrajectoryState initialFTS = trajectoryStateTransform::initialFreeState(tr, bfield);
     TSCBLBuilderNoMaterial blsBuilder;
@@ -253,9 +242,11 @@ std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
     return outputmap;
 }
 
+
 double V0Analyzer::getTrackRelIso(const reco::Track& tr, const edm::Event& iEvent){
     // calculate relative isolation of a track
     // (still to check if this works correctly or if there isn't a better way)
+    // (however, not yet used in further analysis, so harmless for now)
     edm::Handle<std::vector<pat::PackedCandidate>> packedCandidates;
     iEvent.getByToken(multilepAnalyzer->packedCandidatesToken, packedCandidates);
     edm::Handle<std::vector<pat::PackedCandidate>> lostTracks;
@@ -276,6 +267,45 @@ double V0Analyzer::getTrackRelIso(const reco::Track& tr, const edm::Event& iEven
     relIso = relIso/tr.pt();
     return relIso;
 }
+
+
+reco::Track fixTrackCovariance(const reco::Track& tk, double delta=1e-6){
+  // see here: https://twiki.cern.ch/twiki/bin/viewauth/CMS/TrackingPOGRecommendations
+  unsigned int i, j;
+  // Initialize minimum eigenvalue to a default value.
+  double min_eig = 1;
+  // Get the original covariance matrix.
+  reco::TrackBase::CovarianceMatrix cov = tk.covariance();
+  // Convert it from an SMatrix to a TMatrixD so we can get the eigenvalues.
+  TMatrixDSym new_cov(cov.kRows);
+  for (i = 0; i < cov.kRows; i++) {
+    for (j = 0; j < cov.kRows; j++) {
+      // Need to check for nan or inf, because for some reason these cause a segfault when calling Eigenvectors()
+      if (std::isnan(cov(i,j)) || std::isinf(cov(i,j))) cov(i,j) = 1e-6;
+      // In all other cases, just copy the values over from cov to new_cov.
+      new_cov(i,j) = cov(i,j);
+    }
+  }
+  // Get the eigenvalues.
+  TVectorD eig(cov.kRows);
+  new_cov.EigenVectors(eig);
+  // Find the minimum eigenvalue
+  for (i = 0; i < cov.kRows; i++){
+    if (eig(i) < min_eig){
+      min_eig = eig(i);
+    }
+  }
+  // If the minimum eigenvalue is less than zero, then subtract it from the diagonal and add `delta`.
+  if (min_eig < 0) {
+    for (i = 0; i < cov.kRows; i++){
+      cov(i,i) -= min_eig - delta;
+    }
+  } 
+  return reco::Track(tk.chi2(), tk.ndof(), tk.referencePoint(), 
+                     tk.momentum(), tk.charge(), cov, tk.algo(), 
+                     (reco::TrackBase::TrackQuality) tk.qualityMask()); 
+}
+
 
 std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Track& tr1, 
 						const reco::Track& tr2,
@@ -304,9 +334,13 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
 	    {"d0pos",0.}, {"dzpos",0.}, {"d0neg",0.}, {"dzneg",0.},
 	    {"isopos",0.}, {"isoneg",0.}
     };
-    // condition: candidates must have opposite charge
+    
+    // candidates must have opposite charge
     if(tr1.charge()*tr2.charge()>0) return outputmap;
-    // the following fragment applies some conditions on the point of closest approach
+    
+    // the following fragment applies some conditions on the point of closest approach,
+    // namely that the distance of closest approach must be reasonably small
+    // and that the point of closest approach must be situated not too far from the center of CMS.
     reco::TransientTrack trtr1(tr1, bfield);
     reco::TransientTrack trtr2(tr2, bfield);
     if(!trtr1.impactPointTSCP().isValid() or !trtr2.impactPointTSCP().isValid()) return outputmap;
@@ -323,8 +357,11 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     outputmap["pcax"] = cxpt.x();
     outputmap["pcay"] = cxpt.y();
     outputmap["pcaz"] = cxpt.z();
+
     // the following fragment calculates the trajectory states at PCA and applies preliminary cut on mass
     // (assuming pion masses for both tracks)
+    // note: this cut has now been disabled as it is a little vague,
+    //       it is for example not clear what the bias is for tracks that are not from pions.
     TrajectoryStateClosestToPoint tscp1 = 
 	trtr1.trajectoryStateClosestToPoint( cxpt );
     TrajectoryStateClosestToPoint tscp2 =
@@ -336,10 +373,15 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     double totalPSq = (tscp1.momentum() + tscp2.momentum() ).mag2();
     double mass = sqrt(totalESq - totalPSq);
     if(mass > 0.6) return outputmap; // default: 0.6 */
-    // preliminary conditions are met; now fit a vertex and perform further selections    
+
+    // preliminary conditions are met; now fit a vertex and perform further selections
+    // note: need to apply the fix for track covariance matrices recommended here:
+    //       https://twiki.cern.ch/twiki/bin/viewauth/CMS/TrackingPOGRecommendations
+    reco::Track tr1fix = fixTrackCovariance(tr1);
+    reco::Track tr2fix = fixTrackCovariance(tr2);
     std::vector<reco::TransientTrack> transtracks;
-    transtracks.push_back(reco::TransientTrack(tr1, bfield));
-    transtracks.push_back(reco::TransientTrack(tr2, bfield));
+    transtracks.push_back(reco::TransientTrack(tr1fix, bfield));
+    transtracks.push_back(reco::TransientTrack(tr2fix, bfield));
     KalmanVertexFitter vtxFitter(true); // use option true to include track refitting!
     TransientVertex v0vtx = vtxFitter.vertex(transtracks);
     // condition: vertex must be valid
@@ -352,6 +394,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     std::vector<reco::TransientTrack> refittedTracks;
     if(v0vtx.hasRefittedTracks()) refittedTracks = v0vtx.refittedTracks();
     else return outputmap; // should not happen when using option true in vtxFitter
+
     // convert TransientVertex to RecoVertex for later use
     reco::Vertex v0recovtx = v0vtx;
     // store vertex position to output map
@@ -369,6 +412,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     GlobalPoint primaryVertexXYZ(primaryVertex.position().x(),
     				primaryVertex.position().y(),
     				primaryVertex.position().z());
+
     // calculate transverse displacement (+ unc and sig) with respect to the beamspot
     ROOT::Math::SVector<double, 3> vtxrvec_bs(vtxXYZ.x()-beamSpotXYZ.x(), 
 						vtxXYZ.y()-beamSpotXYZ.y(), 0.);
@@ -391,6 +435,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     outputmap["vtxr_pv"] = vtxr_pv;
     outputmap["vtxrunc_pv"] = vtxrunc_pv;
     outputmap["vtxrsig_pv"] = vtxrsig_pv;
+
     // apply cut on inner hit position with respect to vertex position (ONLY IN RECO!)
     /*if(tr1.innerOk()){
         reco::Vertex::Point inpos1 = tr1.innerPosition();
@@ -402,6 +447,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
         double inpos2d0 = sqrt(pow(inpos2.x()-beamSpotPos.x(),2) + pow(inpos2.y()-beamSpotPos.y(),2));
 	if(inpos2d0 < vtxd0-4*vtxd0sigma) return outputmap; // default: 4
     }*/
+
     // calculate properties of tracks at the vertex
     reco::Track postrack;
     reco::Track negtrack;
@@ -444,6 +490,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     outputmap["pt"] = totalP.transverse();
     outputmap["eta"] = totalP.eta();
     outputmap["phi"] = totalP.phi();
+
     // (optional) condition: cosine of pointing angle must be close to one (not default)
     // note: now commented out since it can be easily recalculated and used in selections
     //       in downstream stages of the analysis.
@@ -455,6 +502,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     y = v0vtx.position().y()-beamSpotXYZ.y();
     double cospointing_bs = (x*px+y*py)/(sqrt(pow(x,2)+pow(y,2))*sqrt(pow(px,2)+pow(py,2)));
     if(cospointing_pv<0.99 and cospointing_bs<0.99) return outputmap; // good value: 0.99 (trial and error) */
+
     // calculate energy assuming Kshort, Lambda and LambdaBar
     double piPlusE = sqrt(positiveP.mag2() + pimass2); // pi plus
     double piMinE = sqrt(negativeP.mag2() + pimass2); // pi minus
@@ -470,9 +518,10 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     double LambdaInvMass = LambdaP4.M();
     math::XYZTLorentzVector LambdaBarP4(totalP.x(),totalP.y(),totalP.z(),LambdaBarETot);
     double LambdaBarInvMass = LambdaBarP4.M();
-    // condition: mass must be close to Ks mass (default 0.07) or Lambda mass (default 0.05)
+    // mass must be close to Ks mass (default 0.07) or Lambda mass (default 0.05)
     if(std::abs(KsInvMass-ksmass) > 0.07 and std::abs(LambdaInvMass-lambdamass) > 0.05
 		and std::abs(LambdaBarInvMass-lambdamass) > 0.05) return outputmap;
+
     // fill track properties
     outputmap["nhitspos"] = postrack.numberOfValidHits();
     outputmap["nhitsneg"] = negtrack.numberOfValidHits();
@@ -487,6 +536,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(const reco::Trac
     outputmap["dzneg"] = negtrack.dz(refPoint);
     outputmap["isopos"] = getTrackRelIso(postrack,iEvent);
     outputmap["isoneg"] = getTrackRelIso(negtrack,iEvent);
+
     // case 1: V0hort
     if(std::abs(KsInvMass-ksmass) < 0.07 
 		and std::abs(KsInvMass-ksmass)<std::abs(LambdaInvMass-lambdamass)

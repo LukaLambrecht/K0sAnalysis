@@ -13,6 +13,8 @@ Custom analyzer class for finding secondary vertices corresponding to light neut
 #include <unordered_map>
 #include <Math/SVector.h> // root high-performance vector class
 #include <Math/SMatrix.h> // root high-performance matrix class
+#include "TMatrixDSym.h" // for fixTrackCovariance
+#include "TVectorD.h" // for fixTrackCovariance
 
 // main include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"

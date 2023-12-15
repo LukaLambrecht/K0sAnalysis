@@ -1,0 +1,9 @@
+<library   name="heavyNeutrinomultilep_plugins" file="*.cc">
+	<flags   EDM_PLUGIN="1"/>
+	<use   name="heavyNeutrino/multilep"/>
+</library>
+
+
+
+
+

@@ -1,0 +1,21 @@
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="DataFormats/VertexReco"/>
+<use name="DataFormats/MuonReco"/>
+<use name="DataFormats/EgammaReco"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="CommonTools/UtilAlgos"/>
+<use name="RecoEgamma/EgammaTools"/>
+<use name="CondFormats/JetMETObjects"/>
+<use name="rivet"/>
+<use name="xgboost"/>
+<use name="MagneticField/ParametrizedEngine"/> <!-- for V0Analyzer -->
+<use name="TrackingTools/TransientTrack"/> <!-- for V0Analyzer -->
+<use name="TrackingTools/Records"/> <!-- for V0Analyzer -->
+<use name="RecoVertex/VertexPrimitives"/> <!-- for V0Analyzer -->
+<use name="RecoVertex/KalmanVertexFit"/> <!-- for V0Analyzer -->
+<use name="RecoVertex/VertexTools"/> <!-- for V0Analyzer -->
+<use name="DataFormats/TrackReco"/> <!-- for V0Analyzer -->
+<export>
+  <lib   name="1"/>
+</export>
