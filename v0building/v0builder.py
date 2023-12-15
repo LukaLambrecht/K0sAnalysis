@@ -136,7 +136,11 @@ if __name__=='__main__':
     'cospointingPV': cospointingPV,
     'cospointingBS': cospointingBS
   }
-  selmask = selection(branches, args.selection, extra=extra)
+  (selmask, allmasks) = selection(branches, args.selection, extra=extra, cutflow=True)
+  print('Selection summary:')
+  for maskname, mask in allmasks.items():
+    print('  - {}: {}'.format(maskname, np.sum(mask)))
+  print('  -> total: {}'.format(np.sum(selmask)))
 
   # fill nimloth
   print('Filling per-event tree')
@@ -164,6 +168,7 @@ if __name__=='__main__':
   print('Filling K0s tree')
   laurelin = {}
   laurelinmask = (ksmask & selmask)
+  print('Found {} K0s candidates'.format(np.sum(laurelinmask)))
   laurelin['_mass'] = ak.flatten(branches['_V0InvMass'][laurelinmask])
   laurelin['_vertexX'] = ak.flatten(branches['_V0X'][laurelinmask])
   laurelin['_vertexY'] = ak.flatten(branches['_V0Y'][laurelinmask])
@@ -191,6 +196,7 @@ if __name__=='__main__':
   print('Filling Lambda tree')
   telperion = {}
   telperionmask = (lmask & selmask)
+  print('Found {} Lambda candidates'.format(np.sum(telperionmask)))
   telperion['_mass'] = ak.flatten(branches['_V0InvMass'][telperionmask])
   telperion['_vertexX'] = ak.flatten(branches['_V0X'][telperionmask])
   telperion['_vertexY'] = ak.flatten(branches['_V0Y'][telperionmask])

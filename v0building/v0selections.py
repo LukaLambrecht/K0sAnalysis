@@ -4,8 +4,8 @@
 
 ### interface function mapping selection name to function
 
-def selection(branches, selection_name, extra=None):
-    if(selection_name=='legacy'): return selection_legacy(branches, extra=extra)
+def selection(branches, selection_name, **kwargs):
+    if(selection_name=='legacy'): return selection_legacy(branches, **kwargs)
     else:
         msg = 'ERROR: in pass_selection:'
         msg += ' selection function '+selection_name+' not recognized.'
@@ -23,21 +23,25 @@ def cospointing(branches, reference='primaryVertex'):
 
 ### selection functions
 
-def selection_legacy( branches, extra=None ):
+def selection_legacy( branches, extra=None, cutflow=False ):
   if 'cospointingPV' not in extra.keys():
     extra['cospointingPV'] = cospointing(branches, reference='primaryVertex')
   if 'cospointingBS' not in extra.keys():
     extra['cospointingBS'] = cospointing(branches, reference='beamSpot')
-  selmask = (
-    (branches['_V0NHitsPos'] >= 6)
-    & (branches['_V0NHitsNeg'] >= 6)
-    & (branches['_V0PtPos'] > 1.)
-    & (branches['_V0PtNeg'] > 1.)
-    & (branches['_V0NormChi2Pos'] < 5.)
-    & (branches['_V0NormChi2Neg'] < 5.)
-    & (branches['_V0DCA'] < 0.2)
-    & (branches['_V0VtxNormChi2'] < 7)
-    & (extra['cospointingPV'] > 0.99)
-    & (extra['cospointingBS'] > 0.99)
-  )
-  return selmask
+  allmasks = {
+    #'nhitspos': (branches['_V0NHitsPos'] >= 6),
+    #'nhitsneg': (branches['_V0NHitsNeg'] >= 6),
+    'ptpos': (branches['_V0PtPos'] > 1.),
+    'ptneg': (branches['_V0PtNeg'] > 1.),
+    #'normchi2pos': (branches['_V0NormChi2Pos'] < 5.),
+    #'normchi2neg': (branches['_V0NormChi2Neg'] < 5.),
+    'dca': (branches['_V0DCA'] < 0.2),
+    'normchi2vtx': (branches['_V0VtxNormChi2'] < 7),
+    'cospointingpv': (extra['cospointingPV'] > 0.99),
+    'cospointingbs': (extra['cospointingBS'] > 0.99),
+  }
+  selmask = list(allmasks.values())[0]
+  for mask in allmasks.values():
+    selmask = (selmask & mask)
+  if not cutflow: return selmask
+  else: return (selmask, allmasks)
