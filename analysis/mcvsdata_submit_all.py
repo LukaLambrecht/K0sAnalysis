@@ -17,6 +17,7 @@ if __name__=='__main__':
   parser.add_argument('--doul', default=False, action='store_true')
   parser.add_argument('--docontrol', default=False, action='store_true')
   parser.add_argument('--doks', default=False, action='store_true')
+  parser.add_argument('--dola', default=False, action='store_true')
   parser.add_argument('--doks2d', default=False, action='store_true')
   args = parser.parse_args()
 
@@ -37,6 +38,25 @@ if __name__=='__main__':
       cmd = 'python3 mcvsdata_submit.py -i {}'.format(uldir)
       cmd += ' -o output_{}_controlvars_ul'.format(args.datetag)
       cmd += ' -v run2ul -c config_controlvars_ul.py --runmode condor'
+      cmds.append(cmd)
+
+  if args.doks:
+    if args.dopreul:
+      cmd = 'python3 mcvsdata_submit.py -i {}'.format(preuldir)
+      cmd += ' -o output_{}_ksvars_preul'.format(args.datetag)
+      cmd += ' -v run2preul -c config_ksvars_preul.py --runmode condor'
+      cmds.append(cmd)
+    if args.doul:
+      cmd = 'python3 mcvsdata_submit.py -i {}'.format(uldir)
+      cmd += ' -o output_{}_ksvars_ul'.format(args.datetag)
+      cmd += ' -v run2ul -c config_ksvars_ul.py --runmode condor'
+      cmds.append(cmd)
+
+  if args.doks:
+    if args.dopreul:
+      cmd = 'python3 mcvsdata_submit.py -i {}'.format(preuldir)
+      cmd += ' -o output_{}_lavars_preul'.format(args.datetag)
+      cmd += ' -v run2preul -c config_lavars_preul.py --runmode condor'
       cmds.append(cmd)
 
   # run all commands

@@ -285,7 +285,7 @@ if __name__=='__main__':
   # loop over input files and fill histograms
   for datadict in datain:
     print('Now running on data file {}...'.format(datadict['file']))
-    lumi = simdict['luminosity']
+    lumi = datadict['luminosity']
     counts, errors = get_histogram(datadict['file'], args.treename,
                        variable=variable,
                        yvariable=yvariable,
@@ -309,6 +309,14 @@ if __name__=='__main__':
                        year=simdict['year'], campaign=simdict['campaign'])
     simdict['counts'] = counts
     simdict['errors'] = errors
+
+  # clip histograms to minimum zero
+  for datadict in datain:
+    datadict['counts'] = np.clip(datadict['counts'], 0, None)
+    datadict['errors'] = np.clip(datadict['errors'], 0, None)
+  for simdict in simin:
+    simdict['counts'] = np.clip(simdict['counts'], 0, None)
+    simdict['errors'] = np.clip(simdict['errors'], 0, None)
 
   # now need to manage additional normalization of histograms.
   # for normmode=None and normmode='lumi', no additional steps are needed;
@@ -379,7 +387,8 @@ if __name__=='__main__':
       lumi = simdict['luminosity']
       sumweights, _ = get_histogram(simdict['file'], args.eventtreename,
                         isdata=False, xsection=xsection, lumi=lumi,
-                        nentries=args.nprocess)
+                        nentries=args.nprocess,
+                        year=simdict['year'], campaign=simdict['campaign'])
       simsum += sumweights
     scale = datasum / simsum
     for simdict in simin:

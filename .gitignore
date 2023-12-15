@@ -14,6 +14,9 @@
 ### ignore crab job files
 cjob_*
 
+### ignore output directories
+*/output_*
+
 ### ignore specific directories altogether
 files
 oldplots

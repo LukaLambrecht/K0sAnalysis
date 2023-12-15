@@ -40,7 +40,7 @@ config = ({
                 'bkgdefault': {'type':None},
               },
               'bins': {
-                'binsdefault': np.linspace(25,125,num=51,endpoint=True),
+                'binsdefault': np.linspace(25,125,num=50,endpoint=True),
               },
               'normalization': {
                 'normlumi':{'type':'lumi'},
@@ -54,7 +54,7 @@ config = ({
                 'bkgdefault': {'type':None},
               },
               'bins': {
-                'binsdefault': np.linspace(-2.4,2.4,num=51,endpoint=True),
+                'binsdefault': np.linspace(-2.4,2.4,num=50,endpoint=True),
               },
               'normalization': {
                 'normlumi':{'type':'lumi'},

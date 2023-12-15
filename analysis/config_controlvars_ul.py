@@ -1,3 +1,6 @@
+# note: this is supposed to be the same configuration as the pre-UL version,
+#       only with a different (newer) naming convention for the variables.
+
 import numpy as np
 
 config = ({
@@ -9,7 +12,7 @@ config = ({
                 'bkgdefault': {'type':None},
               },
               'bins': {
-                'binsdefault': np.linspace(85,97,num=51,endpoint=True),
+                'binsdefault': np.linspace(85,97,num=50,endpoint=True),
               },
               'normalization': {
                 'normlumi':{'type':'lumi'},
@@ -37,7 +40,7 @@ config = ({
                 'bkgdefault': {'type':None},
               },
               'bins': {
-                'binsdefault': np.linspace(25,125,num=51,endpoint=True),
+                'binsdefault': np.linspace(25,125,num=50,endpoint=True),
               },
               'normalization': {
                 'normlumi':{'type':'lumi'},
@@ -51,7 +54,7 @@ config = ({
                 'bkgdefault': {'type':None},
               },
               'bins': {
-                'binsdefault': np.linspace(-2.4,2.4,num=51,endpoint=True),
+                'binsdefault': np.linspace(-2.4,2.4,num=50,endpoint=True),
               },
               'normalization': {
                 'normlumi':{'type':'lumi'},

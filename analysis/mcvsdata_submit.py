@@ -128,12 +128,11 @@ if __name__=='__main__':
               with open(normvarjson, 'w') as f:
                 json.dump(normvariabledict, f)
             # write sideband variable
-            # hard-coded for now, maybe extend later
             if bkgmode['type']=='sideband':
               sidevariabledict = ({
-                'name': '_mass',
-                'variable': '_mass',
-                'bins': list(np.linspace(0.44, 0.56, num=31, endpoint=True))
+                'name': bkgmode['sidevariable'],
+                'variable': bkgmode['sidevariable'],
+                'bins': list(bkgmode['sidebins'])
               })
               sidevarjson = os.path.join(thisvardir, 'sidevariable.json')
               with open(sidevarjson, 'w') as f:
