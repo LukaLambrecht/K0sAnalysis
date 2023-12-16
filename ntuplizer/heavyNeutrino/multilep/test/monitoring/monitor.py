@@ -41,7 +41,7 @@ import os, sys, glob, subprocess, pexpect, json
 from datetime import datetime
 import argparse
 
-def style():
+def define_css_style():
     ### define a fixed style string for the web page
     # only meant for internal use in web function
 
@@ -76,27 +76,57 @@ def style():
 
     s += '.divide tr td { width:60%; }\n'
 
-    s += '#progress {\n'
-    s += 'width: 500px;\n'
+    # define style for progress bar, consisting of:
+    # - "progress-container": the container for both the colored bars and text
+    # - "progress-text": container for text overlaying the colored bars
+    # - "progress-bar": the colored bar
+
+    s += '.progress-container {\n'
+    s += 'width: 100%;\n'
+    s += 'height: 20px;\n'
     s += 'border: 1px solid black;\n'
     s += 'position: relative;\n'
     s += 'padding: 3px;\n'
     s += '}\n'
 
-    s += '#percent {\n'
+    s += '.progress-text {\n'
     s += 'position: absolute;\n'
-    s += 'left: 10%;\n'
+    s += 'left: 5%;\n'
     s += '}\n'
 
-    s += '#bar {\n'
+    s += '.progress-bar {\n'
+    s += 'position: absolute;\n'
     s += 'height: 20px;\n'
-    s += 'background-color: green;\n'
-    s += 'width: 30%;\n'
     s += '}\n'
 
     s += '</style>\n'
 
     return s
+
+
+def make_progress_bar(progress_values):
+    ### make html progress bar
+    # input arguments:
+    # - progress_values: a dict matching status names to percentages in str format,
+    #   e.g. {'finished': '100%'}
+    progress_str = ' '.join(['{}: {}'.format(key, val) for key, val in progress_values.items()])
+    colors = {
+      'finished': 'lightgreen',
+      'transferring': 'turquoise',
+      'running': 'deepskyblue',
+      'failed': 'crimson'
+    }
+    html = '<td> <div class="progress-container">'
+    cumul = 0
+    for status, color in colors.items():
+        if status not in progress_values.keys(): continue
+        val = float(progress_values[status].strip('%'))
+        stylestr = 'left: {}%; width: {}%; background-color: {}'.format(cumul, val, color)
+        html += '<div class="progress-bar" style="{}"></div>'.format(stylestr)
+        cumul += val
+    html += '<div class="progress-text">'+progress_str+'</div>'
+    html += '</div></td>'
+    return html
 
 
 def web( data, webpath, force=False ):
@@ -124,7 +154,7 @@ def web( data, webpath, force=False ):
 
     # make the page layout and header
     page = '<html>\n'
-    page += '<head>\n'+style()+'</head>\n'
+    page += '<head>\n'+define_css_style()+'</head>\n'
     page += '<body>\n'
     page += '<table style="background-color:#2C3E50;color:#EAECEE;'
     page += 'font-size:40px;width:100%;text-align: center;">'
@@ -177,8 +207,12 @@ def web( data, webpath, force=False ):
         sample_status = sampledata[sample]['status']
         status_str = ', '.join('{}: {}'.format(key,val) 
             for key,val in sorted(sample_status.items()))
-        finished_fraction = '0%'
-        if 'finished' in sample_status.keys(): finished_fraction = sample_status['finished']
+        finished_fraction = 0
+        transferring_fraction = 0
+        running_fraction = 0
+        if 'finished' in sample_status.keys(): finished_fraction = float(sample_status['finished'].strip('%'))
+        if 'transferring' in sample_status.keys(): transferring_fraction = float(sample_status['transferring'].strip('%'))
+        if 'running' in sample_status.keys(): running_fraction = float(sample_status['running'].strip('%'))
 
         # special case for old submissions (status no longer retrievable):
         # avoid overwriting by 'finished 0%'.
@@ -195,13 +229,14 @@ def web( data, webpath, force=False ):
         # format the webpage entry
         page += '<table class="divide" cellpadding="5px" cellspacing="0">\n'
         page += '<tr>\n'
-        page += '<td>'+sampleshortname+'</td>'
-        page += '<td>'+versionshortname+'</td>'
-        page += '<td> <div id="progress">'
-        page += '<div id="percent" style="width=100%">'+status_str+'</div>'
-        page += '<div id="bar" style="width:'+finished_fraction+'"></div>'
-        page += '</div></td>'
-        page += '<td> <a href="'+sample_grafana+'" target="_blank">Grafana</a> </td>\n'
+        # sample name
+        page += '<td style="width:20%">'+sampleshortname+'</td>'
+        # version name
+        page += '<td style="width:20%">'+versionshortname+'</td>'
+        # progress bar and text
+        page += make_progress_bar(sample_status)
+        # grafana link
+        page += '<td style="width:20%"> <a href="'+sample_grafana+'" target="_blank">Grafana</a> </td>\n'
         page += '</tr>\n'
 
     page += '</table>\n'    
