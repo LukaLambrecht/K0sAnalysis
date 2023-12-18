@@ -20,7 +20,6 @@ if __name__=='__main__':
   parser.add_argument('-v', '--version', required=True)
   parser.add_argument('-o', '--outputdir', default='output_test')
   parser.add_argument('-n', '--nprocess', type=int, default=-1)
-  parser.add_argument('--normalize', default=False, action='store_true')
   parser.add_argument('--runmode', default='local', choices=['local', 'condor'])
   args = parser.parse_args()
 
@@ -93,7 +92,6 @@ if __name__=='__main__':
       # make info to display on plot
       extrainfos = inputlabel.strip('\'')
       if v0info is not None: extrainfos += ',{}'.format(v0info)
-      if args.normalize: extrainfos += ',Normalized'
       extrainfos = extrainfos.strip(',')
 
       # make output directory
@@ -105,7 +103,6 @@ if __name__=='__main__':
       cmd += ' --inputfile {}'.format(inputfile)
       cmd += ' --outputdir {}'.format(outputdir)
       cmd += ' --nprocess {}'.format(args.nprocess)
-      if args.normalize: cmd += ' --normalize'
       cmd += ' --treename {}'.format(treename)
       cmd += ' --variables {}'.format(variables)
       if args.runmode=='local': extrainfosarg = '\'{}\''.format(extrainfos)

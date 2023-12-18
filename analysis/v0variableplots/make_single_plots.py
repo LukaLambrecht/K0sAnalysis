@@ -21,7 +21,6 @@ if __name__=='__main__':
   parser.add_argument('--outputdir', default='output_test')
   parser.add_argument('--nprocess', type=int, default=-1)
   parser.add_argument('--extrainfos', default=None)
-  parser.add_argument('--normalize', default=False, action='store_true')
   args = parser.parse_args()
 
   # read the variables
@@ -37,6 +36,8 @@ if __name__=='__main__':
   extrainfos = None
   if args.extrainfos is not None:
     extrainfos = args.extrainfos.replace('-',' ').split(',')
+  normextrainfos = ['Normalized']
+  if extrainfos is not None: normextrainfos = extrainfos + normextrainfos
 
   # make output directory
   if not os.path.exists(args.outputdir):
@@ -54,10 +55,10 @@ if __name__=='__main__':
             nprocess = args.nprocess )
 
     # normalize
-    if args.normalize:
-      integral = float(hist.Integral("width"))
-      hist.Scale(1/integral)
-      variable['yaxtitle'] = 'Arbitrary units'
+    normhist = hist.Clone()
+    integral = float(hist.Integral("width"))
+    normhist.Scale(1/integral)
+    normyaxtitle = 'Arbitrary units'
 
     # define plot settings
     outputfile = os.path.join(args.outputdir, 'var_{}'.format(variable['name']))
@@ -74,6 +75,15 @@ if __name__=='__main__':
         do_cms_text=True, extracmstext='Preliminary',
         extrainfos=extrainfos, infoleft=infoleft )
 
+    # same with normalized y-axis
+    normoutputfile = os.path.splitext(outputfile)[0] + '_log'
+    plotsinglehistogram( normhist, normoutputfile,
+        xaxtitle=xaxtitle, yaxtitle=normyaxtitle, title=title,
+        topmargin=0.1,
+        drawoptions='hist e',
+        do_cms_text=True, extracmstext='Preliminary',
+        extrainfos=normextrainfos, infoleft=infoleft )
+
     # same with log scale
     logoutputfile = os.path.splitext(outputfile)[0] + '_log'
     plotsinglehistogram( hist, logoutputfile,
@@ -81,5 +91,15 @@ if __name__=='__main__':
         topmargin=0.1,
         logy=True, yminlogfactor=0.2, ymaxlogfactor=10,
         drawoptions='hist e',
-        do_cms_text=True,
+        do_cms_text=True, extracmstext='Preliminary',
         extrainfos=extrainfos, infoleft=infoleft )
+
+    # same with normalized y-axis and log scale
+    lognormoutputfile = os.path.splitext(outputfile)[0] + '_norm_log'
+    plotsinglehistogram( normhist, lognormoutputfile,
+        xaxtitle=xaxtitle, yaxtitle=normyaxtitle, title=title,
+        topmargin=0.1,
+        logy=True, yminlogfactor=0.2, ymaxlogfactor=10,
+        drawoptions='hist e',
+        do_cms_text=True, extracmstext='Preliminary',
+        extrainfos=normextrainfos, infoleft=infoleft )

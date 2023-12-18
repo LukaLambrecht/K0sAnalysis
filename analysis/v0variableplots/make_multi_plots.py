@@ -97,6 +97,7 @@ if __name__=='__main__':
             colorlist=colorlist,
             ymaxlinfactor=1.8,
             drawoptions='hist e',
+            extracmstext='Preliminary',
             extrainfos=extrainfos, infosize=None, infoleft=infoleft, infotop=infotop)
 
     # same in log scale
@@ -108,4 +109,5 @@ if __name__=='__main__':
             dolegend=dolegend, labellist=inputlabels,
             colorlist=colorlist,
             drawoptions='hist e',
+            extracmstext='Preliminary',
             extrainfos=extrainfos, infosize=None, infoleft=infoleft, infotop=infotop)

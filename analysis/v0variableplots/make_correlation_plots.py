@@ -96,6 +96,11 @@ if __name__=='__main__':
                    transform=ax.transAxes)
     txt.set_bbox(dict(facecolor='white', alpha=0.9, edgecolor='black'))
 
+  # add cms text
+  txt = ax.text(0.05, 0.95, r'\textbf{CMS} \textit{Preliminary}', fontsize=12, ha='left', va='top',
+                   transform=ax.transAxes)
+  txt.set_bbox(dict(facecolor='white', alpha=0.9, edgecolor='black')) 
+
   # add pixel layer indications if requested
   linestyle = '--'
   linewidth = 2 
