@@ -52,7 +52,7 @@ if __name__=='__main__':
       cmd += ' -v run2ul -c config_ksvars_ul.py --runmode condor'
       cmds.append(cmd)
 
-  if args.doks:
+  if args.dola:
     if args.dopreul:
       cmd = 'python3 mcvsdata_submit.py -i {}'.format(preuldir)
       cmd += ' -o output_{}_lavars_preul'.format(args.datetag)

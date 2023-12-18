@@ -56,6 +56,18 @@ if __name__=='__main__':
         '2016PostVFPG',
         '2016PostVFPH'
       ])
+  elif 'detector' in includelist:
+    if args.version=='run2preul':
+      includelist = ['2016','2017','2018','20172018']
+    elif args.version=='run2ul':
+      includelist = ([
+        '2016PreVFP',
+        '2016PostVFP',
+        '2016',
+        '2017',
+        '2018',
+        '20172018',
+      ])
   kwargs = {}
   if args.version=='run2preul':
     kwargs['filemode'] = 'old' # hard-coded setting to run on either new or old convention
@@ -178,6 +190,11 @@ if __name__=='__main__':
               if '2016' in era['label']: cmd += ' --do2016pixel'
               if '2017' in era['label']: cmd += ' --do20172018pixel'
               if '2018' in era['label']: cmd += ' --do20172018pixel'
+            if exe=='mcvsdataplotter2d.py':
+              eratxt = era['label']
+              if eratxt=='run2': eratxt = 'Run-II'
+              extrainfos = ['{} data / simulation'.format(eratxt)] + extrainfos
+              doextrafinos = True
             if doextrainfos:
               cmd += ' --doextrainfos'
               cmd += ' --extrainfos \'{}\''.format(','.join(extrainfos))
