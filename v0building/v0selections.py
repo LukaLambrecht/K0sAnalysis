@@ -29,12 +29,12 @@ def selection_legacy( branches, extra=None, cutflow=False ):
   if 'cospointingBS' not in extra.keys():
     extra['cospointingBS'] = cospointing(branches, reference='beamSpot')
   allmasks = {
-    #'nhitspos': (branches['_V0NHitsPos'] >= 6),
-    #'nhitsneg': (branches['_V0NHitsNeg'] >= 6),
+    'nhitspos': (branches['_V0NHitsPos'] >= 6),
+    'nhitsneg': (branches['_V0NHitsNeg'] >= 6),
     'ptpos': (branches['_V0PtPos'] > 1.),
     'ptneg': (branches['_V0PtNeg'] > 1.),
-    #'normchi2pos': (branches['_V0NormChi2Pos'] < 5.),
-    #'normchi2neg': (branches['_V0NormChi2Neg'] < 5.),
+    'normchi2pos': (branches['_V0NormChi2Pos'] < 5.),
+    'normchi2neg': (branches['_V0NormChi2Neg'] < 5.),
     'dca': (branches['_V0DCA'] < 0.2),
     'normchi2vtx': (branches['_V0VtxNormChi2'] < 7),
     'cospointingpv': (extra['cospointingPV'] > 0.99),
