@@ -53,15 +53,16 @@ if __name__=='__main__':
         go = input()
         if go=='y': return
         else: sys.exit()
-    # check if this directory has multiple subdirectories;
-    # this would correspond to multiple processings of the same dataset,
-    # in which case choose most recent one.
+    # check if sample directory is empty
     if len(os.listdir(sampledir))==0:
         print('### WARNING ###: directory '+sampledir+' is empty;')
         print('                 continue ignoring this directory? (y/n)')
         go = input()
         if go=='y': return
         else: sys.exit()
+    # check if this directory has multiple subdirectories;
+    # this would correspond to multiple processings of the same dataset,
+    # in which case choose most recent one.
     if len(os.listdir(sampledir))>1:
         print('### WARNING ###: directory '+sampledir+' has multiple subdirectories;')
         print('                 choosing most recent processing of this dataset.')
@@ -85,7 +86,9 @@ if __name__=='__main__':
   print('Found {} samples in sample list.'.format(len(samples_info)))
   for i,sampleinfo in enumerate(samples_info):
     line = sampleinfo['line']
-    thisinputdir, thisfiles = get_files(line)
+    temp = get_files(line)
+    if temp is None: continue
+    thisinputdir, thisfiles = temp
     print('Found {} files.'.format(len(thisfiles)))
     inputfiles.append({})
     inputfiles[-1]['inputdir'] = thisinputdir

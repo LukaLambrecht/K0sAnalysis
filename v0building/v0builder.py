@@ -77,7 +77,8 @@ if __name__=='__main__':
         ntrueint = f[ntrueintkey]
     
     # define branches to read from input file
-    branchnames = ['_nimloth_Mll', '_nimloth_nJets',
+    branchnames = ['_runNb', '_lumiBlock', '_eventNb',
+                   '_nimloth_Mll', '_nimloth_nJets',
                    '_beamSpotX', '_beamSpotY', '_beamSpotZ',
                    '_primaryVertexX', '_primaryVertexY', '_primaryVertexZ',
                    '_celeborn_lPt', '_celeborn_lEta', '_celeborn_lPhi', '_celeborn_lCharge']
@@ -96,6 +97,17 @@ if __name__=='__main__':
     sys.stdout.flush()
     sys.stderr.flush()
     branches = tree.arrays(branchnames, entry_stop=entry_stop)
+
+  # switch between older and newer variable naming conventions
+  vnametype = 'old'
+  if vnametype=='new':
+    rpvsigkey = 'RPVSig'
+    rbssigkey = 'RBSSig'
+  elif vnametype=='old':
+    rpvsigkey = 'RSigPV'
+    rbssigkey = 'RSigBS'
+    branches['_V0NormChi2Pos'] = branches['_V0PtPos']*0.
+    branches['_V0NormChi2Neg'] = branches['_V0PtNeg']*0.
 
   # make masks for V0 types
   ksmask = (branches['_V0Type']==1)
@@ -138,9 +150,10 @@ if __name__=='__main__':
   }
   (selmask, allmasks) = selection(branches, args.selection, extra=extra, cutflow=True)
   print('Selection summary:')
+  print('  Before selection: {} candidates'.format(ak.count(selmask)))
   for maskname, mask in allmasks.items():
     print('  - {}: {}'.format(maskname, np.sum(mask)))
-  print('  -> total: {}'.format(np.sum(selmask)))
+  print('  -> Candidates passing all selections: {}'.format(np.sum(selmask)))
 
   # fill nimloth
   print('Filling per-event tree')
@@ -175,8 +188,8 @@ if __name__=='__main__':
   laurelin['_vertexZ'] = ak.flatten(branches['_V0Z'][laurelinmask])
   laurelin['_RPV'] = ak.flatten(branches['_V0RPV'][laurelinmask])
   laurelin['_RBS'] = ak.flatten(branches['_V0RBS'][laurelinmask])
-  laurelin['_RPVSig'] = ak.flatten(branches['_V0RPVSig'][laurelinmask])
-  laurelin['_RBSSig'] = ak.flatten(branches['_V0RBSSig'][laurelinmask])
+  laurelin['_RPVSig'] = ak.flatten(branches['_V0'+rpvsigkey][laurelinmask])
+  laurelin['_RBSSig'] = ak.flatten(branches['_V0'+rbssigkey][laurelinmask])
   laurelin['_pt'] = ak.flatten(branches['_V0Pt'][laurelinmask])
   laurelin['_ptSum'] = ak.flatten(ptSum[laurelinmask])
   laurelin['_eta'] = ak.flatten(branches['_V0Eta'][laurelinmask])
@@ -188,6 +201,9 @@ if __name__=='__main__':
   laurelin['_normChi2Pos'] = ak.flatten(branches['_V0NormChi2Pos'][laurelinmask])
   laurelin['_normChi2Neg'] = ak.flatten(branches['_V0NormChi2Neg'][laurelinmask])
   laurelin['_trackdR'] = ak.flatten(trackdR[laurelinmask])
+  laurelin['_runNb'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_runNb'] )
+  laurelin['_lumiBlock'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_lumiBlock'] )
+  laurelin['_eventNb'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_eventNb'] )
   if not isdata:
     laurelin['_weight'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_weight'] )
     laurelin['_nTrueInt'] = ak.flatten( (branches['_V0Pt'][laurelinmask]>-1.)*branches['_nTrueInt'] )
@@ -203,8 +219,8 @@ if __name__=='__main__':
   telperion['_vertexZ'] = ak.flatten(branches['_V0Z'][telperionmask])
   telperion['_RPV'] = ak.flatten(branches['_V0RPV'][telperionmask])
   telperion['_RBS'] = ak.flatten(branches['_V0RBS'][telperionmask])
-  telperion['_RPVSig'] = ak.flatten(branches['_V0RPVSig'][telperionmask])
-  telperion['_RBSSig'] = ak.flatten(branches['_V0RBSSig'][telperionmask])
+  telperion['_RPVSig'] = ak.flatten(branches['_V0'+rpvsigkey][telperionmask])
+  telperion['_RBSSig'] = ak.flatten(branches['_V0'+rbssigkey][telperionmask])
   telperion['_pt'] = ak.flatten(branches['_V0Pt'][telperionmask])
   telperion['_ptSum'] = ak.flatten(ptSum[telperionmask])
   telperion['_eta'] = ak.flatten(branches['_V0Eta'][telperionmask])
@@ -216,6 +232,9 @@ if __name__=='__main__':
   telperion['_normChi2Pos'] = ak.flatten(branches['_V0NormChi2Pos'][telperionmask])
   telperion['_normChi2Neg'] = ak.flatten(branches['_V0NormChi2Neg'][telperionmask])
   telperion['_trackdR'] = ak.flatten(trackdR[telperionmask])
+  telperion['_runNb'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_runNb'] )
+  telperion['_lumiBlock'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_lumiBlock'] )
+  telperion['_eventNb'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_eventNb'] )
   if not isdata:
     telperion['_weight'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_weight'] )
     telperion['_nTrueInt'] = ak.flatten( (branches['_V0Pt'][telperionmask]>-1.)*branches['_nTrueInt'] )

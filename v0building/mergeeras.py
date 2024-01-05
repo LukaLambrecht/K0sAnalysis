@@ -11,7 +11,7 @@ import argparse
 
 if __name__=='__main__':
 
-    yeardict = ({
+    '''yeardict = ({
       'DoubleMuon_Run2016PreVFP': [
         'DoubleMuon_crab_Run2016B-ver2_HIPM_UL2016_MiniAODv2-v1',
         'DoubleMuon_crab_Run2016C-HIPM_UL2016_MiniAODv2-v1',
@@ -36,6 +36,31 @@ if __name__=='__main__':
         'DoubleMuon_crab_Run2018B-UL2018_MiniAODv2-v1_data_doublemuon',
         'DoubleMuon_crab_Run2018C-UL2018_MiniAODv2-v1_data_doublemuon',
         'DoubleMuon_crab_Run2018D-UL2018_MiniAODv2-v1_data_doublemuon'
+      ]
+    })'''
+
+    yeardict = ({
+      'DoubleMuon_Run2016': [
+        'DoubleMuon_crab_Run2016B-17Jul2018_ver2-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016C-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016D-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016E-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016F-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016G-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016H-17Jul2018-v1_data_Run2016_DoubleMuon'
+      ],
+      'DoubleMuon_Run2017': [
+        'DoubleMuon_crab_Run2017B-31Mar2018-v1_data_Run2017_DoubleMuon',
+        'DoubleMuon_crab_Run2017C-31Mar2018-v1_data_Run2017_DoubleMuon',
+        'DoubleMuon_crab_Run2017D-31Mar2018-v1_data_Run2017_DoubleMuon',
+        'DoubleMuon_crab_Run2017E-31Mar2018-v1_data_Run2017_DoubleMuon',
+        'DoubleMuon_crab_Run2017F-31Mar2018-v1_data_Run2017_DoubleMuon'
+      ],
+      'DoubleMuon_Run2018': [
+        'DoubleMuon_crab_Run2018A-17Sep2018-v2_data_Run2018_DoubleMuon',
+        'DoubleMuon_crab_Run2018B-17Sep2018-v1_data_Run2018_DoubleMuon',
+        'DoubleMuon_crab_Run2018C-17Sep2018-v1_data_Run2018_DoubleMuon',
+        'DoubleMuon_crab_Run2018D-PromptReco-v2_data_Run2018_DoubleMuon'
       ]
     })
 
