@@ -141,29 +141,39 @@ def getfiles_run2ul( filedir, includelist ):
 def getfiles_run2preul( filedir, includelist, filemode='old' ):
 
     eralist = []
+    mcdirdict = {}
+    datadirdict = {}
+    allyears = ['2016', '2017', '2018']
+    alleras = (['2016B', '2016C', '2016D', '2016E', '2016F', '2016G', '2016H',
+                '2017B', '2017C', '2017D', '2017E', '2017F',
+                '2018A', '2018B', '2018C', '2018D'])
+    if filemode=='new':
+        for year in allyears: mcdirdict[year] = 'DYJetsToLL_'+year
+        for year in allyears: datadirdict[year] = 'DoubleMuon_Run'+year
+        for era in alleras: datadirdict[era] = 'DoubleMuon_Run'+era
+        filename = 'merged_selected.root'
+    elif filemode=='old':
+        mcdirdict['2016'] = 'RunIISummer16_DYJetsToLL'
+        mcdirdict['2017'] = 'RunIIFall17_DYJetsToLL'
+        mcdirdict['2018'] = 'RunIIAutumn18_DYJetsToLL'
+        for year in allyears: datadirdict[year] = 'Run'+year+'_DoubleMuon'
+        for era in alleras: datadirdict[era] = 'Run'+era+'_DoubleMuon'
+        for grouped in ['2016BtoF', '2016GtoH']: datadirdict[grouped] = 'Run'+grouped+'_DoubleMuon'
+        filename = 'skim_ztomumu_all.root'
+    else: raise Exception('ERROR: filemode "{}" not recognized.'.format(filemode))
     for era in includelist:
         # skip special cases (consider them later)
         if era=='run2': continue
         if era=='20172018': continue
+        if era=='2016BtoF': continue
+        if era=='2016GtoH': continue
         # set MC file and data file
         year = era.strip('ABCDEFGH')
-        if filemode == 'new':
-            mcdir = 'DYJetsToLL_'+year
-            datadir = 'DoubleMuon_Run'+era
-            filename = 'merged_selected.root'
-        elif filemode == 'old':
-            mcdir = 'RunIISummer16_DYJetsToLL'
-            if '2017' in era: mcdir = 'RunIIFall17_DYJetsToLL'
-            if '2018' in era: mcdir = 'RunIIAutumn18_DYJetsToLL'
-            datadir = 'Run'+era+'_DoubleMuon'
-            filename = 'skim_ztomumu_all.root'
-        else:
-            raise Exception('ERROR: filemode "{}" not recognized.'.format(filemode))
-        mcin = ([{ 'file':os.path.join(filedir,mcdir,filename), 
+        mcin = ([{ 'file':os.path.join(filedir, mcdirdict[year], filename), 
 		'label':era+' sim.', 'xsection':6077.22,
 		'luminosity':lt.getlumi('run2preul', era)*1000,
                 'era': era, 'year': year, 'campaign': 'run2preul'}])
-        datain = ([{'file':os.path.join(filedir,datadir,filename), 
+        datain = ([{'file':os.path.join(filedir, datadirdict[era], filename), 
 		'label':era+' data','luminosity':lt.getlumi('run2preul', era)*1000,
                 'era': era, 'year': year, 'campaign': 'run2preul'}])
         label = era
@@ -173,24 +183,14 @@ def getfiles_run2preul( filedir, includelist, filemode='old' ):
     if '20172018' in includelist:
         mcin = []
         datain = []
-        if filemode=='old':
-            filename = 'skim_ztomumu_all.root'
-            # 2017
-            mcin.append({ 'file':os.path.join(filedir,'RunIIFall17_DYJetsToLL',filename),
-                  'label':'2017 sim.', 'xsection':6077.22,
-                  'luminosity':lt.getlumi('run2preul', '2017')*1000,
-                  'era': '2017', 'year': '2017', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'Run2017_DoubleMuon',filename),
-                   'label':'2017 data','luminosity':lt.getlumi('run2preul', '2017')*1000,
-                   'era': '2017', 'year': '2017', 'campaign': 'run2preul'})
-            # 2018
-            mcin.append({ 'file':os.path.join(filedir,'RunIIAutumn18_DYJetsToLL',filename),
-                  'label':'2018 sim.', 'xsection':6077.22,
-                  'luminosity':lt.getlumi('run2preul', '2018')*1000,
-                  'era': '2018', 'year': '2018', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'Run2018_DoubleMuon',filename),
-                   'label':'2018 data','luminosity':lt.getlumi('run2preul', '2018')*1000,
-                   'era': '2018', 'year': '2018', 'campaign': 'run2preul'})
+        for year in ['2017', '2018']:
+            mcin.append({ 'file':os.path.join(filedir, mcdirdict[year], filename),
+                  'label':year+' sim.', 'xsection':6077.22,
+                  'luminosity':lt.getlumi('run2preul', year)*1000,
+                  'era': year, 'year': year, 'campaign': 'run2preul'})
+            datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
+                   'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                   'era': year, 'year': year, 'campaign': 'run2preul'})
         label = '20172018'
         eralist.append({'mcin':mcin,'datain':datain,'label':label})
 
@@ -198,56 +198,41 @@ def getfiles_run2preul( filedir, includelist, filemode='old' ):
     if 'run2' in includelist:
         mcin = []
         datain = []
-        if filemode == 'old':
-            filename = 'skim_ztomumu_all.root'
-            # 2016
-            mcin.append({ 'file':os.path.join(filedir,'RunIISummer16_DYJetsToLL',filename), 
-                      'label':'2016 sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', '2016')*1000,
-                      'era': '2016', 'year': '2016', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'Run2016_DoubleMuon',filename), 
-                       'label':'2016 data','luminosity':lt.getlumi('run2preul', '2016')*1000,
-                       'era': '2016', 'year': '2016', 'campaign': 'run2preul'})
-            # 2017
-            mcin.append({ 'file':os.path.join(filedir,'RunIIFall17_DYJetsToLL',filename), 
-                      'label':'2017 sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', '2017')*1000,
-                      'era': '2017', 'year': '2017', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'Run2017_DoubleMuon',filename), 
-                       'label':'2017 data','luminosity':lt.getlumi('run2preul', '2017')*1000,
-                       'era': '2017', 'year': '2017', 'campaign': 'run2preul'})
-            # 2018
-            mcin.append({ 'file':os.path.join(filedir,'RunIIAutumn18_DYJetsToLL',filename), 
-                      'label':'2018 sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', '2018')*1000,
-                      'era': '2018', 'year': '2018', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'Run2018_DoubleMuon',filename), 
-                       'label':'2018 data','luminosity':lt.getlumi('run2preul', '2018')*1000,
-                       'era': '2018', 'year': '2018', 'campaign': 'run2preul'})
-        elif filemode == 'new':
-            filename = 'merged_selected.root'
-            # 2016
-            mcin.append({ 'file':os.path.join(filedir,'DYJetsToLL_2016',filename),
-                  'label':'2016 sim.', 'xsection':6077.22,
-                  'luminosity':lt.getlumi('run2preul', '2016')*1000,
-                  'era': '2016', 'year': '2016', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'DoubleMuon_Run2016',filename),
-                   'label':'2016 data','luminosity':lt.getlumi('run2preul', '2016')*1000,
-                   'era': '2016', 'year': '2016', 'campaign': 'run2preul'})
-            # 2017
-            mcin.append({ 'file':os.path.join(filedir,'DYJetsToLL_2017',filename),
-                  'label':'2017 sim.', 'xsection':6077.22,
-                  'luminosity':lt.getlumi('run2preul', '2017')*1000,
-                  'era': '2017', 'year': '2017', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'DoubleMuon_Run2017',filename),
-                   'label':'2017 data','luminosity':lt.getlumi('run2preul', '2017')*1000,
-                   'era': '2017', 'year': '2017', 'campaign': 'run2preul'})
-            # 2018
-            mcin.append({ 'file':os.path.join(filedir,'DYJetsToLL_2018',filename),
-                  'label':'2018 sim.', 'xsection':6077.22,
-                  'luminosity':lt.getlumi('run2preul', '2018')*1000,
-                  'era': '2018', 'year': '2018', 'campaign': 'run2preul'})
-            datain.append({'file':os.path.join(filedir,'DoubleMuon_Run2018',filename),
-                   'label':'2018 data','luminosity':lt.getlumi('run2preul', '2018')*1000,
-                   'era': '2018', 'year': '2018', 'campaign': 'run2preul'})
-        label = 'Run-II'
+        for year in ['2016', '2017', '2018']:
+            mcin.append({ 'file':os.path.join(filedir, mcdirdict[year], filename), 
+                      'label':year+' sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'era': year, 'year': year, 'campaign': 'run2preul'})
+            datain.append({'file':os.path.join(filedir, datadirdict[year], filename), 
+                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'era': year, 'year': year, 'campaign': 'run2preul'})
+        label = 'run2'
+        eralist.append({'mcin':mcin,'datain':datain,'label':label})
+
+    # special case
+    if '2016BtoF' in includelist:
+        mcin = []
+        datain = []
+        mcin.append({ 'file':os.path.join(filedir, mcdirdict['2016'], filename),
+                      'label':'2016PreVFP sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'era': year, 'year': year, 'campaign': 'run2preul'})
+        datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
+                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'era': year, 'year': year, 'campaign': 'run2preul'})
+        label = '2016BtoF'
+        eralist.append({'mcin':mcin,'datain':datain,'label':label})
+
+    # special case
+    if '2016GtoH' in includelist:
+        mcin = []
+        datain = []
+        for year in ['2016GtoH']:
+            mcin.append({ 'file':os.path.join(filedir, mcdirdict['2016'], filename),
+                      'label':'2016PostVFP sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'era': year, 'year': year, 'campaign': 'run2preul'})
+            datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
+                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'era': year, 'year': year, 'campaign': 'run2preul'})
+        label = 'run2'
         eralist.append({'mcin':mcin,'datain':datain,'label':label})
 
     # return the eralist
