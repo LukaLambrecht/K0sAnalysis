@@ -160,7 +160,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
                 + datahistlist[0].GetBinWidth(datahistlist[0].GetNbinsX()))
     statcolor = ROOT.kOrange
     statfillstyle = 1001
-    stattransparency = 0.5
+    stattransparency = 0.9
     if colorlist is None: 
         colorlist = ([ROOT.kAzure-4,ROOT.kAzure+6,ROOT.kViolet,ROOT.kMagenta-9,
                       ROOT.kRed,ROOT.kPink-9,ROOT.kBlue+1])
@@ -310,9 +310,9 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
       tinfo.SetTextFont(10*infofont+3)
       tinfo.SetTextSize(infosize)
       tinfo.SetTextColor(linecolor)
-      tinfo.DrawLatexNDC(0.33,0.52,"PXL1")
-      tinfo.DrawLatexNDC(0.45,0.47,"PXL2")
-      tinfo.DrawLatexNDC(0.57,0.42,"PXL3")
+      tinfo.DrawLatexNDC(0.33,0.52,"BPIX1")
+      tinfo.DrawLatexNDC(0.45,0.47,"BPIX2")
+      tinfo.DrawLatexNDC(0.57,0.42,"BPIX3")
 
     # draw vertical lines for 2017/2018 pixel detector
     if do20172018pixel:
@@ -350,10 +350,10 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
       tinfo.SetTextFont(10*infofont+3)
       tinfo.SetTextSize(infosize)
       tinfo.SetTextColor(linecolor)
-      tinfo.DrawLatexNDC(0.27,0.55,"PXL1")
-      tinfo.DrawLatexNDC(0.43,0.50,"PXL2")
-      tinfo.DrawLatexNDC(0.60,0.40,"PXL3")
-      tinfo.DrawLatexNDC(0.80,0.30,"PXL4")
+      tinfo.DrawLatexNDC(0.27,0.55,"BPIX1")
+      tinfo.DrawLatexNDC(0.43,0.50,"BPIX2")
+      tinfo.DrawLatexNDC(0.60,0.40,"BPIX3")
+      tinfo.DrawLatexNDC(0.80,0.30,"BPIX4")
 
     ### Create pad for ratio plots
     pad2.cd()
