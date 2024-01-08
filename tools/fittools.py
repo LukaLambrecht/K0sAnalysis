@@ -18,7 +18,7 @@ def poly(x, par, degree=0):
         res += par[k]*np.power(x[0], k)
     return res
 
-def poly_fit(hist, fitrange, initialguesses, optionstring="LQ0"):
+def poly_fit(hist, fitrange, initialguesses, optionstring="WLQ0"):
     # args: - histogram to be fitted on
     #        - tuple or list representing range to take into account for fit
     #        - (ordered) list of initial parameter guesses

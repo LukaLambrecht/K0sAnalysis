@@ -9,10 +9,10 @@ import os
 sys.path.append('../tools')
 import plottools as pt
 
-def plot_fit_mcvsdata(datahist,simhist,figname,fitfunc=None,backfit=None,
-			datalabel=None,simlabel=None,fitfunclabel=None,backfitlabel=None,
-			paramdict=None,xaxtitle=None,yaxtitle=None,
-			extrainfo='',lumitext=''):
+def plot_fit_mcvsdata(datahist, simhist, figname, fitfunc=None, backfit=None,
+			datalabel=None, simlabel=None, fitfunclabel=None, backfitlabel=None,
+			paramdict=None, xaxtitle=None, yaxtitle=None,
+			extrainfo='', extracmstext='', lumitext=''):
     # args: - datahist and simhist are the histograms for data and simulation respectively
     #       - figname is the name of the output figure
     #       - fitfunc and backfit are two fitted functions 
@@ -136,7 +136,7 @@ def plot_fit_mcvsdata(datahist,simhist,figname,fitfunc=None,backfit=None,
         tinfo.DrawLatexNDC(0.2,0.8-i*0.035,info)
 
     # title
-    pt.drawLumi(c1,cmstext_size_factor=1.0,extratext='', lumitext=lumitext)
+    pt.drawLumi(c1, cmstext_size_factor=1.0, extratext=extracmstext, lumitext=lumitext)
 
     c1.Update()
     c1.SaveAs(figname)

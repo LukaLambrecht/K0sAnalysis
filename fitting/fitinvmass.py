@@ -1,147 +1,210 @@
 ##########################################################
-# make invariant pass plots and fits of kshort or lambda #
+# Make invariant mass plots and fits of kshort or lambda #
 ##########################################################
 
 import sys 
 import os
-import ROOT
+import json
+import argparse
+import uproot
 import numpy as np
-import array
+import ROOT
+from array import array
 sys.path.append('../tools')
 import fittools as ft
-import histtools as ht
-import optiontools as opt
 sys.path.append('../plotting')
 import plotfit as pf
 
 if __name__=='__main__':
     
-    options = []
-    options.append( opt.Option('finloc', vtype='path') )
-    options.append( opt.Option('treename', default='laurelin') )
-    options.append( opt.Option('varname', default='_mass') )
-    options.append( opt.Option('outfilename', default='test') )
-    options.append( opt.Option('title', default='invariant mass (GeV)') )
-    options.append( opt.Option('xaxtitle', default=r'reconstructed K^{0}_{S} invariant mass') )
-    options.append( opt.Option('label', default='data'))
-    options.append( opt.Option('nmxax', vtype='int', default=-1) )
-    options.append( opt.Option('xlow', vtype='float', default=0.44) )
-    options.append( opt.Option('xhigh', vtype='float', default=0.56) )
-    options.append( opt.Option('binwidth', vtype='float', default=0.005) )
-    options.append( opt.Option('divvarname') )
-    options.append( opt.Option('divbins', vtype='list', default=[0.0,999.0]) )
-    # (note: do not use '0.' notation, only '0.0' works in the json decoder!)
-    options.append( opt.Option('polydegree', vtype='int', default=1) )
-    options = opt.OptionCollection( options )
-    if len(sys.argv)==1:
-	print('Use with following options:')
-	print(options)
-	sys.exit()
-    else:
-	options.parse_options( sys.argv[1:] )
-	print('Found following configuration:')
-	print(options)
+  # read command line arguments
+  parser = argparse.ArgumentParser( description = 'Plot invariant mass' )
+  parser.add_argument('-i', '--inputfile', required=True, nargs='+')
+  parser.add_argument('-t', '--treename', required=True)
+  parser.add_argument('-v', '--variable', required=True, type=os.path.abspath)
+  parser.add_argument('-o', '--outputfile', required=True, type=os.path.abspath)
+  parser.add_argument('-n', '--nentries', default=-1, type=int)
+  parser.add_argument('--isdata', default=False, action='store_true')
+  parser.add_argument('--lumi', default=None, type=float)
+  parser.add_argument('--xsection', default=None, type=float)
+  parser.add_argument('--label', default=None)
+  parser.add_argument('--yvariable', default=None)
+  parser.add_argument('--doplot', default=False, action='store_true')
+  # options below are only for plot aesthetics, not relevant when doplot is False
+  parser.add_argument('--title', default=None)
+  parser.add_argument('--xaxtitle', default=None)
+  parser.add_argument('--yaxtitle', default=None)
+  parser.add_argument('--drawstyle', default='hist')
+  parser.add_argument('--show_bkg_fit', default=False, action='store_true')
+  parser.add_argument('--show_sig_fit', default=False, action='store_true')
+  parser.add_argument('--show_fit_params', default=False, action='store_true')
+  parser.add_argument('--polydegree', type=int, default=1)
+  args = parser.parse_args()
+
+  # load main variable
+  with open(args.variable) as f:
+    variable = json.load(f)
+  print('Found following main variable:')
+  for key,val in variable.items(): print('  {}: {}'.format(key,val))
+
+  # load sideband variable
+  yvariable = None # default case if no secondary binning
+  if args.yvariable is not None:
+    with open(args.yvariable) as f:
+      yvariable = json.load(f)
+    print('Found following secondary variable:')
+    for key,val in yvariable.items(): print('  {}: {}'.format(key,val))
+
+  # loop over input files
+  # (usually there will be just one input file,
+  #  but multiple are possible e.g. to make quick run-2 plots for data;
+  #  this will not work correctly for simulation as different xsection and lumi values are needed!)
+  for inputfile in args.inputfile:
+    # open the file and read hcounter
+    print('Now running on file {}...'.format(inputfile))
+    with uproot.open(inputfile) as f:
+      sumweights = 1 # default case for data, overwritten for simulation below
+      if not args.isdata:
+        try: sumweights = f[hcountername].values()[0]
+        except:
+          msg = 'WARNING: isdata was set to False, but no valid hCounter found in file'
+          msg += ' (for provided key {}),'.format(hcountername)
+          msg += ' will use sum of weights = 1 for this sample.'
+          msg += ' Valid keys are {}'.format(f.keys())
+          print(msg)
+
+      # get main tree and manage number of entries
+      tree = f[args.treename]
+      nentries = tree.num_entries
+      nentries_reweight = 1.
+      if( args.nentries is not None and args.nentries>0 and args.nentries<tree.num_entries ):
+        nentries = args.nentries
+        nentries_reweight = tree.num_entries / nentries
+      msg = 'Tree {} was found to have {} entries,'.format(args.treename, tree.num_entries)
+      msg += ' of which {} will be read (using reweighting factor {}).'.format(nentries, nentries_reweight)
+      print(msg)
+
+      # get weights
+      if args.isdata: weights = np.ones(nentries)
+      else:
+        weights = tree[weightvarname].array(library='np', entry_stop=nentries)
+        weights = weights / sumweights * args.xsection * args.lumi
+      weights = weights * nentries_reweight
+
+      # get the variable and some masks
+      varvalues = tree[variable['variable']].array(library='np', entry_stop=nentries)
+      nanmask = np.isnan(varvalues)
+      rangemask = ((varvalues > variable['bins'][0]) & (varvalues < variable['bins'][-1]))
+      totalmask = ((~nanmask) & rangemask)
+
+      # initialize a dummy secondary variable if it was not provided
+      # (easier than if else statements below)
+      dim = 1
+      if args.yvariable is not None: dim = 2
+      else:
+        dummyvar = tree.keys()[0]
+        dummyvalues = tree[dummyvar].array(library='np', entry_stop=nentries)
+        dummymin = np.min(dummyvalues)
+        dummymax = np.max(dummyvalues)
+        yvariable = {'variable': dummyvar, 'bins': [dummymin/2., dummymax*2]}
+
+      # get the secondary variable
+      yvarvalues = tree[yvariable['variable']].array(library='np', entry_stop=nentries)
+      ynanmask = np.isnan(yvarvalues)
+      yrangemask = ((yvarvalues >= yvariable['bins'][0]) & (yvarvalues <= yvariable['bins'][-1]))
+      totalmask = (totalmask & (~ynanmask) & yrangemask)
+
+      # calculate the counts
+      varvalues = varvalues[totalmask]
+      yvarvalues = yvarvalues[totalmask]
+      weights = weights[totalmask]
+      counts = np.histogram2d(varvalues, yvarvalues,
+                   bins=(variable['bins'], yvariable['bins']),
+                   weights=weights)[0]
+      errors = np.sqrt(np.histogram2d(varvalues, yvarvalues,
+                   bins=(variable['bins'], yvariable['bins']),
+                   weights=np.power(weights,2))[0])
+
+  # write histograms to output file
+  hists = []
+  for i, (ylow, yhigh) in enumerate(zip(yvariable['bins'][:-1], yvariable['bins'][1:])):
+    # make a ROOT histogram
+    if args.label is not None: histname = 'hist_{}_{}'.format(args.label,i)
+    else: histname = 'hist_{}'.format(i)
+    hist = ROOT.TH1F(histname, histname, len(variable['bins'])-1, array('f', variable['bins']))
+    hist.SetDirectory(0)
+    for binnb, (count, error) in enumerate(zip(counts[:,i], errors[:,i])):
+      hist.SetBinContent(binnb+1, count)
+      hist.SetBinError(binnb+1, error)
+    hists.append(hist)
+  outrootfile = os.path.splitext(args.outputfile)[0]+'.root'
+  f = ROOT.TFile.Open(outrootfile, 'recreate')
+  for hist in hists: hist.Write()
+  f.Close()
+  
+  # exit if no plot is needed  
+  if not args.doplot: sys.exit()
+  
+  # loop over secondary bins
+  for i, (ylow, yhigh) in enumerate(zip(yvariable['bins'][:-1], yvariable['bins'][1:])):
+    hist = hists[i]
 
     # fit range settings
-    fitrange = [options.xlow,options.xhigh]
-    xcenter = (options.xhigh+options.xlow)/2.
-    xwidth = (options.xhigh-options.xlow)/4.
-    nbins = int((options.xhigh-options.xlow)/options.binwidth)
+    xlow = variable['bins'][0]
+    xhigh = variable['bins'][-1]
+    fitrange = [xlow, xhigh]
+    xcenter = (xhigh + xlow)/2.
+    xwidth = (xhigh - xlow)/4.
 
-    # possibility to make a histogram per bin in another variable
-    show_divinfo = True
-    nhists = len(options.divbins)-1
-    if options.divvarname is None: 
-	options.divvarname = options.varname
-	options.divbins = array.array('f',[options.xlow,options.xhigh])
-	show_divinfo = False
-	nhists = 1
-	
-    # other program settings
-    do_fill = True
-    tempfilename = os.path.splitext(options.outfilename)[0]+'_temp.root'
-    figname = os.path.splitext(options.outfilename)[0]+'_fig'
-    do_fit = True
+    # remove middle band and fit sidebands to obtain background
+    histclone = hist.Clone()
+    binlow = histclone.FindBin(xcenter-xwidth)
+    binhigh = histclone.FindBin(xcenter+xwidth)
+    for binnb in range(binlow,binhigh):
+        histclone.SetBinContent(binnb,0)
+        histclone.SetBinError(binnb,0)
+    guess = [0.]*(args.polydegree+1)
+    bkgfit, paramdict, fitobj1 = ft.poly_fit(histclone,fitrange,guess,"Q0")
+    average = bkgfit.Eval(xcenter)
+    
+    # do simultaneous fit with previous fit parameters as initial guesses
+    guess = [xcenter,average*10,0.005,average*10,0.01]
+    for degree in range(args.polydegree+1):
+        guess.append(paramdict["a"+str(degree)])
+    totfit, paramdict, fitobj2 = ft.poly_plus_doublegauss_fit(hist,fitrange,guess)
+    print('Fitted parameters:')
+    for el in paramdict: print('    '+el+': '+str(paramdict[el]))
 
-    # fill the histograms
-    if do_fill:
-	nfilled = 0
-	histlist = []
-	for j in range(nhists):
-	    histlist.append(ROOT.TH1F('hist'+str(j),'',nbins,options.xlow,options.xhigh))
-	    histlist[j].SetDirectory(0)
-	infilelist = []
-	if(options.finloc[-5:] == '.root'): # in case of single file.
-	    infilelist = [options.finloc]
-	else:
-	    # (in case of folder: not yet implemented)
-	    raise Exception('ERROR: input file does not appear to be a .root file.')
-	# loop over entries in tree and fill histograms
-	for j,infile in enumerate(infilelist):
-	    fin = ROOT.TFile.Open(infile)
-	    tree = fin.Get(options.treename)
-	    nevents = tree.GetEntries()
-	    nprocess = nevents
-	    if options.nmxax>0: nprocess = int(min(options.nmxax,nevents))
-	    print('file '+str(j+1)+' of '+str(len(infilelist)))
-	    print(str(nprocess)+' events out of '+str(nevents)+' will be processed.')
-	    nfilled += nprocess
-	    for i in range(nprocess):
-		if(i>1 and (i+1)%10000==0):
-		    print('number of processed events: '+str(i+1)) 
-		tree.GetEntry(i)
-		varvalue = getattr(tree,options.varname)
-		divvalue = getattr(tree,options.divvarname)
-		if(divvalue>options.divbins[0] and divvalue<options.divbins[-1]):
-		    divindex = np.digitize(divvalue,options.divbins)-1
-		    histlist[divindex].Fill(varvalue)
-	fout = ROOT.TFile(tempfilename,"recreate")
-	for hist in histlist:
-	    hist.Write()
-	divbins_w = ROOT.TVectorD(len(options.divbins))
-	for j in range(len(options.divbins)):
-	    divbins_w[j] = options.divbins[j]
-	divbins_w.Write("divbins_w")
-	divvarname_w = ROOT.TNamed("divvarname_w",options.divvarname)
-	divvarname_w.Write()
-	nfilled_w = ROOT.TVectorD(1); nfilled_w[0] = nfilled
-	nfilled_w.Write()
-	fout.Close()
-	print(str(nfilled)+' instances were written to a histogram file.')
+    # also get uncertainty on best-fit value for mass
+    # not very clean, maybe improve later
+    idx = 0
+    for paramidx, paramname in enumerate(paramdict.keys()):
+        if paramname=='#mu': idx = paramidx
+    mu_central = totfit.GetParameter(idx)
+    mu_unc = totfit.GetParError(idx)
 
-    if do_fit:
-	if not do_fill:
-	    histlist = ht.loadallhistograms( tempfilename )
-	    fin = ROOT.TFile.Open(tempfilename)
-	    options.divbins = fin.Get("divbins_w")
-	    options.divvarname = str(fin.Get("divvarname_w").GetTitle())
-	    fin.Close()
-	for j,hist in enumerate(histlist):
-	    # step 1: remove middle band and fit sidebands to obtain background
-	    histclone = hist.Clone()
-	    binlow = histclone.FindBin(xcenter-xwidth)
-	    binhigh = histclone.FindBin(xcenter+xwidth)
-	    for i in range(binlow,binhigh):
-		    histclone.SetBinContent(i,0)
-	    guess = [0.]*(options.polydegree+1)
-	    backfit,paramdict = ft.poly_fit(histclone,fitrange,guess,"Q0")
-	    average = backfit.Eval(xcenter)
-	    # step 2: do simultaneous fit with previous fit parameters as initial guesses
-	    guess = [xcenter,average*10,0.005,average*10,0.01]
-	    for i in range(options.polydegree+1):
-		guess.append(paramdict["a"+str(i)])
-	    totfit,paramdict = ft.poly_plus_doublegauss_fit(hist,fitrange,guess)
-	    print('Fitted parameters:')
-	    for el in paramdict:
-		print('    '+el+': '+str(paramdict[el]))
-	    # step 3: plot
-	    extrainfo = ''
-	    if show_divinfo: 
-		extrainfo = str(options.divbins[j])
-		extrainfo += ' < {}  < '.format(options.divvarname)
-		extrainfo += str(options.divbins[j+1])
-	    extrainfo += ' << <<HACK_KS'
-	    pf.plot_fit(hist,figname+'_{}.png'.format(j),fitfunc=totfit,backfit=backfit,
-			label=options.label,paramdict=paramdict,
-			xaxtitle=options.xaxtitle,yaxtitle='number of reconstructed vertices',
-	    		extrainfo=extrainfo)
+    # make extra info
+    extrainfo = ''
+    if args.show_sig_fit:
+        extrainfo += 'Fitted K_{S}^{0} mass: <<  '
+        extrainfo += '{:.3f} #pm {:.3f} MeV << <<'.format(mu_central*1000,mu_unc*1000)
+    #extrainfo += ' << <<HACK_KS'
+    if dim==2:
+        extrainfo += '{0:.2f} < '.format(ylow)
+        extrainfo += yvariable['name']
+        extrainfo += ' < {0:.2f}'.format(yhigh)
+            
+    # make a plot
+    if not args.show_bkg_fit: bkgfit = None
+    if not args.show_sig_fit: totfit = None
+    if not args.show_fit_params: paramdict = None
+    lumitext = '' if args.lumi is None else '{0:.3g} '.format(float(args.lumi)/1000.) + 'fb^{-1} (13 TeV)'
+    outputfile = os.path.splitext(args.outputfile)[0]
+    if len(yvariable['bins'])>2: outputfile += '_{}'.format(i)
+    outputfile += '.png'
+    pf.plot_fit(hist, outputfile,
+                style=args.drawstyle, fitfunc=totfit, backfit=bkgfit,
+                label=args.label, paramdict=paramdict,
+                xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle,
+                extrainfo=extrainfo,
+                lumitext=lumitext)

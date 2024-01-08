@@ -48,12 +48,13 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
     guess = [0.,0.]
     backfit, paramdict, backfitobj = ft.poly_fit(histclone, fitrange, guess, "Q0")
     if gargs['helpdir'] is not None:
+        lumitext = '' if gargs['lumi'] is None else '{0:.3g} '.format(float(gargs['lumi'])/1000.) + 'fb^{-1} (13 TeV)'
         outfile = os.path.join(gargs['helpdir'], hist.GetName().replace(' ','_')+'_bck.png')
         pft.plot_fit(hist, outfile,
                 fitfunc=None, backfit=backfit, label=label, paramdict=paramdict,
                 xaxtitle='Invariant mass (GeV)',
                 yaxtitle='Number of reconstructed vertices',
-                extrainfo=extrainfo, lumi=gargs['lumi'])
+                extrainfo=extrainfo, lumitext=lumitext)
     # make signal peak fit if requested
     if(mode=='gfit' or mode=='hybrid'):
         avgbck = paramdict['a0']+0.5*fitcenter*paramdict['a1']
@@ -72,7 +73,7 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
                     fitfunc=globfit, backfit=backfit, label=label, paramdict=paramdict,
                     xaxtitle='Invariant mass (GeV)',
                     yaxtitle='Number of reconstructed vertices',
-                    extrainfo=extrainfo, lumi=gargs['lumi'])
+                    extrainfo=extrainfo, lumitext=lumitext)
 
     # METHOD 1: subtract background from peak and count remaining instances
     if(mode=='subtract' or mode=='hybrid'):

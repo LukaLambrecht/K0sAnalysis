@@ -8,9 +8,9 @@ import os
 sys.path.append('../')
 import plotting.plottools as pt
 
-def plot_fit(hist,figname,fitfunc=None,backfit=None,
-             label=None,paramdict=None,xaxtitle=None,yaxtitle=None,
-             extrainfo='',lumi=0): 
+def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
+             label=None, paramdict=None, xaxtitle=None, yaxtitle=None,
+             extrainfo='', extracmstext='', lumitext=0): 
         # args: - hist is the histogram
         #        - figname is the name of the output figure
         #        - fitfunc and backfit are two fitted functions 
@@ -37,19 +37,31 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
         if label is None: label = 'histogram'
 
         # legend
-        leg = ROOT.TLegend(0.65,0.8,0.88,0.9)
+        leg = ROOT.TLegend(0.65,0.7,0.9,0.9)
         leg.SetTextFont(10*legendfont+3)
         leg.SetTextSize(legendsize)
         leg.SetBorderSize(0)
 
-        # draw histogram
-        hist.SetStats(False)
-        hist.SetLineColor(ROOT.kBlue)
-        hist.SetLineWidth(2)
-        hist.SetMarkerSize(0)
-        hist.Sumw2()
-        leg.AddEntry(hist,label,"l")
-        hist.Draw()
+        # draw histogram (data style)
+        if style=='data':
+            hist.SetStats(False)
+            hist.SetMarkerStyle(20)
+            hist.SetMarkerSize(1.3)
+            hist.Sumw2()
+            leg.AddEntry(hist,label,"pe")
+            drawoptions = 'e1 x0'
+            hist.Draw(drawoptions)
+
+        # draw histogram (sim style)
+        if style=='hist':
+            hist.SetStats(False)
+            hist.SetLineColor(ROOT.kBlue)
+            hist.SetLineWidth(2)
+            hist.SetMarkerSize(0)
+            hist.Sumw2()
+            leg.AddEntry(hist,label,"l")
+            drawoptions = 'hist e'
+            hist.Draw(drawoptions)
 
         # X-axis layout
         xax = hist.GetXaxis()
@@ -62,8 +74,10 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
             xax.SetTitleSize(axtitlesize)
 
         # Y-axis layout
-        hist.SetMaximum(hist.GetMaximum()*1.2)
-        hist.SetMinimum(0.)
+        hist.SetMaximum(hist.GetMaximum()*1.3)
+        #hist.SetMinimum(0.)
+        # shift y-axis so labels do not overlap with x-axis
+        hist.SetMinimum(-hist.GetMaximum()*0.03)
         yax = hist.GetYaxis()
         yax.SetMaxDigits(3)
         yax.SetNdivisions(8,4,0,ROOT.kTRUE)
@@ -75,7 +89,7 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
             yax.SetTitleSize(axtitlesize)
             yax.SetTitleOffset(1.5)
         ROOT.gPad.SetTicks(1,1)
-        hist.Draw("HIST E")
+        hist.Draw(drawoptions)
         tinfo = ROOT.TLatex()
 
         # draw fitted function
@@ -100,11 +114,12 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
             tinfo.SetTextSize(infosize)
             if fitfunc.GetNDF()==0: normchi2 = 0
             else: normchi2 = fitfunc.GetChisquare()/fitfunc.GetNDF()
-            for i,key in enumerate(paramdict):
-                info = key+' : {0:.4E}'.format(paramdict[key])
-                tinfo.DrawLatexNDC(0.65,0.75-i*0.035,info)
-            info = r"#frac{#chi^{2}}{ndof}"+' of fit: {0:.2E}'.format(normchi2)
-            tinfo.DrawLatexNDC(0.65,0.75-(len(paramdict)+1)*0.035,info)
+            if paramdict is not None:
+                for i,key in enumerate(paramdict):
+                    info = key+' : {0:.4E}'.format(paramdict[key])
+                    tinfo.DrawLatexNDC(0.65,0.75-i*0.035,info)
+                info = r"#frac{#chi^{2}}{ndof}"+' of fit: {0:.2E}'.format(normchi2)
+                tinfo.DrawLatexNDC(0.65,0.75-(len(paramdict)+1)*0.035,info)
         
         # display extra info
         tinfo.SetTextFont(10*infofont+3)
@@ -117,8 +132,7 @@ def plot_fit(hist,figname,fitfunc=None,backfit=None,
                 tinfo.DrawLatexNDC(0.2,0.8-i*0.035,info)
 
         # title
-        lumitext = '' if lumi==0 else '{0:.1f} '.format(float(lumi)/1000) + 'fb^{-1} (13 TeV)'
-        pt.drawLumi(c1, extratext="Preliminary", lumitext=lumitext)
+        pt.drawLumi(c1, extratext=extracmstext, lumitext=lumitext)
 
         c1.Update()
         c1.SaveAs(figname)
