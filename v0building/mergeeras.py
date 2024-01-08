@@ -49,6 +49,17 @@ if __name__=='__main__':
         'DoubleMuon_crab_Run2016G-17Jul2018-v1_data_Run2016_DoubleMuon',
         'DoubleMuon_crab_Run2016H-17Jul2018-v1_data_Run2016_DoubleMuon'
       ],
+      'DoubleMuon_Run2016BtoF': [
+        'DoubleMuon_crab_Run2016B-17Jul2018_ver2-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016C-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016D-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016E-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016F-17Jul2018-v1_data_Run2016_DoubleMuon',
+      ],
+      'DoubleMuon_Run2016GtoH': [
+        'DoubleMuon_crab_Run2016G-17Jul2018-v1_data_Run2016_DoubleMuon',
+        'DoubleMuon_crab_Run2016H-17Jul2018-v1_data_Run2016_DoubleMuon'
+      ],
       'DoubleMuon_Run2017': [
         'DoubleMuon_crab_Run2017B-31Mar2018-v1_data_Run2017_DoubleMuon',
         'DoubleMuon_crab_Run2017C-31Mar2018-v1_data_Run2017_DoubleMuon',
