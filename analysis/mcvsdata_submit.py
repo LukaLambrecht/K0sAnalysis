@@ -17,7 +17,7 @@ CMSSW = '/user/llambrec/CMSSW_12_4_6'
 if __name__=='__main__':
 
   # read command-line arguments
-  parser = argparse.ArgumentParser( description = 'Control variables' )
+  parser = argparse.ArgumentParser( description = 'Submit analysis' )
   # general arguments
   parser.add_argument('-i', '--filedir', required=True, type=os.path.abspath)
   parser.add_argument('-v', '--version', required=True)
@@ -32,7 +32,15 @@ if __name__=='__main__':
   # manage input arguments to get files
   includelist = args.eras
   if 'default' in includelist:
-    if args.version=='run2preul': includelist = ['2016', '2017', '2018', 'run2']
+    if args.version=='run2preul':
+        includelist = ([
+          '2016PreVFP', # split of 2016 file based on run ranges
+          '2016PostVFP', # split of 2016 file based on run ranges
+          '2016',
+          '2017',
+          '2018',
+          'run2'
+        ])
     elif args.version=='run2ul':
         includelist = ([
           '2016PreVFP',
@@ -58,7 +66,14 @@ if __name__=='__main__':
       ])
   elif 'detector' in includelist:
     if args.version=='run2preul':
-      includelist = ['2016','2017','2018','20172018']
+      includelist = ([
+        '2016PreVFP',
+        '2016PostVFP',
+        '2016',
+        '2017',
+        '2018',
+        '20172018'
+      ])
     elif args.version=='run2ul':
       includelist = ([
         '2016PreVFP',
@@ -70,7 +85,7 @@ if __name__=='__main__':
       ])
   kwargs = {}
   if args.version=='run2preul':
-    kwargs['filemode'] = 'old' # hard-coded setting to run on either new or old convention
+    kwargs['filemode'] = 'new' # hard-coded setting to run on either new or old convention
 
   # fill eralist with files to run on and related properties
   eralist = getfiles( args.filedir, includelist, args.version, 

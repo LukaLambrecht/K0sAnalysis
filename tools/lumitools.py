@@ -36,6 +36,8 @@ def getlumi( campaign, era ):
       elif era=='2016H': return 8.74
       elif era=='2016BtoF': return 19.9 # corresponds to sum of B to F -> ok.
       elif era=='2016GtoH': return 16.4 # corresponds to sum of G to H -> ok.
+      elif era=='2016PreVFP': return 19.5 # copied from UL
+      elif era=='2016PostVFP': return 16.8 # copied from UL
       elif era=='2016': return 36.3 # corresponds to sum of per-era and to recommendations -> ok.
 
       # 2017: see twiki pages mentioned above.

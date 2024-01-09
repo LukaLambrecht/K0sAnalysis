@@ -13,6 +13,7 @@ def get_pileup_profile(campaign, year):
   path = '/user/llambrec/K0sAnalysis/reweighting/pileup/data'
   if campaign=='run2preul':
     path = os.path.join(path, campaign)
+    if year.startswith('2016'): year = '2016'
     if year not in ['2016','2017','2018']:
       msg = 'ERROR: year {} not recogized.'.format(year)
       raise Exception(msg)
