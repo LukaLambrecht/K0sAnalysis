@@ -163,6 +163,7 @@ if __name__=='__main__':
     '_beamSpotX', '_beamSpotY', '_beamSpotZ',
     '_primaryVertexX', '_primaryVertexY', '_primaryVertexZ'
   ]
+  nimlothvars += ['_runNb', '_lumiBlock', '_eventNb']
   if not isdata: nimlothvars += ['_weight', '_nTrueInt']
   for var in nimlothvars: nimloth[var] = branches[var]
 
@@ -173,6 +174,9 @@ if __name__=='__main__':
     '_celeborn_lPt', '_celeborn_lEta', '_celeborn_lPhi', '_celeborn_lCharge'
   ]
   for var in celebornvars: celeborn[var] = ak.flatten(branches[var])
+  celeborn['_runNb'] = np.repeat(branches['_runNb'], 2)
+  celeborn['_lumiBlock'] = np.repeat(branches['_lumiBlock'], 2)
+  celeborn['_eventNb'] = np.repeat(branches['_eventNb'], 2)
   if not isdata:
     celeborn['_weight'] = np.repeat(branches['_weight'], 2)
     celeborn['_nTrueInt'] = np.repeat(branches['_nTrueInt'], 2)
