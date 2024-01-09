@@ -1,7 +1,7 @@
 import numpy as np
 
 config = ({
-    'rpv': {'variablename':'_LaRPV',
+    'rpv': {'variablename':'_RPV',
             'xaxtitle': '#Delta_{2D} (cm)',
             'yaxtitle': 'Reconstructed vertices',
             'treename': 'telperion',
@@ -9,7 +9,7 @@ config = ({
             'bkgmodes': {
               'bkgdefault': {'type':None, 'info':'Background not subtracted'},
               'bkgsideband': {'type':'sideband', 'info': 'Background subtracted',
-                              'sidevariable': '_LaInvMass',
+                              'sidevariable': '_mass',
                               'sidebins': np.linspace(1.08, 1.15, num=31, endpoint=True)},
             },
             'bins': {
@@ -19,7 +19,7 @@ config = ({
               'normlumi':{'type':'lumi', 'info':'Normalized to luminosity'},
               'normeventyield':{'type':'eventyield', 'info':'Normalized to data events'},
               'normrange':{'type':'range', 'info': 'Normalized for #Delta_{2D} < 1.5 cm', 
-                          'normvariable': '_LaRPV', 'normrange':[0.,1.5]},
+                          'normvariable': '_RPV', 'normrange':[0.,1.5]},
             },
     }
 })

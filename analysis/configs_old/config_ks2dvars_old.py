@@ -1,3 +1,8 @@
+# note: this is supposed to be the same configuration as the newer version,
+#       only with a different (older) naming convention for the variables,
+#       for running on older files.
+
+
 import numpy as np
 
 config = ({

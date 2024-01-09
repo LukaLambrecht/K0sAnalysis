@@ -1,7 +1,9 @@
-# note: this is supposed to be the same configuration as the UL version,
-#       only with a different (older) naming convention for the variables.
+# note: this is supposed to be the same configuration as the newer version,
+#       only with a different (older) naming convention for the variables,
+#       for running on older files.
 # note: also it does not include the RPV significance variable,
-#       as it is not present in the old pre-UL files.
+#       as it is not present in the old pre-UL analysis files.
+
 
 import numpy as np
 
