@@ -72,7 +72,7 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
             pft.plot_fit(hist, outfile,
                     fitfunc=globfit, backfit=backfit, label=label, paramdict=paramdict,
                     xaxtitle='Invariant mass (GeV)',
-                    yaxtitle='Number of reconstructed vertices',
+                    yaxtitle='Reconstructed vertices',
                     extrainfo=extrainfo, lumitext=lumitext)
 
     # METHOD 1: subtract background from peak and count remaining instances

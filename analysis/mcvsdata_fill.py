@@ -251,11 +251,11 @@ if __name__=='__main__':
             thisweights = weights[mask]
             # make extra info
             extrainfo = '{0:.2f} < '.format(low)
-            extrainfo += variable['name']
+            extrainfo += variable['label']
             extrainfo += ' < {0:.2f}'.format(high)
             if dim==2:
               extrainfo += '<< {0:.2f} < '.format(ylow)
-              extrainfo += yvariable['name']
+              extrainfo += yvariable['label']
               extrainfo += ' < {0:.2f}'.format(yhigh)
             # fit background and count what is left in peak
             histlabel = 'Data' if isdata else 'Simulation'

@@ -123,7 +123,7 @@ def plot_fit_mcvsdata(datahist, simhist, figname, fitfunc=None, backfit=None,
     if paramdict is not None:
 	for i,key in enumerate(paramdict):
 	    info = key+' : {0:.4E}'.format(paramdict[key])
-	    tinfo.DrawLatexNDC(0.65,0.75-i*0.035,info)
+	    tinfo.DrawLatexNDC(0.65,0.65-i*0.035,info)
 
     # display extra info
     tinfo.SetTextFont(10*infofont+3)

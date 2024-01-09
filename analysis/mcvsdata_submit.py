@@ -128,6 +128,7 @@ if __name__=='__main__':
             # write main variable
             variabledict = ({
               'name': varname,
+              'label': variable['xaxtitle'],
               'variable': variable['variablename'],
               'bins': list(bins)
             })
@@ -138,6 +139,7 @@ if __name__=='__main__':
             if 'yvariablename' in variable.keys():
               yvariabledict = ({
                 'name': varname,
+                'label': variable['yaxistitle'],
                 'variable': variable['yvariablename'],
                 'bins': list(ybins)
               })
@@ -148,6 +150,7 @@ if __name__=='__main__':
             if norm['type']=='range':
               normvariabledict = ({
                 'name': norm['normvariable'],
+                'label': norm['normvariable'],
                 'variable': norm['normvariable'],
                 'bins': list(norm['normrange'])
               })
@@ -158,6 +161,7 @@ if __name__=='__main__':
             if bkgmode['type']=='sideband':
               sidevariabledict = ({
                 'name': bkgmode['sidevariable'],
+                'label': bkgmode['sidevariable'],
                 'variable': bkgmode['sidevariable'],
                 'bins': list(bkgmode['sidebins'])
               })

@@ -207,4 +207,5 @@ if __name__=='__main__':
                 label=args.label, paramdict=paramdict,
                 xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle,
                 extrainfo=extrainfo,
+                extracmstext='Preliminary',
                 lumitext=lumitext)

@@ -117,9 +117,9 @@ def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
             if paramdict is not None:
                 for i,key in enumerate(paramdict):
                     info = key+' : {0:.4E}'.format(paramdict[key])
-                    tinfo.DrawLatexNDC(0.65,0.75-i*0.035,info)
+                    tinfo.DrawLatexNDC(0.65,0.65-i*0.035,info)
                 info = r"#frac{#chi^{2}}{ndof}"+' of fit: {0:.2E}'.format(normchi2)
-                tinfo.DrawLatexNDC(0.65,0.75-(len(paramdict)+1)*0.035,info)
+                tinfo.DrawLatexNDC(0.65,0.65-(len(paramdict)+1)*0.035,info)
         
         # display extra info
         tinfo.SetTextFont(10*infofont+3)
