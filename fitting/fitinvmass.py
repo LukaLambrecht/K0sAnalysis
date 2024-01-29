@@ -28,15 +28,18 @@ if __name__=='__main__':
   parser.add_argument('--lumi', default=None, type=float)
   parser.add_argument('--xsection', default=None, type=float)
   parser.add_argument('--label', default=None)
+  parser.add_argument('--unit', default='GeV', choices=['GeV','MeV'])
   parser.add_argument('--yvariable', default=None)
   parser.add_argument('--doplot', default=False, action='store_true')
   # options below are only for plot aesthetics, not relevant when doplot is False
   parser.add_argument('--title', default=None)
-  parser.add_argument('--xaxtitle', default=None)
-  parser.add_argument('--yaxtitle', default=None)
+  parser.add_argument('--xaxtitle', default=None) # can use 'auto' for basic automatic option
+  parser.add_argument('--yaxtitle', default=None) # can use 'auto' for basic automatic option
+  parser.add_argument('--lumilabel', default=None)
   parser.add_argument('--drawstyle', default='hist')
   parser.add_argument('--show_bkg_fit', default=False, action='store_true')
   parser.add_argument('--show_sig_fit', default=False, action='store_true')
+  parser.add_argument('--show_sideband', default=False, action='store_true')
   parser.add_argument('--show_fit_params', default=False, action='store_true')
   parser.add_argument('--polydegree', type=int, default=1)
   args = parser.parse_args()
@@ -46,6 +49,9 @@ if __name__=='__main__':
     variable = json.load(f)
   print('Found following main variable:')
   for key,val in variable.items(): print('  {}: {}'.format(key,val))
+
+  # modifiy bins if display units are different from default
+  if args.unit=='MeV': variable['bins'] = [binedge*1000 for binedge in variable['bins']]
 
   # load sideband variable
   yvariable = None # default case if no secondary binning
@@ -93,6 +99,7 @@ if __name__=='__main__':
 
       # get the variable and some masks
       varvalues = tree[variable['variable']].array(library='np', entry_stop=nentries)
+      if args.unit=='MeV': varvalues = varvalues*1000
       nanmask = np.isnan(varvalues)
       rangemask = ((varvalues > variable['bins'][0]) & (varvalues < variable['bins'][-1]))
       totalmask = ((~nanmask) & rangemask)
@@ -168,12 +175,20 @@ if __name__=='__main__':
     average = bkgfit.Eval(xcenter)
     
     # do simultaneous fit with previous fit parameters as initial guesses
-    guess = [xcenter,average*10,0.005,average*10,0.01]
+    sigma_1_init = 0.005
+    sigma_2_init = 0.01
+    if args.unit=='MeV':
+        sigma_1_init *= 1000
+        sigma_2_init *= 1000
+    guess = [xcenter, average*10, sigma_1_init, average*10, sigma_2_init]
     for degree in range(args.polydegree+1):
         guess.append(paramdict["a"+str(degree)])
     totfit, paramdict, fitobj2 = ft.poly_plus_doublegauss_fit(hist,fitrange,guess)
     print('Fitted parameters:')
     for el in paramdict: print('    '+el+': '+str(paramdict[el]))
+    print('Fit quality:')
+    print('    chi2: {}'.format(totfit.GetChisquare()))
+    print('    degrees of freedom: {}'.format(totfit.GetNDF()))
 
     # also get uncertainty on best-fit value for mass
     # not very clean, maybe improve later
@@ -186,19 +201,41 @@ if __name__=='__main__':
     # make extra info
     extrainfo = ''
     if args.show_sig_fit:
+        if args.unit=='GeV':
+            mu_central *= 1000
+            mu_unc *= 1000
         extrainfo += 'Fitted K_{S}^{0} mass: <<  '
-        extrainfo += '{:.3f} #pm {:.3f} MeV << <<'.format(mu_central*1000,mu_unc*1000)
+        extrainfo += '{:.3f} #pm {:.3f} MeV << <<'.format(mu_central, mu_unc)
     #extrainfo += ' << <<HACK_KS'
     if dim==2:
         extrainfo += '{0:.2f} < '.format(ylow)
         extrainfo += yvariable['name']
         extrainfo += ' < {0:.2f}'.format(yhigh)
-            
+
+    # format the axis titles
+    # note: the bin width is added to the y-axis title,
+    #       this assumes all bins have equal width.
+    if(args.xaxtitle is not None and args.xaxtitle=='auto'):
+        args.xaxtitle = 'Invariant mass (GeV)'
+    if(args.yaxtitle is not None and args.yaxtitle=='auto'):
+        binwidth = variable['bins'][1] - variable['bins'][0]
+        if args.unit=='GeV': binwdith = binwidth*1000
+        args.yaxtitle = 'Reconstructed vertices (/ {:.0f} MeV)'.format(binwidth)
+
+    # format lumi header
+    lumitext = ''
+    if args.lumilabel is not None: lumitext += args.lumilabel
+    elif args.lumi is not None: lumitext = '{0:.3g} '.format(float(args.lumi)/1000.) + 'fb^{-1} (13 TeV)'
+
+    # settings for sideband indications
+    sidebandxcoords = None
+    if args.show_sideband:
+        sidebandxcoords = [xcenter-xwidth, xcenter+xwidth]
+
     # make a plot
     if not args.show_bkg_fit: bkgfit = None
     if not args.show_sig_fit: totfit = None
     if not args.show_fit_params: paramdict = None
-    lumitext = '' if args.lumi is None else '{0:.3g} '.format(float(args.lumi)/1000.) + 'fb^{-1} (13 TeV)'
     outputfile = os.path.splitext(args.outputfile)[0]
     if len(yvariable['bins'])>2: outputfile += '_{}'.format(i)
     outputfile += '.png'
@@ -208,7 +245,8 @@ if __name__=='__main__':
                 xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle,
                 extrainfo=extrainfo,
                 extracmstext='Preliminary',
-                lumitext=lumitext)
+                lumitext=lumitext,
+                sideband=sidebandxcoords)
     outputfile = os.path.splitext(outputfile)[0] + '.pdf'
     pf.plot_fit(hist, outputfile,
                 style=args.drawstyle, fitfunc=totfit, backfit=bkgfit,
@@ -216,4 +254,5 @@ if __name__=='__main__':
                 xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle,
                 extrainfo=extrainfo,
                 extracmstext='Preliminary',
-                lumitext=lumitext)
+                lumitext=lumitext,
+                sideband=sidebandxcoords)

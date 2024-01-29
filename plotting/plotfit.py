@@ -10,7 +10,8 @@ import plotting.plottools as pt
 
 def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
              label=None, paramdict=None, xaxtitle=None, yaxtitle=None,
-             extrainfo='', extracmstext='', lumitext=0): 
+             extrainfo='', extracmstext='', lumitext=0,
+             sideband=None): 
         # args: - hist is the histogram
         #        - figname is the name of the output figure
         #        - fitfunc and backfit are two fitted functions 
@@ -49,7 +50,7 @@ def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
             hist.SetMarkerSize(1.3)
             hist.Sumw2()
             leg.AddEntry(hist,label,"pe")
-            drawoptions = 'e1 x0'
+            drawoptions = 'e0 x0'
             hist.Draw(drawoptions)
 
         # draw histogram (sim style)
@@ -94,8 +95,8 @@ def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
 
         # draw fitted function
         if backfit is not None:
-            backfit.SetLineColor(ROOT.kGreen+3)
-            backfit.SetLineWidth(3)
+            backfit.SetLineColor(ROOT.kGreen+2)
+            backfit.SetLineWidth(4)
             backfit.SetLineStyle(ROOT.kDashed)
             backfit.Draw("SAME")
             leg.AddEntry(backfit,'Background fit','l')
@@ -120,6 +121,22 @@ def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
                     tinfo.DrawLatexNDC(0.65,0.65-i*0.035,info)
                 info = r"#frac{#chi^{2}}{ndof}"+' of fit: {0:.2E}'.format(normchi2)
                 tinfo.DrawLatexNDC(0.65,0.65-(len(paramdict)+1)*0.035,info)
+       
+        # draw vertical lines for sideband
+        if sideband is not None:
+            linestyle = 9
+            linewidth = 2
+            linecolor = ROOT.kBlue
+            adhocymin = hist.GetMinimum()
+            adhocymax = hist.GetMaximum()*0.5
+            lines = []
+            for xcoord in sideband:
+                dl = ROOT.TLine(xcoord, adhocymin, xcoord, adhocymax)
+                dl.SetLineWidth(linewidth)
+                dl.SetLineColor(linecolor)
+                dl.SetLineStyle(linestyle)
+                dl.Draw()
+                lines.append(dl)
         
         # display extra info
         tinfo.SetTextFont(10*infofont+3)
