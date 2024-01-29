@@ -209,3 +209,11 @@ if __name__=='__main__':
                 extrainfo=extrainfo,
                 extracmstext='Preliminary',
                 lumitext=lumitext)
+    outputfile = os.path.splitext(outputfile)[0] + '.pdf'
+    pf.plot_fit(hist, outputfile,
+                style=args.drawstyle, fitfunc=totfit, backfit=bkgfit,
+                label=args.label, paramdict=paramdict,
+                xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle,
+                extrainfo=extrainfo,
+                extracmstext='Preliminary',
+                lumitext=lumitext)
