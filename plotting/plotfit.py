@@ -46,15 +46,16 @@ def plot_fit(hist, figname, style='hist', fitfunc=None, backfit=None,
         # draw histogram (data style)
         if style=='data':
             hist.SetStats(False)
+            hist.SetLineColor(ROOT.kBlack)
             hist.SetMarkerStyle(20)
             hist.SetMarkerSize(1.3)
             hist.Sumw2()
-            leg.AddEntry(hist,label,"pe")
-            drawoptions = 'e0 x0'
+            leg.AddEntry(hist,label,"ep")
+            drawoptions = 'E0'
             hist.Draw(drawoptions)
 
         # draw histogram (sim style)
-        if style=='hist':
+        elif style=='hist':
             hist.SetStats(False)
             hist.SetLineColor(ROOT.kBlue)
             hist.SetLineWidth(2)

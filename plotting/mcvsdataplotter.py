@@ -184,7 +184,14 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     mchistsum.SetMarkerSize(0)
 
     ### Declare legend
-    leg = ROOT.TLegend(0.5, 0.65, 0.9, 0.85)
+    # find sum of number of characters in legend entries
+    legendlen = 0
+    for hist in mchistlist:
+        legendlen += len(hist.GetTitle())
+    if legendlen > 50: legendbox_left = 0.4
+    elif legendlen < 10: legendbox_left = 0.6
+    else: legendbox_left = 0.4 + (50-legendlen)/40*0.2
+    leg = ROOT.TLegend(legendbox_left, 0.65, 0.95, 0.85)
     leg.SetTextFont(10*legendfont+3)
     leg.SetTextSize(legendsize)
     leg.SetNColumns(2)
@@ -215,7 +222,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     else:
         hist0 = mchistlist[0].Clone()
         hist0.Reset()
-        drawdaa = False
+        drawdata = False
 
     ### Stacked histogram layout
     mcstack.Draw("HIST")
@@ -249,7 +256,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     leg.AddEntry(mchistsum,"Stat. uncertainty","f")
 
     ### Draw data histogram
-    if drawdata: hist0.Draw("SAME E1")
+    if drawdata: hist0.Draw("SAME E0")
 
     ### Draw normalization range if needed
     if( drawrange is not None ):
@@ -267,7 +274,8 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         ttitle.SetTextFont(10*titlefont+3)
         ttitle.SetTextSize(titlesize)
         ttitle.DrawLatexNDC(0.15,0.92,title)
-    pt.drawLumi(pad1, cmstext_size_factor=0.5, extratext=extracmstext,
+    pt.drawLumi(pad1, cmstext_size_factor=0.5,
+                extratext=extracmstext, extratext_newline=True,
                 lumitext=lumistr, lumitext_size_factor=0.4, lumitext_offset=0.02)
 
     ### Draw extra info
@@ -396,7 +404,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     yax.SetNdivisions(4,5,0,ROOT.kTRUE)
     yax.SetLabelFont(10*labelfont+3)
     yax.SetLabelSize(labelsize)
-    yax.SetTitle('Data/Pred.')
+    yax.SetTitle('Data/Sim.')
     yax.SetTitleFont(10*axtitlefont+3)
     yax.SetTitleSize(axtitlesize)
     yax.SetTitleOffset(1.5)
@@ -413,7 +421,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
             histratio.SetBinContent(i,0)
             histratio.SetBinError(i,0)
     histratio.SetStats(False)
-    histratio.Draw("SAME E1")
+    histratio.Draw("SAME E0")
     c1.Update()
 
     ### Draw unit ratio line
@@ -453,6 +461,7 @@ if __name__=='__main__':
     parser.add_argument('--yaxtitle', default=None)
     # other arguments
     parser.add_argument('--logy', default=False, action='store_true')
+    parser.add_argument('--extralumitext', default=None)
     parser.add_argument('--extracmstext', default=None)
     parser.add_argument('--doextrainfos', default=False, action='store_true')
     parser.add_argument('--extrainfos', default=None)
@@ -474,6 +483,8 @@ if __name__=='__main__':
     lumistr = ''
     if indict['lumi'] > 0: 
         lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
+    if args.extralumitext is not None:
+        lumistr += ' ' + args.extralumitext
     extracmstext = ''
     if args.extracmstext is not None: extracmstext = args.extracmstext
     colorlist = []
@@ -485,9 +496,11 @@ if __name__=='__main__':
           elif '2016E' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
           elif '2016F' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
           elif '2016PreVFP' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
+          elif '2016 (old APV)' in hist.GetTitle(): colorlist.append(ROOT.kAzure-2)
           elif '2016G' in hist.GetTitle(): colorlist.append(ROOT.kAzure-9)
           elif '2016H' in hist.GetTitle(): colorlist.append(ROOT.kAzure-9)
           elif '2016PostVFP' in hist.GetTitle(): colorlist.append(ROOT.kAzure-9)
+          elif '2016 (new APV)' in hist.GetTitle(): colorlist.append(ROOT.kAzure-9)
           else: colorlist.append(ROOT.kAzure-4)
         elif '2017' in hist.GetTitle(): colorlist.append(ROOT.kAzure+6)
         elif '2018' in hist.GetTitle(): colorlist.append(ROOT.kViolet)

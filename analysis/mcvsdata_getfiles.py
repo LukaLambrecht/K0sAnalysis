@@ -77,12 +77,15 @@ def getfiles_run2ul( filedir, includelist ):
         mcdir = mcdirdict[year]
         datadir = datadirdict[era]
         # make an entry for this era
+        eralabel = era
+        eralabel = eralabel.replace('PreVFP', ' (old APV)')
+        eralabel = eralabel.replace('PostVFP', ' (new APV)')
         mcin = ([{ 'file':os.path.join(filedir, mcdir, filename),
-                'label':era+' sim.', 'xsection':6077.22,
+                'label':eralabel+' sim.', 'xsection':6077.22,
                 'luminosity':lt.getlumi('run2ul', era)*1000,
                 'era': era, 'year': year, 'campaign': 'run2ul'}])
         datain = ([{'file':os.path.join(filedir, datadir, filename),
-                'label':era+' data','luminosity':lt.getlumi('run2ul', era)*1000,
+                'label':eralabel+' data','luminosity':lt.getlumi('run2ul', era)*1000,
                 'era': era, 'year': year, 'campaign': 'run2ul'}])
         label = era
         eralist.append({'mcin':mcin, 'datain':datain, 'label':label})
@@ -108,12 +111,15 @@ def getfiles_run2ul( filedir, includelist ):
         mcin = []
         datain = []
         for year in ['2016PreVFP', '2016PostVFP']:
+            eralabel = year
+            eralabel = eralabel.replace('PreVFP', ' (old APV)')
+            eralabel = eralabel.replace('PostVFP', ' (new APV)')
             mcin.append({ 'file':os.path.join(filedir, mcdirdict[year], filename),
-                  'label':'{} sim.'.format(year), 'xsection':6077.22,
+                  'label':'{} sim.'.format(eralabel), 'xsection':6077.22,
                   'luminosity':lt.getlumi('run2ul', year)*1000,
                   'era': year, 'year': year, 'campaign': 'run2ul'})
             datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
-                   'label':'{} data'.format(year),
+                   'label':'{} data'.format(eralabel),
                    'luminosity':lt.getlumi('run2ul', year)*1000,
                    'era': year, 'year': year, 'campaign': 'run2ul'})
         label = '2016'
@@ -124,12 +130,15 @@ def getfiles_run2ul( filedir, includelist ):
         mcin = []
         datain = []
         for year in ['2016PreVFP', '2016PostVFP', '2017', '2018']:
+            eralabel = year
+            eralabel = eralabel.replace('PreVFP', ' (old APV)')
+            eralabel = eralabel.replace('PostVFP', ' (new APV)')
             mcin.append({ 'file':os.path.join(filedir, mcdirdict[year], filename),
-                  'label':'{} sim.'.format(year), 'xsection':6077.22,
+                  'label':'{} sim.'.format(eralabel), 'xsection':6077.22,
                   'luminosity':lt.getlumi('run2ul', year)*1000,
                   'era': year, 'year': year, 'campaign': 'run2ul'})
             datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
-                   'label':'{} data'.format(year),
+                   'label':'{} data'.format(eralabel),
                    'luminosity':lt.getlumi('run2ul', year)*1000,
                    'era': year, 'year': year, 'campaign': 'run2ul'})
         label = 'run2'
@@ -240,10 +249,10 @@ def getfiles_run2preul( filedir, includelist, filemode='old' ):
         datain = []
         for year in ['2016BtoF']:
             mcin.append({ 'file':os.path.join(filedir, mcdirdict['2016'], filename),
-                      'label':'2016PreVFP sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'label':'2016 (old APV) sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
                       'era': year, 'year': year, 'campaign': 'run2preul'})
             datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
-                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'label':'2016 (old APV) data', 'luminosity':lt.getlumi('run2preul', year)*1000,
                        'era': year, 'year': year, 'campaign': 'run2preul'})
         label = '2016BtoF'
         eralist.append({'mcin':mcin,'datain':datain,'label':label})
@@ -254,10 +263,10 @@ def getfiles_run2preul( filedir, includelist, filemode='old' ):
         datain = []
         for year in ['2016GtoH']:
             mcin.append({ 'file':os.path.join(filedir, mcdirdict['2016'], filename),
-                      'label':'2016PostVFP sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'label':'2016 (new APV) sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
                       'era': year, 'year': year, 'campaign': 'run2preul'})
             datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
-                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'label':'2016 (new APV) data', 'luminosity':lt.getlumi('run2preul', year)*1000,
                        'era': year, 'year': year, 'campaign': 'run2preul'})
         label = '2016GtoH'
         eralist.append({'mcin':mcin,'datain':datain,'label':label})
@@ -268,10 +277,10 @@ def getfiles_run2preul( filedir, includelist, filemode='old' ):
         datain = []
         for year in ['2016PreVFP']:
             mcin.append({ 'file':os.path.join(filedir, mcdirdict['2016'], filename),
-                      'label':'2016PreVFP sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'label':'2016 (old APV) sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
                       'era': year, 'year': year, 'campaign': 'run2preul'})
             datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
-                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'label':'2016 (old APV) data', 'luminosity':lt.getlumi('run2preul', year)*1000,
                        'era': year, 'year': year, 'campaign': 'run2preul'})
         label = '2016PreVFP'
         eralist.append({'mcin':mcin,'datain':datain,'label':label})
@@ -282,10 +291,10 @@ def getfiles_run2preul( filedir, includelist, filemode='old' ):
         datain = []
         for year in ['2016PostVFP']:
             mcin.append({ 'file':os.path.join(filedir, mcdirdict['2016'], filename),
-                      'label':'2016PostVFP sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
+                      'label':'2016 (new APV) sim.', 'xsection':6077.22, 'luminosity':lt.getlumi('run2preul', year)*1000,
                       'era': year, 'year': year, 'campaign': 'run2preul'})
             datain.append({'file':os.path.join(filedir, datadirdict[year], filename),
-                       'label':year+' data','luminosity':lt.getlumi('run2preul', year)*1000,
+                       'label':'2016 (new APV) data','luminosity':lt.getlumi('run2preul', year)*1000,
                        'era': year, 'year': year, 'campaign': 'run2preul'})
         label = '2016PostVFP'
         eralist.append({'mcin':mcin,'datain':datain,'label':label})

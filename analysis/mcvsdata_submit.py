@@ -205,6 +205,8 @@ if __name__=='__main__':
             cmd += ' --xaxtitle \'{}\''.format(variable['xaxtitle'])
             cmd += ' --yaxtitle \'{}\''.format(variable['yaxtitle'])
             cmd += ' --extracmstext Preliminary'
+            if args.version=='run2ul': cmd += ' --extralumitext Legacy'
+            if args.version=='run2preul': cmd += ' --extralumitext Pre-legacy'
             if args.dodetector:
               if '2016' in era['label']: cmd += ' --do2016pixel'
               if '2017' in era['label']: cmd += ' --do20172018pixel'

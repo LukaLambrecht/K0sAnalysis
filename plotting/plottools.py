@@ -164,6 +164,7 @@ def drawLumi(pad,
 	cmstext_size_factor=0.8, 
 	cmstext_offset=0.03,
 	extratext="Preliminary",
+        extratext_newline=False,
         lumitext="<lumi> fb^{-1} (13 TeV)",
 	lumitext_size_factor=0.6,
 	lumitext_offset=0.01,
@@ -203,8 +204,10 @@ def drawLumi(pad,
 
     # get width of the text we just drew
     cmsX = latex.GetXsize();
+    cmsY = latex.GetYsize();
     # the above is in pad coordinates, but we need NDC coordinates
     cmsX = cmsX / (pad.GetUxmax() - pad.GetUxmin())
+    cmsY = cmsY / (pad.GetUymax() - pad.GetUymin())
 
     # draw extra text
     extraTextSize = CMSTextSize*0.8
@@ -213,8 +216,13 @@ def drawLumi(pad,
     latex.SetTextAlign(11);
     if not cms_in_grid: latex.DrawLatex(lmargin+0.01 + 1.0*cmsX,
                         1-tmargin+CMSTextVerticalOffset, extratext);
-    else: latex.DrawLatex(lmargin+0.03 + 1.0*cmsX,
-            1-tmargin-CMSTextVerticalOffset-CMSTextSize, extratext);
+    else:
+      if not extratext_newline:
+        latex.DrawLatex(lmargin+0.03 + 1.0*cmsX,
+          1-tmargin-CMSTextVerticalOffset-CMSTextSize, extratext);
+      else:
+        latex.DrawLatex(lmargin+0.03,
+          1-tmargin-CMSTextVerticalOffset-CMSTextSize - 1.0*cmsY, extratext);
 
     # draw lumi
     latex.SetTextFont(42);

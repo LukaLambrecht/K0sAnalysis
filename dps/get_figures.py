@@ -17,7 +17,7 @@ if __name__=='__main__':
   cmds = []
 
   # regular yield vs distance plots
-  datetag = '20240109'
+  datetag = '20240129'
   years = ['2016', '2016PreVFP', '2016PostVFP', '2017', '2018', 'run2']
   processings = ['preul', 'ul']
   for year in years:
@@ -29,7 +29,7 @@ if __name__=='__main__':
       cmds.append(cmd)
 
   # yield vs distance plots with detector layers
-  datetag = '20240109'
+  datetag = '20240129'
   years = ['2016', '20172018']
   processings = ['ul']
   for year in years:
@@ -41,7 +41,7 @@ if __name__=='__main__':
       cmds.append(cmd)
 
   # invariant mass plots
-  datetag = '20240109'
+  datetag = '20240129'
   years = ['run2']
   appendices = ['', '_split_0', '_split_1', '_split_3']
   for year in years:
