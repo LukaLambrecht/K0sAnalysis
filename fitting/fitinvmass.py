@@ -190,6 +190,14 @@ if __name__=='__main__':
     print('    chi2: {}'.format(totfit.GetChisquare()))
     print('    degrees of freedom: {}'.format(totfit.GetNDF()))
 
+    # temp for testing: check chi2 with manual computation
+    testchi2 = 0
+    for i in range(1, hist.GetNbinsX()+1):
+        obs = hist.GetBinContent(i)
+        exp = totfit.Eval(hist.GetBinCenter(i))
+        testchi2 += (obs-exp)**2/exp
+    print('Manual chi2 (for testing): {}'.format(testchi2))
+
     # also get uncertainty on best-fit value for mass
     # not very clean, maybe improve later
     idx = 0
