@@ -27,6 +27,8 @@ if __name__=='__main__':
       outputfile = os.path.join(outputdir, 'rpv_{}_{}.pdf'.format(year, processing))
       cmd = 'cp {} {}'.format(inputfile, outputfile)
       cmds.append(cmd)
+      cmd = cmd.replace('.pdf', '.png')
+      cmds.append(cmd)
 
   # yield vs distance plots with detector layers
   datetag = '20240129'
@@ -39,6 +41,8 @@ if __name__=='__main__':
       outputfile = os.path.join(outputdir, 'rpv_{}_{}_detector.pdf'.format(year, processing))
       cmd = 'cp {} {}'.format(inputfile, outputfile)
       cmds.append(cmd)
+      cmd = cmd.replace('.pdf', '.png')
+      cmds.append(cmd)
 
   # invariant mass plots
   datetag = '20240129'
@@ -49,6 +53,8 @@ if __name__=='__main__':
       inputfile = os.path.join('../fitting/plots_{}'.format(datetag), year+appendix+'.pdf')
       outputfile = os.path.join(outputdir, 'mass_{}{}.pdf'.format(year, appendix))
       cmd = 'cp {} {}'.format(inputfile, outputfile)
+      cmds.append(cmd)
+      cmd = cmd.replace('.pdf', '.png')
       cmds.append(cmd)
 
   # execute all commands
