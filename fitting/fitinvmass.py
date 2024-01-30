@@ -213,8 +213,8 @@ if __name__=='__main__':
         extrainfo += ' < {0:.2f}'.format(yhigh)
 
     # format the axis titles
-    # note: the bin width is added to the y-axis title,
-    #       this assumes all bins have equal width.
+    # note: the bin width is added to the y-axis title (on request),
+    #       this assumes all bins have equal width...
     if(args.xaxtitle is not None and args.xaxtitle=='auto'):
         args.xaxtitle = 'Invariant mass (GeV)'
     if(args.yaxtitle is not None and args.yaxtitle=='auto'):

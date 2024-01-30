@@ -203,8 +203,17 @@ if __name__=='__main__':
             cmd = 'python3 ../plotting/{}'.format(exe)
             cmd += ' -i {}'.format(histfile)
             cmd += ' --xaxtitle \'{}\''.format(variable['xaxtitle'])
-            cmd += ' --yaxtitle \'{}\''.format(variable['yaxtitle'])
             cmd += ' --extracmstext Preliminary'
+            # special cases for plotting command
+            # note: bin width is added to y-axis title (on request),
+            #       this assumes all bins have equal width...
+            #       it will give nonsense on non-equal binnings,
+            #       but some people have very strong feelings about this,
+            #       so temporarily implemented this comment anyway,
+            #       comment out if not needed.
+            yaxtitle = variable['yaxtitle']
+            yaxtitle += ' (/ {:.1f} cm)'.format(bins[1]-bins[0])
+            cmd += ' --yaxtitle \'{}\''.format(yaxtitle)
             if args.version=='run2ul': cmd += ' --extralumitext Legacy'
             if args.version=='run2preul': cmd += ' --extralumitext Pre-legacy'
             if args.dodetector:
