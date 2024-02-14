@@ -188,9 +188,11 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     legendlen = 0
     for hist in mchistlist:
         legendlen += len(hist.GetTitle())
-    if legendlen > 50: legendbox_left = 0.4
-    elif legendlen < 10: legendbox_left = 0.6
-    else: legendbox_left = 0.4 + (50-legendlen)/40*0.2
+    if legendlen > 30: legendbox_left = 0.35
+    elif legendlen > 15: legendbox_left = 0.45
+    else: legendbox_left = 0.6
+    #elif legendlen < 30: legendbox_left = 0.6
+    #else: legendbox_left = 0.35 + (50-legendlen)/30*0.25
     leg = ROOT.TLegend(legendbox_left, 0.65, 0.95, 0.85)
     leg.SetTextFont(10*legendfont+3)
     leg.SetTextSize(legendsize)
@@ -205,7 +207,6 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         hist.SetMarkerSize(0)
         hist.SetFillColor(colorlist[i])
         hist.SetFillStyle(1001)
-        leg.AddEntry(hist,hist.GetTitle(),"f")
         mcstack.Add(hist)
         mchistsum.Add(hist)
 
@@ -218,7 +219,6 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
             hist0.Add(hist)
         hist0.SetMarkerStyle(20)
         hist0.SetMarkerSize(0.9)
-        leg.AddEntry(hist0,"Data","ep")
     else:
         hist0 = mchistlist[0].Clone()
         hist0.Reset()
@@ -253,7 +253,22 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     mchistsum.SetFillColorAlpha(statcolor, stattransparency)
     mchistsum.SetFillStyle(statfillstyle)
     mchistsum.Draw("SAME E2")
-    leg.AddEntry(mchistsum,"Stat. uncertainty","f")
+
+    ### Fill legend entries
+    legentries = []
+    for hist in mchistlist: legentries.append({'hist': hist, 'label': hist.GetTitle(), 'options': 'f'})
+    legentries.append({'hist': mchistsum, 'label': 'Stat. uncertainty', 'options': 'f'})
+    if drawdata: legentries.append({'hist': hist0, 'label': 'Data', 'options': 'ep'})
+    # normal (row-first) filling:
+    #for l in legentries: leg.AddEntry(l['hist'], l['label'], l['options'])
+    # trick for column-first filling:
+    indices = []
+    for i in range(len(legentries)):
+        if i%2==0: indices.append(int(i/2))
+        else: indices.append(int((len(legentries)+1)/2) + int((i-1)/2))
+    for i in indices:
+        l = legentries[i]
+        leg.AddEntry(l['hist'], l['label'], l['options'])
 
     ### Draw data histogram
     if drawdata: hist0.Draw("SAME E0")
