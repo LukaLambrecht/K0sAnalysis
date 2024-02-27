@@ -78,6 +78,10 @@ if __name__=='__main__':
             xhigh = variable['xhigh'],
             nbins = variable['nbins'],
             nprocess = args.nprocess )
+      hist.SetBinContent(0,1e-10)
+      hist.SetBinContent(1,1e-10)
+      hist.SetBinContent(hist.GetNbinsX()+1,1e-10)
+      hist.SetBinContent(hist.GetNbinsX(),1e-10)
       histlist.append(hist)
 
     # define plot settings

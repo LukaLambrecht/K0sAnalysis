@@ -43,7 +43,7 @@ if __name__=='__main__':
         ])
   kwargs = {}
   if args.version=='run2preul':
-    kwargs['filemode'] = 'old' # hard-coded setting to run on either new or old convention
+    kwargs['filemode'] = 'new' # hard-coded setting to run on either new or old convention
 
   # get the files
   eralist = getfiles( args.filedir, includelist, args.version,
@@ -70,12 +70,17 @@ if __name__=='__main__':
           msg += ' (found {})'.format(thisinputfiles)
           raise Exception(msg)
         inputfile = thisinputfiles[0]['file']
+
+        # make label
         inputlabel = thisinputfiles[0]['label']
+        inputlabel = inputlabel.replace(' (old APV)','PreVFP')
+        inputlabel = inputlabel.replace(' (new APV)','PostVFP')
 
         # make extra info
         extrainfos = []
         extrainfos.append('$K^{0}_{S}$ candidates')
         extrainfos.append(inputlabel)
+        extrainfos.append(args.version)
 
         # make output file name
         outputfile = name+'_'+inputlabel.replace(' ','')+'.png'
@@ -96,7 +101,7 @@ if __name__=='__main__':
         cmd += ' --variables {}'.format(variables)
         extrainfosarg = ','.join(extrainfos)
         extrainfosarg = extrainfosarg.replace(' ','-')
-        cmd += ' --extrainfos {}'.format(extrainfosarg)
+        cmd += ' --extrainfos \'{}\''.format(extrainfosarg)
         if dopixel: cmd += ' --{}'.format(pixelarg)
         cmds.append(cmd)
 

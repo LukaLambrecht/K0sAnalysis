@@ -297,6 +297,7 @@ if __name__=='__main__':
     parser.add_argument('--yaxtitle', default=None)
     # other arguments
     parser.add_argument('--outrootfile', default=None)
+    parser.add_argument('--extralumitext', default=None)
     parser.add_argument('--extracmstext', default=None)
     parser.add_argument('--doextrainfos', default=False, action='store_true')
     parser.add_argument('--extrainfos', default=None)
@@ -316,6 +317,8 @@ if __name__=='__main__':
     lumistr = ''
     if indict['lumi'] > 0:
         lumistr = '{0:.3g}'.format(indict['lumi']/1000.)+' fb^{-1} (13 TeV)'
+    if args.extralumitext is not None:
+        lumistr += ' ' + args.extralumitext
     extracmstext = ''
     if args.extracmstext is not None: extracmstext = args.extracmstext
 

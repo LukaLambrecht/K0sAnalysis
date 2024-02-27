@@ -139,7 +139,7 @@ if __name__=='__main__':
             if 'yvariablename' in variable.keys():
               yvariabledict = ({
                 'name': varname,
-                'label': variable['yaxistitle'],
+                'label': variable['yaxtitle'],
                 'variable': variable['yvariablename'],
                 'bins': list(ybins)
               })
@@ -212,7 +212,7 @@ if __name__=='__main__':
             #       so temporarily implemented this comment anyway,
             #       comment out if not needed.
             yaxtitle = variable['yaxtitle']
-            yaxtitle += ' (/ {:.1f} cm)'.format(bins[1]-bins[0])
+            #yaxtitle += ' (/ {:.1f} cm)'.format(bins[1]-bins[0])
             cmd += ' --yaxtitle \'{}\''.format(yaxtitle)
             if args.version=='run2ul': cmd += ' --extralumitext Legacy'
             if args.version=='run2preul': cmd += ' --extralumitext Pre-legacy'
@@ -223,7 +223,9 @@ if __name__=='__main__':
             if exe=='mcvsdataplotter2d.py':
               eratxt = era['label']
               if eratxt=='run2': eratxt = 'Run-II'
-              extrainfos = ['{} data / simulation'.format(eratxt)] + extrainfos
+              eratxt = eratxt.replace('PreVFP', ' (old APV)')
+              eratxt = eratxt.replace('PostVFP', ' (new APV)')
+              extrainfos = ['{} data / sim.'.format(eratxt)] + extrainfos
               doextrafinos = True
             if doextrainfos:
               cmd += ' --doextrainfos'

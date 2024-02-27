@@ -192,9 +192,9 @@ if __name__=='__main__':
 
     # temp for testing: check chi2 with manual computation
     testchi2 = 0
-    for i in range(1, hist.GetNbinsX()+1):
-        obs = hist.GetBinContent(i)
-        exp = totfit.Eval(hist.GetBinCenter(i))
+    for binnb in range(1, hist.GetNbinsX()+1):
+        obs = hist.GetBinContent(binnb)
+        exp = totfit.Eval(hist.GetBinCenter(binnb))
         testchi2 += (obs-exp)**2/exp
     print('Manual chi2 (for testing): {}'.format(testchi2))
 

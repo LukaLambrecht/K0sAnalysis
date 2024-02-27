@@ -80,6 +80,12 @@ if __name__=='__main__':
   extrainfos = None
   if args.extrainfos is not None:
     extrainfos = args.extrainfos.replace('-',' ').split(',')
+    for i, el in enumerate(extrainfos):
+      el = el.replace('PreVFP', ' (old APV)')
+      el = el.replace('PostVFP', ' (new APV)')
+      el = el.replace('run2preul', 'Pre-legacy')
+      el = el.replace('run2ul', 'Legacy')
+      extrainfos[i] = el
 
   # define plot settings
   xaxtitle = variables[0].get('xaxtitle',None)
@@ -111,17 +117,17 @@ if __name__=='__main__':
     for x in [4.4, 7.3, 10.2]:
       ax.axvline(x, ymin=0, ymax=1,
         linestyle=linestyle, linewidth=linewidth, color=linecolor)
-    ax.text(4.4, ypos, "PXL1", fontsize=fontsize, color=linecolor)
-    ax.text(7.3, ypos, "PXL2", fontsize=fontsize, color=linecolor)
-    ax.text(10.2, ypos, "PXL3", fontsize=fontsize, color=linecolor)
+    ax.text(4.4, ypos, "BPIX1", fontsize=fontsize, color=linecolor)
+    ax.text(7.3, ypos, "BPIX2", fontsize=fontsize, color=linecolor)
+    ax.text(10.2, ypos, "BPIX3", fontsize=fontsize, color=linecolor)
   if args.pixel1718:
     for x in [2.9, 6.8, 10.9, 16.]:
       ax.axvline(x, ymin=0, ymax=1,
         linestyle=linestyle, linewidth=linewidth, color=linecolor)
-    ax.text(2.9, ypos, "PXL1", fontsize=fontsize, color=linecolor)
-    ax.text(6.8, ypos, "PXL2", fontsize=fontsize, color=linecolor)
-    ax.text(10.9, ypos, "PXL3", fontsize=fontsize, color=linecolor)
-    ax.text(16, ypos, "PXL4", fontsize=fontsize, color=linecolor)
+    ax.text(2.9, ypos, "BPIX1", fontsize=fontsize, color=linecolor)
+    ax.text(6.8, ypos, "BPIX2", fontsize=fontsize, color=linecolor)
+    ax.text(10.9, ypos, "BPIX3", fontsize=fontsize, color=linecolor)
+    ax.text(16, ypos, "BPIX4", fontsize=fontsize, color=linecolor)
 
   # save figure
   fig.savefig(args.outputfile)

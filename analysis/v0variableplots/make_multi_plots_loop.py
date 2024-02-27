@@ -27,8 +27,8 @@ if __name__=='__main__':
   v0types = ['ks', 'la']
   treenamedict = {'ks':'laurelin', 'la':'telperion'}
   if args.version=='run2preul':
-    variabledict = {'ks': os.path.abspath('../../variables/variables_ks_old.json'),
-                    'la': os.path.abspath('../../variables/variables_la_old.json')}
+    variabledict = {'ks': os.path.abspath('../../variables/variables_ks_new.json'),
+                    'la': os.path.abspath('../../variables/variables_la_new.json')}
   elif args.version=='run2ul':
     variabledict = {'ks': os.path.abspath('../../variables/variables_ks_new.json'),
                     'la': os.path.abspath('../../variables/variables_la_new.json')}
@@ -49,7 +49,7 @@ if __name__=='__main__':
         ])
   kwargs = {}
   if args.version=='run2preul':
-    kwargs['filemode'] = 'old' # hard-coded setting to run on either new or old convention
+    kwargs['filemode'] = 'new' # hard-coded setting to run on either new or old convention
 
   # get the files
   eralist = getfiles( args.filedir, includelist, args.version,

@@ -243,7 +243,9 @@ def plotmultihistograms(histlist,
     ROOT.gPad.RedrawAxis()
 
     # draw header
-    pt.drawLumi(pad1, extratext=extracmstext, lumitext=lumitext)
+    pt.drawLumi(pad1, extratext=extracmstext,
+      extratext_newline=True,
+      lumitext=lumitext)
 
     # draw extra info
     tinfo = ROOT.TLatex()

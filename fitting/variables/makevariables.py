@@ -12,8 +12,23 @@ with open('variable_ks_invmass.json', 'w') as f:
 
 
 var = {}
-var["name"] =  "_RPV"
+var["name"] =  "#Delta_{2D} (cm)"
 var["variable"] = "_RPV"
-var["bins"] = [0.0, 0.5, 1.0]
+var["bins"] = [0.0, 0.5, 1.0, 19.5, 20.0]
 with open('variable_ks_rpv.json', 'w') as f:
+    json.dump(var, f)
+
+var = {}
+var["name"] =  "_mass"
+var["variable"] = "_mass"
+var["bins"] = list(np.linspace(1.08, 1.15, num=71, endpoint=True))
+with open('variable_la_invmass.json', 'w') as f:
+    json.dump(var, f)
+
+
+var = {}
+var["name"] =  "#Delta_{2D} (cm)"
+var["variable"] = "_RPV"
+var["bins"] = [0.0, 0.5, 1.0, 19.5, 20.0]
+with open('variable_la_rpv.json', 'w') as f:
     json.dump(var, f)
