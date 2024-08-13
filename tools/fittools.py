@@ -8,17 +8,17 @@ import numpy as np
 from functools import partial
 
 ### polynomial function
-def poly(x, par, degree=0):
+def poly(x, par, degree=0, refx=0):
     # par[k] = coefficient with x**k
     # note: in new versions of ROOT or CMSSW or python,
     #       one cannot rely on len(par) anymore to get the degree
     #       of the polynomial; instead it is passed here explicitly.
     res = 0.
     for k in range(degree+1):
-        res += par[k]*np.power(x[0], k)
+        res += par[k]*np.power(x[0]-refx, k)
     return res
 
-def poly_fit(hist, fitrange, initialguesses, optionstring="WLQ0"):
+def poly_fit(hist, fitrange, initialguesses, refx=0, optionstring="WLQ0"):
     # args: - histogram to be fitted on
     #        - tuple or list representing range to take into account for fit
     #        - (ordered) list of initial parameter guesses
@@ -27,7 +27,7 @@ def poly_fit(hist, fitrange, initialguesses, optionstring="WLQ0"):
     #       for using fitfunc (else error "the callable was deleted"),
     #       so it is returned as well, but not meant to be used explicitly.
     degree = len(initialguesses)-1
-    fitobj = partial(poly, degree=degree)
+    fitobj = partial(poly, degree=degree, refx=refx)
     fitfunc = ROOT.TF1("fitfunc", fitobj, fitrange[0], fitrange[1], len(initialguesses))
     for i,val in enumerate(initialguesses):
         fitfunc.SetParameter(i,val)

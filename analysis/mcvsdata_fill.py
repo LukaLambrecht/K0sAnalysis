@@ -240,7 +240,8 @@ if __name__=='__main__':
         sidebandvalues = tree[sidevariable['variable']].array(library='np', entry_stop=nentries)
         # initialize final histograms
         counts = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
-        errors = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
+        staterrors = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
+        systerrors = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
         # loop over main variable bins and secondary variable bins
         for i, (low, high) in enumerate(zip(variable['bins'][:-1], variable['bins'][1:])):
           for j, (ylow, yhigh) in enumerate(zip(yvariable['bins'][:-1], yvariable['bins'][1:])):
@@ -261,62 +262,68 @@ if __name__=='__main__':
             histlabel = 'Data' if isdata else 'Simulation'
             histname = '{}_bin{}'.format(label, i)
             if dim==2: histname += '_ybin{}'.format(j)
-            (npeak, nerror) = count_peak_unbinned(
-                                thissidebandvalues,
-                                thisweights,
-                                sidevariable,
-                                mode='hybrid',
-                                label=histlabel,
-                                lumi=lumi,
-                                extrainfo=extrainfo,
-                                histname=histname,
-                                plotdir=args.sideplotdir)
+            (npeak, staterror, systerror) = count_peak_unbinned(
+              thissidebandvalues,
+              thisweights,
+              sidevariable,
+              mode='hybrid',
+              label=histlabel,
+              lumi=lumi,
+              extrainfo=extrainfo,
+              histname=histname,
+              plotdir=args.sideplotdir)
             counts[i,j] = npeak
-            errors[i,j] = nerror
+            staterrors[i,j] = staterror
+            systerrors[i,j] = systerror
 
     # remove superfluous dimension for one-dimensional arrays
     if dim==1:
       counts = counts[:,0]
-      errors = errors[:,0]
+      staterrors = staterrors[:,0]
+      systerrors = systerrors[:,0]
 
     # return histogram with counts and corresponding errors
-    return (counts, errors)
+    return (counts, staterrors, systerrors)
     
   # loop over input files and fill histograms
   for datadict in datain:
     print('Now running on data file {}...'.format(datadict['file']))
     lumi = datadict['luminosity']
-    counts, errors = get_histogram(datadict['file'], args.treename,
-                       variable=variable,
-                       yvariable=yvariable,
-                       isdata=True, lumi=lumi,
-                       sidevariable=sidevariable,
-                       label=datadict['label'].strip(' .'),
-                       nentries=args.nprocess)
+    counts, staterrors, systerrors = get_histogram(
+      datadict['file'], args.treename,
+      variable=variable,
+      yvariable=yvariable,
+      isdata=True, lumi=lumi,
+      sidevariable=sidevariable,
+      label=datadict['label'].strip(' .'),
+      nentries=args.nprocess)
     datadict['counts'] = counts
-    datadict['errors'] = errors
+    datadict['staterrors'] = staterrors
+    datadict['systerrors'] = systerrors
   for simdict in simin:
     print('Now running on simulation file {}...'.format(simdict['file']))
     xsection = simdict['xsection']
     lumi = simdict['luminosity']
-    counts, errors = get_histogram(simdict['file'], args.treename,
-                       variable=variable,
-                       yvariable=yvariable,
-                       isdata=False, xsection=xsection, lumi=lumi,
-                       sidevariable=sidevariable,
-                       label=simdict['label'].strip(' .'),
-                       nentries=args.nprocess,
-                       year=simdict['year'], campaign=simdict['campaign'])
+    counts, staterrors, systerrors = get_histogram(simdict['file'], args.treename,
+      variable=variable,
+      yvariable=yvariable,
+      isdata=False, xsection=xsection, lumi=lumi,
+      sidevariable=sidevariable,
+      label=simdict['label'].strip(' .'),
+      nentries=args.nprocess,
+      year=simdict['year'], campaign=simdict['campaign'])
     simdict['counts'] = counts
-    simdict['errors'] = errors
+    simdict['staterrors'] = staterrors
+    simdict['systerrors'] = systerrors
 
   # clip histograms to minimum zero
   for datadict in datain:
     datadict['counts'] = np.clip(datadict['counts'], 0, None)
-    datadict['errors'] = np.clip(datadict['errors'], 0, None)
+    datadict['staterrors'] = np.clip(datadict['staterrors'], 0, None)
+    datadict['systerrors'] = np.clip(datadict['systerrors'], 0, None)
   for simdict in simin:
     simdict['counts'] = np.clip(simdict['counts'], 0, None)
-    simdict['errors'] = np.clip(simdict['errors'], 0, None)
+    simdict['systerrors'] = np.clip(simdict['systerrors'], 0, None)
 
   # now need to manage additional normalization of histograms.
   # for normmode=None and normmode='lumi', no additional steps are needed;
@@ -332,43 +339,63 @@ if __name__=='__main__':
     scale = datasum / simsum
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
-      simdict['errors'] = simdict['errors']*scale
+      simdict['staterrors'] = simdict['staterrors']*scale
+      simdict['systerrors'] = simdict['systerrors']*scale
 
   # for normmode 'range', normalize sum of simulation to sum of data,
   # but the sum is calculated only for a given variable in given range
   if args.normmode=='range':
     print('Normalizing simulation yield to data yield in range...')
+    # calculate the sum of data counts in normalization range
+    # (background subtracted)
     datasum = 0
+    datasyst2 = 0
     for datadict in datain:
-      counts, _ = get_histogram(datadict['file'], args.treename,
-                    variable=normvariable,
-                    isdata=True,
-                    label=datadict['label'].strip(' .')+'_normrange',
-                    sidevariable=sidevariable,
-                    nentries=args.nprocess)
+      counts, staterror, systerror = get_histogram(
+        datadict['file'], args.treename,
+        variable=normvariable,
+        isdata=True,
+        label=datadict['label'].strip(' .')+'_normrange',
+        sidevariable=sidevariable,
+        nentries=args.nprocess)
       if len(counts)!=1:
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
       datasum += counts[0]
+      datasyst2 += systerror[0]**2
+    # calculate the sum of simulation counts in normalization range
+    # (background subtracted)
     simsum = 0
+    simsyst2 = 0
     for simdict in simin:
       xsection = simdict['xsection']
       lumi = simdict['luminosity']
-      counts, _ = get_histogram(simdict['file'], args.treename,
-                    variable=normvariable,
-                    isdata=False, xsection=xsection, lumi=lumi,
-                    label=simdict['label'].strip(' .')+'_normrange',
-                    sidevariable=sidevariable,
-                    nentries=args.nprocess,
-                    year=simdict['year'], campaign=simdict['campaign'])
+      counts, staterror, systerror = get_histogram(
+        simdict['file'], args.treename,
+        variable=normvariable,
+        isdata=False, xsection=xsection, lumi=lumi,
+        label=simdict['label'].strip(' .')+'_normrange',
+        sidevariable=sidevariable,
+        nentries=args.nprocess,
+        year=simdict['year'], campaign=simdict['campaign'])
       if len(counts)!=1:
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
       simsum += counts[0]
+      simsyst2 += systerror[0]**2
+    # make the ratio to calculate the normalization factor
+    # (and propagate corresponding uncertainty)
     scale = datasum / simsum
+    scalerelerr = np.sqrt(datasyst2/(datasum**2) + simsyst2/(simsum**2))
+    # simple rescaling for nominal values
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
-      simdict['errors'] = simdict['errors']*scale
+      simdict['staterrors'] = simdict['staterrors']*scale
+      simdict['systerrors'] = simdict['systerrors']*scale
+    # adding the normalization uncertainty in quadrature
+    # as systematic uncertainty to all bins
+    normunc = simdict['counts'] * scalerelerr
+    simdict['systerrors'] = np.sqrt( np.power(simdict['systerrors'],2) + np.power(normunc,2) )
 
   # for normmode 'eventyield', scale using event weights
   if args.normmode=='eventyield':
@@ -378,22 +405,25 @@ if __name__=='__main__':
         raise Exception(msg)
     datasum = 0
     for datadict in datain:
-      sumweights, _ = get_histogram(datadict['file'], args.eventtreename, 
-                        isdata=True, nentries=args.nprocess)
+      sumweights, _, _ = get_histogram(
+        datadict['file'], args.eventtreename, 
+        isdata=True, nentries=args.nprocess)
       datasum += sumweights
     simsum = 0
     for simdict in simin:
       xsection = simdict['xsection']
       lumi = simdict['luminosity']
-      sumweights, _ = get_histogram(simdict['file'], args.eventtreename,
-                        isdata=False, xsection=xsection, lumi=lumi,
-                        nentries=args.nprocess,
-                        year=simdict['year'], campaign=simdict['campaign'])
+      sumweights, _, _ = get_histogram(
+        simdict['file'], args.eventtreename,
+        isdata=False, xsection=xsection, lumi=lumi,
+        nentries=args.nprocess,
+        year=simdict['year'], campaign=simdict['campaign'])
       simsum += sumweights
     scale = datasum / simsum
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
-      simdict['errors'] = simdict['errors']*scale
+      simdict['staterrors'] = simdict['staterrors']*scale
+      simdict['systerrors'] = simdict['systerrors']*scale
 
   # write histograms and meta-info to file
   # note: for now this is done with PyROOT instead of uproot
@@ -402,27 +432,38 @@ if __name__=='__main__':
   # write histograms
   for ddict in simin + datain:
     counts = ddict['counts']
-    errors = ddict['errors']
+    staterrors = ddict['staterrors']
+    systerrors = ddict['systerrors']
     # conversion to ROOT.TH1
     if(len(counts.shape)==1):
       hist = ROOT.TH1F(ddict['label'], ddict['label'], len(variable['bins'])-1,
                          array('f', variable['bins']))
-      for i, (count, error) in enumerate(zip(counts, errors)):
+      systhist = ROOT.TH1F(ddict['label']+'_syst', ddict['label']+'_syst',
+                            len(variable['bins'])-1, array('f', variable['bins']))
+      for i, (count, staterror, systerror) in enumerate(zip(counts, staterrors, systerrors)):
         hist.SetBinContent(i+1, count)
-        hist.SetBinError(i+1, error)
+        hist.SetBinError(i+1, staterror)
+        systhist.SetBinContent(i+1, count)
+        systhist.SetBinError(i+1, systerror)
     # converstion to ROOT.TH2
     elif(len(counts.shape)==2):
       hist = ROOT.TH2F(ddict['label'], ddict['label'],
                          len(variable['bins'])-1, array('f', variable['bins']),
                          len(yvariable['bins'])-1, array('f', yvariable['bins']))
+      systhist = ROOT.TH2F(ddict['label']+'_syst', ddict['label']+'_syst',
+                             len(variable['bins'])-1, array('f', variable['bins']),
+                             len(yvariable['bins'])-1, array('f', yvariable['bins']))
       for i in range(counts.shape[0]):
         for j in range(counts.shape[1]):
           hist.SetBinContent(i+1, j+1, counts[i,j])
-          hist.SetBinError(i+1, j+1, errors[i,j])
+          hist.SetBinError(i+1, j+1, staterrors[i,j])
+          systhist.SetBinContent(i+1, j+1, counts[i,j])
+          systhist.SetBinError(i+1, j+1, systerrors[i,j])
     else:
       msg = 'ERROR: shape of counts array could not be converted to TH1 or TH2.'
       raise Exception(msg)
     hist.Write(hist.GetName())
+    systhist.Write(systhist.GetName())
   # write variable
   varname_st = ROOT.TNamed('variable', variable['name'])
   varname_st.Write()

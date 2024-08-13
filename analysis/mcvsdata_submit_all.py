@@ -45,12 +45,12 @@ if __name__=='__main__':
     if args.dopreul:
       cmd = 'python3 mcvsdata_submit.py -i {}'.format(preuldir)
       cmd += ' -o output_{}_ksvars_preul'.format(args.datetag)
-      cmd += ' -v run2preul -c config_ksvars.py --runmode condor'
+      cmd += ' -v run2preul -c config_ksvars_minimal.py --runmode condor'
       cmds.append(cmd)
     if args.doul:
       cmd = 'python3 mcvsdata_submit.py -i {}'.format(uldir)
       cmd += ' -o output_{}_ksvars_ul'.format(args.datetag)
-      cmd += ' -v run2ul -c config_ksvars.py --runmode condor'
+      cmd += ' -v run2ul -c config_ksvars_minimal.py --runmode condor'
       cmds.append(cmd)
 
   if args.dola:

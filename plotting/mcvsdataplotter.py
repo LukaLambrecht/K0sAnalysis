@@ -60,11 +60,15 @@ def loadobjects(histfile, histdim=1):
     histlist = ht.loadallhistograms(histfile)
     mchistlist = []
     datahistlist = []
+    mcsysthistlist = []
+    datasysthistlist = []
     for hist in histlist:
         if 'sim' in hist.GetName() or 'Sim' in hist.GetName():
-            mchistlist.append(hist)
+            if hist.GetName().endswith('_syst'): mcsysthistlist.append(hist)
+            else: mchistlist.append(hist)
         elif 'data' in hist.GetName() or 'Data' in hist.GetName():
-            datahistlist.append(hist)
+            if hist.GetName().endswith('_syst'): datasysthistlist.append(hist)
+            else: datahistlist.append(hist)
         else:
             msg = 'WARNING: histogram type not recognized'
             msg += ' for histogram with name "{}";'.format(hist.GetName())
@@ -74,6 +78,8 @@ def loadobjects(histfile, histdim=1):
           len(datahistlist),len(mchistlist)))
     res['mchistlist'] = mchistlist
     res['datahistlist'] = datahistlist
+    res['mcsysthistlist'] = mcsysthistlist
+    res['datasysthistlist'] = datasysthistlist
     # get bins
     testhist = None
     if len(mchistlist)>0:
@@ -123,6 +129,7 @@ def getminmax(datahist, mchist, yaxlog, margin=True):
     return (histmin, histmax)
 
 def plotmcvsdata(mchistlist, datahistlist, outfile,
+                mcsysthistlist=None, datasysthistlist=None,
                 xaxtitle='', yaxtitle='', title='',
                 colorlist=None,
                 logy=False, drawrange=None,
@@ -158,7 +165,8 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     xlow = datahistlist[0].GetBinLowEdge(1)
     xhigh = (datahistlist[0].GetBinLowEdge(datahistlist[0].GetNbinsX())
                 + datahistlist[0].GetBinWidth(datahistlist[0].GetNbinsX()))
-    statcolor = ROOT.kOrange
+    staterrcolor = ROOT.kOrange
+    toterrcolor = ROOT.kOrange - 4
     statfillstyle = 1001
     stattransparency = 0.9
     if colorlist is None: 
@@ -200,6 +208,8 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     leg.SetBorderSize(0)
 
     ### Add MC histograms
+    # sum and stack nominal histograms
+    # (including statistical uncertainties)
     for i,hist in enumerate(mchistlist):
         hist.SetStats(False)
         hist.SetLineColor(ROOT.kBlack)
@@ -209,19 +219,35 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         hist.SetFillStyle(1001)
         mcstack.Add(hist)
         mchistsum.Add(hist)
+    # handle systematic uncertainties (if provided)
+    mcerrhistsum = None
+    if mcsysthistlist is not None and len(mcsysthistlist)>0:
+        mcerrhistsum = mchistsum.Clone()
+        mcerrhistsum.Reset()
+        for i,hist in enumerate(mcsysthistlist): mcerrhistsum.Add(hist)
+        for i in range(1, mcerrhistsum.GetNbinsX()+1):
+            toterror = np.sqrt( mcerrhistsum.GetBinError(i)**2 + mchistsum.GetBinError(i)**2 )
+            mcerrhistsum.SetBinError(i, toterror)
 
     ### Add data histograms
-    # sum of all data
     drawdata = True
     if(len(datahistlist)>0):
-        hist0 = datahistlist[0]
-        for i,hist in enumerate(datahistlist[1:]):
-            hist0.Add(hist)
-        hist0.SetMarkerStyle(20)
-        hist0.SetMarkerSize(0.9)
+        # sum nominal histograms (including statistical uncertainties)
+        datahistsum = datahistlist[0]
+        for i,hist in enumerate(datahistlist[1:]): datahistsum.Add(hist)
+        # handle systematic uncertainties (if provided)
+        # (just add it quadratically to the statistical uncertainty)
+        if datasysthistlist is not None and len(datasysthistlist)>0:
+            datasysthist = datasysthistlist[0]
+            for i,hist in enumerate(datasysthistlist[1:]): datasysthist.Add(hist)
+            for i in range(1, datahistsum.GetNbinsX()+1):
+              toterror = np.sqrt( datahistsum.GetBinError(i)**2 + datasysthist.GetBinError(i)**2 )
+              datahistsum.SetBinError(i, toterror)
+        datahistsum.SetMarkerStyle(20)
+        datahistsum.SetMarkerSize(0.9)
     else:
-        hist0 = mchistlist[0].Clone()
-        hist0.Reset()
+        datahistsum = mchistlist[0].Clone()
+        datahistsum.Reset()
         drawdata = False
 
     ### Stacked histogram layout
@@ -231,7 +257,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     xax.SetNdivisions(5,4,0,ROOT.kTRUE)
     xax.SetLabelSize(0)
     # Y-axis layout
-    (ymin,ymax) = getminmax(hist0,mchistsum,yaxlog=logy,margin=True)
+    (ymin,ymax) = getminmax(datahistsum,mchistsum,yaxlog=logy,margin=True)
     if logy: pad1.SetLogy()
     mcstack.SetMaximum(ymax)
     mcstack.SetMinimum(ymin)
@@ -247,10 +273,18 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         yax.SetTitleOffset(1.5)
     mcstack.Draw("HIST")
 
-    ### Summed histogram layout
+    ### Draw uncertainties on the prediction
+    # total uncertainties
+    if mcerrhistsum is not None:
+        mcerrhistsum.SetStats(False)
+        mcerrhistsum.SetLineWidth(0)
+        mcerrhistsum.SetFillColorAlpha(toterrcolor, stattransparency/2.)
+        mcerrhistsum.SetFillStyle(statfillstyle)
+        mcerrhistsum.Draw("SAME E2")
+    # statistical uncertainties
     mchistsum.SetStats(False)
     mchistsum.SetLineWidth(0)
-    mchistsum.SetFillColorAlpha(statcolor, stattransparency)
+    mchistsum.SetFillColorAlpha(staterrcolor, stattransparency)
     mchistsum.SetFillStyle(statfillstyle)
     mchistsum.Draw("SAME E2")
 
@@ -258,7 +292,10 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     legentries = []
     for hist in mchistlist: legentries.append({'hist': hist, 'label': hist.GetTitle(), 'options': 'f'})
     legentries.append({'hist': mchistsum, 'label': 'Stat. uncertainty', 'options': 'f'})
-    if drawdata: legentries.append({'hist': hist0, 'label': 'Data', 'options': 'ep'})
+    if mcerrhistsum is not None:
+        legentries.append({'hist': mcerrhistsum, 'label': 'Tot. uncertainty', 'options': 'f'})
+    if drawdata:
+        legentries.append({'hist': datahistsum, 'label': 'Data', 'options': 'ep'})
     # normal (row-first) filling:
     #for l in legentries: leg.AddEntry(l['hist'], l['label'], l['options'])
     # trick for column-first filling:
@@ -271,7 +308,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         leg.AddEntry(l['hist'], l['label'], l['options'])
 
     ### Draw data histogram
-    if drawdata: hist0.Draw("SAME E0")
+    if drawdata: datahistsum.Draw("SAME E0")
 
     ### Draw normalization range if needed
     if( drawrange is not None ):
@@ -304,7 +341,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     # temp for testing:
     #for i in range(1,mchistsum.GetNbinsX()):
     #        print('bin '+str(i)+' of '+str(mchistsum.GetNbinsX()))
-    #        print(hist0.GetBinContent(i))
+    #        print(datahistsum.GetBinContent(i))
     #        print(mchistsum.GetBinContent(i))
 
     # draw vertical lines for 2016 pixel detector
@@ -388,20 +425,34 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     pad2.Draw()
 
     ### Divide simulation by itself to obtain expected uncertainty
-    histratio2 = mchistsum.Clone()
-    for i in range(1,histratio2.GetSize()-1):
+    statratio = mchistsum.Clone()
+    for i in range(1, statratio.GetSize()-1):
         denom = mchistsum.GetBinContent(i)
         if not denom==0: # if zero, do nothing
-            histratio2.SetBinContent(i,histratio2.GetBinContent(i)/denom)
-            histratio2.SetBinError(i,histratio2.GetBinError(i)/denom)
-    histratio2.SetStats(False)
-    histratio2.SetTitle("")
-    histratio2.SetLineWidth(0)
-    histratio2.SetFillColorAlpha(statcolor, stattransparency)
-    histratio2.SetFillStyle(statfillstyle)
-    histratio2.Draw("E2")
+            statratio.SetBinContent(i,statratio.GetBinContent(i)/denom)
+            statratio.SetBinError(i,statratio.GetBinError(i)/denom)
+    statratio.SetStats(False)
+    statratio.SetTitle("")
+    statratio.SetLineWidth(0)
+    statratio.SetFillColorAlpha(staterrcolor, stattransparency)
+    statratio.SetFillStyle(statfillstyle)
+    statratio.Draw("E2")
+    # do systematic uncertainties
+    if mcerrhistsum is not None:
+        errratio = mcerrhistsum.Clone()
+        for i in range(1, errratio.GetSize()-1):
+            denom = mcerrhistsum.GetBinContent(i)
+            if not denom==0: # if zero, do nothing
+                errratio.SetBinContent(i,errratio.GetBinContent(i)/denom)
+                errratio.SetBinError(i,errratio.GetBinError(i)/denom)
+        errratio.SetStats(False)
+        errratio.SetTitle("")
+        errratio.SetLineWidth(0)
+        errratio.SetFillColorAlpha(toterrcolor, stattransparency/2.)
+        errratio.SetFillStyle(statfillstyle)
+        errratio.Draw("SAME E2")
     # X-axis layout
-    xax = histratio2.GetXaxis()
+    xax = statratio.GetXaxis()
     xax.SetNdivisions(10,4,0,ROOT.kTRUE)
     xax.SetLabelFont(10*labelfont+3)
     xax.SetLabelSize(labelsize)
@@ -411,11 +462,11 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
         xax.SetTitleSize(axtitlesize)
         xax.SetTitleOffset(3.)
     # Y-axis layout
-    #histratio2.SetMinimum(0.88)
-    #histratio2.SetMaximum(1.12)
-    histratio2.SetMinimum(0.4)
-    histratio2.SetMaximum(1.6)
-    yax = histratio2.GetYaxis()
+    #statratio.SetMinimum(0.88)
+    #statratio.SetMaximum(1.12)
+    statratio.SetMinimum(0.4)
+    statratio.SetMaximum(1.6)
+    yax = statratio.GetYaxis()
     yax.SetNdivisions(4,5,0,ROOT.kTRUE)
     yax.SetLabelFont(10*labelfont+3)
     yax.SetLabelSize(labelsize)
@@ -423,10 +474,11 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     yax.SetTitleFont(10*axtitlefont+3)
     yax.SetTitleSize(axtitlesize)
     yax.SetTitleOffset(1.5)
-    histratio2.Draw("E2")
+    statratio.Draw("E2")
+    if mcerrhistsum is not None: errratio.Draw("SAME E2")
 
     ### Divide data by simulation
-    histratio = hist0.Clone()
+    histratio = datahistsum.Clone()
     for i in range(1,histratio.GetSize()-1):
         denom = mchistsum.GetBinContent(i)
         if not denom==0: 
@@ -447,8 +499,8 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     ### Draw normalization range if needed
     if( drawrange is not None ):
         for xval in drawrange:
-            lines.append(ROOT.TLine(xval,histratio2.GetMinimum(),
-                                    xval,histratio2.GetMaximum()))
+            lines.append(ROOT.TLine(xval,statratio.GetMinimum(),
+                                    xval,statratio.GetMaximum()))
             lines[-1].SetLineStyle(9)
             lines[-1].Draw()
 
@@ -459,7 +511,7 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
     ## write ratio to txt file if requested
     if dotxt:
         txtoutfile = outfile.split('.')[0]+'_ratio.txt'
-        ratiototxtfile(hist0,mchistsum,txtoutfile)
+        ratiototxtfile(datahistsum,mchistsum,txtoutfile)
 
 if __name__=='__main__':
 
@@ -565,6 +617,8 @@ if __name__=='__main__':
         extrainfos = args.extrainfos.split(',')
     
     plotmcvsdata(indict['mchistlist'], indict['datahistlist'], args.outputfile,
+                    mcsysthistlist=indict['mcsysthistlist'],
+                    datasysthistlist=indict['datasysthistlist'],
                     xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle, title=args.title,
                     colorlist=colorlist,
                     logy=args.logy, drawrange=normrange,

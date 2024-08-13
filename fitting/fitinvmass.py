@@ -212,9 +212,9 @@ if __name__=='__main__':
         if args.unit=='GeV':
             mu_central *= 1000
             mu_unc *= 1000
-        extrainfo += 'Fitted K_{S}^{0} mass: <<  '
+        #extrainfo += 'Fitted K_{S}^{0} mass: <<  '
+        extrainfo += 'Fitted #Lambda^{0} mass: << '
         extrainfo += '{:.3f} #pm {:.3f} MeV << <<'.format(mu_central, mu_unc)
-    #extrainfo += ' << <<HACK_KS'
     if dim==2:
         extrainfo += '{0:.2f} < '.format(ylow)
         extrainfo += yvariable['name']

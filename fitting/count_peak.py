@@ -27,6 +27,13 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
     # - gargs = dict containgin global program parameters
     # - mode = 'gfit' or 'subtract'
     #           or 'hybrid', which returns subtract results but makes fancy 'gfit' plot anyway
+    # returns: a tuple with the following elements:
+    # - integral under the peak (background subtracted)
+    # - estimate of statistical error
+    #   (based on the statistics in the peak bins)
+    # - estimate of systematic error
+    #   (based on varying the background fit parameters within their uncertainties)
+    #   (not yet implemented for 'gfit' method)
 
     # initializations
     nbins = hist.GetNbinsX()
@@ -46,15 +53,10 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
 
     # make background-only fit
     guess = [0.,0.]
-    backfit, paramdict, backfitobj = ft.poly_fit(histclone, fitrange, guess, "Q0")
-    if gargs['helpdir'] is not None:
-        lumitext = '' if gargs['lumi'] is None else '{0:.3g} '.format(float(gargs['lumi'])/1000.) + 'fb^{-1} (13 TeV)'
-        outfile = os.path.join(gargs['helpdir'], hist.GetName().replace(' ','_')+'_bck.png')
-        pft.plot_fit(hist, outfile,
-                fitfunc=None, backfit=backfit, label=label, paramdict=paramdict,
-                xaxtitle='Invariant mass (GeV)',
-                yaxtitle='Number of reconstructed vertices',
-                extrainfo=extrainfo, lumitext=lumitext)
+    backfit, paramdict, backfitobj = ft.poly_fit(
+      histclone, fitrange, guess,
+      optionstring="Q0", refx=fitcenter)
+
     # make signal peak fit if requested
     if(mode=='gfit' or mode=='hybrid'):
         avgbck = paramdict['a0']+0.5*fitcenter*paramdict['a1']
@@ -67,24 +69,32 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
                 ]
         guess += [paramdict['a0'],paramdict['a1']] # background estimate
         globfit, paramdict, globfitobj = ft.poly_plus_doublegauss_fit(hist, fitrange, guess)
-        if gargs['helpdir'] is not None:
-            outfile = os.path.join(gargs['helpdir'], hist.GetName().replace(' ','_')+'_sig.png')
-            pft.plot_fit(hist, outfile,
-                    fitfunc=globfit, backfit=backfit, label=label, paramdict=paramdict,
-                    xaxtitle='Invariant mass (GeV)',
-                    yaxtitle='Reconstructed vertices',
-                    extrainfo=extrainfo, lumitext=lumitext)
 
     # METHOD 1: subtract background from peak and count remaining instances
     if(mode=='subtract' or mode=='hybrid'):
         histclone2 = hist.Clone()
-        histclone2.Add(backfit,-1)
-        npeak = 0.
-        npeak_error2 = 0.
-        for i in range(binlow+1,binhigh+1):
-            npeak += histclone2.GetBinContent(i)
-            npeak_error2 += np.power(histclone2.GetBinError(i),2)
-        return (npeak,np.sqrt(npeak_error2))
+        histclone2.Add(backfit, -1)
+        #npeak = 0.
+        #staterror2 = 0.
+        #for i in range(binlow+1, binhigh+1):
+        #    npeak += histclone2.GetBinContent(i)
+        #    staterror2 += np.power(histclone2.GetBinError(i), 2)
+        npeak = hist.Integral() - backfit.Integral(xlow, xhigh)/hist.GetBinWidth(1)
+        staterror2 = sum([hist.GetBinError(i)**2 for i in range(binlow+1, binhigh+1)])
+        # calculate systematic error by repeating the above procedure
+        # with different fit functions with parameters varied within their uncertainties
+        syserror2 = 0
+        for param in [0,1]:
+            tempfit = ROOT.TF1()
+            backfit.Copy(tempfit)
+            tempfit.SetParameter(param, backfit.GetParameter(param)+backfit.GetParError(param))
+            tempyield = hist.Integral() - tempfit.Integral(xlow, xhigh)/hist.GetBinWidth(1)
+            syserror2 += (npeak - tempyield)**2
+        staterror = np.sqrt(staterror2)
+        syserror = np.sqrt(syserror2)
+        res = (npeak, staterror, syserror)
+        restext = '{:.1E}<<#pm {:.1E} (stat.)<<#pm {:.1E} (syst.)'.format(npeak, staterror, syserror)
+        extrainfo += '<< <<Peak count:<<' + restext
 
     # METHOD 2: do global fit and determine integral of peak with error
     elif mode=='gfit':
@@ -94,10 +104,35 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
         npeak = intpeak/sidexbinwidth # calculate number of instances instead of integral
         npeak_error = globfit.IntegralError(fitrange[0],fitrange[1])
         npeak_error /= sidexbinwidth
-        return (npeak,npeak_error)
+        res = (npeak, npeak_error, 0)
 
     else:
         raise Exception('ERROR: peak counting mode not regognized!')
+
+    # make a plot of background only fit
+    if gargs['helpdir'] is not None:
+        lumitext = ''
+        if gargs['lumi'] is not None:
+            lumitext = '{0:.3g} '.format(float(gargs['lumi'])/1000.) + 'fb^{-1} (13 TeV)'
+        outfile = os.path.join(gargs['helpdir'], hist.GetName().replace(' ','_')+'_bck.png')
+        pft.plot_fit(hist, outfile,
+                fitfunc=None, backfit=backfit, label=label, paramdict=paramdict,
+                xaxtitle='Invariant mass (GeV)',
+                yaxtitle='Number of reconstructed vertices',
+                extrainfo=extrainfo, lumitext=lumitext)
+
+    # make a plot of signal peak fit
+    if(mode=='gfit' or mode=='hybrid'):
+        if gargs['helpdir'] is not None:
+            outfile = os.path.join(gargs['helpdir'], hist.GetName().replace(' ','_')+'_sig.png')
+            pft.plot_fit(hist, outfile,
+                    fitfunc=globfit, backfit=backfit, label=label, paramdict=paramdict,
+                    xaxtitle='Invariant mass (GeV)',
+                    yaxtitle='Reconstructed vertices',
+                    extrainfo=extrainfo, lumitext=lumitext)
+
+    # return the result
+    return res
 
 
 def count_peak_unbinned(values, weights, variable, mode='subtract',
