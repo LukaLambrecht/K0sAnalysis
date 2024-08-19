@@ -13,7 +13,7 @@ import tools.listtools as lt
 
 ### histogram reading and loading ###
 
-def loadallhistograms(histfile):
+def loadallhistograms(histfile, suppress_warnings=False):
     ### read a root file containing histograms and load all histograms to a list
     f = ROOT.TFile.Open(histfile)
     histlist = []
@@ -26,7 +26,9 @@ def loadallhistograms(histfile):
             nbins = hist.GetNbinsX()
             hist.SetDirectory(ROOT.gROOT)
         except:
-            print('### WARNING ###: key "'+str(key.GetName())+'" does not correspond to valid hist.')
+            name = key.GetName()
+            msg = 'WARNING: key {} does not correspond to valid hist.'.format(key)
+            if not suppress_warnings: print(msg)
             continue
         hist.SetName(key.GetName())
         histlist.append(hist)

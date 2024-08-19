@@ -94,6 +94,7 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
         syserror = np.sqrt(syserror2)
         res = (npeak, staterror, syserror)
         restext = '{:.1E}<<#pm {:.1E} (stat.)<<#pm {:.1E} (syst.)'.format(npeak, staterror, syserror)
+        if extrainfo is None: extrainfo = ''
         extrainfo += '<< <<Peak count:<<' + restext
 
     # METHOD 2: do global fit and determine integral of peak with error

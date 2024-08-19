@@ -12,8 +12,11 @@ import plotting.plottools as pt
 import tools.histtools as ht
 
 
-def loadobjects(histfile, histdim=1):
+def loadobjects(histfile):
     ### load all objects, i.e. histograms and other relevant info
+    # note: depends heavily on convention for input files
+    #       (usually the output of analysis/mcvsdata_fill.py),
+    #       modify as needed.
     print('loading histograms')
     f = ROOT.TFile.Open(histfile)
     res = {}
@@ -47,6 +50,82 @@ def loadobjects(histfile, histdim=1):
     except:
         print('WARNING: could not find treename value...')
         res['treename'] = None
+    # load histograms
+    histlist = ht.loadallhistograms(histfile, suppress_warnings=True)
+    mchists = {}
+    datahists = {}
+    for hist in histlist:
+        name = hist.GetName()
+        if name.endswith('_up'):
+            name = name.replace('_up','')
+            [label, systematic] = name.rsplit('_',1)
+            stype = 'up'
+        elif name.endswith('_down'):
+            name = name.replace('_down','')
+            [label, systematic] = name.rsplit('_',1)
+            stype = 'down'
+        elif name.endswith('_nominal'):
+            name = name.replace('_nominal','')
+            label = name
+            systematic = 'nominal'
+        else:
+            msg = 'WARNING: histogram type not recognized'
+            msg += ' for histogram with name "{}";'.format(hist.GetName())
+            msg += ' skipping it...'
+            print(msg)
+            continue
+        if 'sim' in hist.GetName() or 'Sim' in hist.GetName(): hists = mchists
+        elif 'data' in hist.GetName() or 'Data' in hist.GetName(): hists = datahists
+        else:
+            msg = 'WARNING: histogram type not recognized'
+            msg += ' for histogram with name "{}";'.format(hist.GetName())
+            msg += ' skipping it...'
+            print(msg)
+            continue
+        if not label in hists.keys(): hists[label] = {}
+        if not systematic in hists[label].keys(): hists[label][systematic] = {}
+        if systematic=='nominal': hists[label]['nominal'] = hist
+        elif stype=='up': hists[label][systematic]['up'] = hist
+        elif stype=='down': hists[label][systematic]['down'] = hist
+        else: raise Exception('ERROR: stype {} not recognized.'.format(stype))
+    mchistlist = [el['nominal'] for key,el in mchists.items()]
+    datahistlist = [el['nominal'] for key,el in datahists.items()]
+    print('found {} data files and {} simulation files.'.format(
+          len(datahistlist),len(mchistlist)))
+    res['mchistlist'] = mchistlist
+    res['datahistlist'] = datahistlist
+    res['mchists'] = mchists
+    res['datahists'] = datahists
+    # printouts of histogram dicts for testing and debugging
+    verbose = True
+    if verbose:
+        print('INFO in mcvsdataplotter.py / loadobjects:')
+        print('loaded following histogram structure:')
+        for dtype, ddict in [('Data', datahists), ('Sim', mchists)]:
+            print('  {}:'.format(dtype))
+            for label, process in ddict.items():
+                print('    {}:'.format(label))
+                for systematic,val in process.items():
+                    valtxt = ''
+                    if isinstance(val, ROOT.TH1): valtxt = 'ok'
+                    if isinstance(val, dict): valtxt = sorted(list(val.keys()))
+                    print('      - {}: {}'.format(systematic, valtxt))
+    # get test histogram for variable and bin extraction
+    testhist = None
+    if len(mchistlist)>0: testhist = mchistlist[0]
+    elif len(datahistlist)>0: testhist = datahistlist[0]
+    if testhist is None: return res
+    histdim = 1
+    if testhist.GetNbinsY() > 1: histdim = 2
+    # get bins
+    if histdim==1:
+        bins = testhist.GetXaxis().GetXbins()
+        res['bins'] = bins
+    elif histdim==2:
+        xbins = testhist.GetXaxis().GetXbins()
+        ybins = testhist.GetYaxis().GetXbins()
+        res['xbins'] = xbins
+        res['ybins'] = ybins
     # load meta-info
     if histdim==1:
         varname = f.Get('variable').GetTitle()
@@ -56,48 +135,37 @@ def loadobjects(histfile, histdim=1):
         res['xvarname'] = xvarname
         yvarname = f.Get('yvariable').GetTitle()
         res['yvarname'] = yvarname
-    # load histograms
-    histlist = ht.loadallhistograms(histfile)
-    mchistlist = []
-    datahistlist = []
-    mcsysthistlist = []
-    datasysthistlist = []
-    for hist in histlist:
-        if 'sim' in hist.GetName() or 'Sim' in hist.GetName():
-            if hist.GetName().endswith('_syst'): mcsysthistlist.append(hist)
-            else: mchistlist.append(hist)
-        elif 'data' in hist.GetName() or 'Data' in hist.GetName():
-            if hist.GetName().endswith('_syst'): datasysthistlist.append(hist)
-            else: datahistlist.append(hist)
-        else:
-            msg = 'WARNING: histogram type not recognized'
-            msg += ' for histogram with name "{}";'.format(hist.GetName())
-            msg += ' skipping it...'
-            print(msg)
-    print('found {} data files and {} simulation files.'.format(
-          len(datahistlist),len(mchistlist)))
-    res['mchistlist'] = mchistlist
-    res['datahistlist'] = datahistlist
-    res['mcsysthistlist'] = mcsysthistlist
-    res['datasysthistlist'] = datasysthistlist
-    # get bins
-    testhist = None
-    if len(mchistlist)>0:
-        testhist = mchistlist[0]
-    elif len(datahistlist)>0:
-        testhist = datahistlist[0]
-    if testhist is not None:
-        if histdim==1:
-            bins = testhist.GetXaxis().GetXbins()
-            res['bins'] = bins
-        elif histdim==2:
-            xbins = testhist.GetXaxis().GetXbins()
-            ybins = testhist.GetYaxis().GetXbins()
-            res['xbins'] = xbins
-            res['ybins'] = ybins 
     return res
 
-def ratiototxt(histnum,histdenom,outfilename):
+def get_total(histdict):
+    ### get sum of nominal histograms and total systematic
+    # note: the total systematic is calculated as the root-sum-squared
+    #       of all systematic histograms;
+    #       this is good enough for plotting,
+    #       but does not take into account correlations.
+    labels = sorted(list(histdict.keys()))
+    nominal = histdict[labels[0]]['nominal'].Clone()
+    nominal.Reset()
+    systematic = nominal.Clone()
+    for label in labels:
+        process = histdict[label]
+        thisnominal = process['nominal']
+        thisvars = []
+        for syst in process.keys():
+            if syst=='nominal': continue
+            upvar = process[syst]['up']
+            downvar = process[syst]['down']
+            maxvar = ht.binperbinmaxvar([upvar, downvar], thisnominal)
+            thisvars.append(maxvar)
+        thissystematic = ht.rootsumsquare(thisvars)
+        for i in range(0, thisnominal.GetNbinsX()+2):
+            thissystematic.SetBinError(i, thissystematic.GetBinContent(i))
+            thissystematic.SetBinContent(i, thisnominal.GetBinContent(i))
+        nominal.Add(thisnominal)
+        systematic.Add(thissystematic)
+    return (nominal, systematic)
+
+def ratiototxt(histnum, histdenom, outfilename):
     ### calculate ratio hist1/hist2 and write result to txt file
     outtxtfile = open(outfilename,'w')
     outtxtfile.write('format: bin <tab> value <tab> error'+'\n')
@@ -290,7 +358,9 @@ def plotmcvsdata(mchistlist, datahistlist, outfile,
 
     ### Fill legend entries
     legentries = []
-    for hist in mchistlist: legentries.append({'hist': hist, 'label': hist.GetTitle(), 'options': 'f'})
+    for hist in mchistlist:
+        legentry = hist.GetTitle().replace('_nominal','')
+        legentries.append({'hist': hist, 'label': legentry, 'options': 'f'})
     legentries.append({'hist': mchistsum, 'label': 'Stat. uncertainty', 'options': 'f'})
     if mcerrhistsum is not None:
         legentries.append({'hist': mcerrhistsum, 'label': 'Tot. uncertainty', 'options': 'f'})
@@ -538,6 +608,11 @@ if __name__=='__main__':
 
     # load objects from input file   
     indict = loadobjects(args.histfile)
+
+    # calculate total systematic error band on simulation
+    # (and potentially on data, e.g. background fit uncertainties)
+    (_, simsyst) = get_total(indict['mchists'])
+    (_, datasyst) = get_total(indict['datahists'])
     
     # configure other parameters based on input
     varname = indict['varname']
@@ -617,8 +692,7 @@ if __name__=='__main__':
         extrainfos = args.extrainfos.split(',')
     
     plotmcvsdata(indict['mchistlist'], indict['datahistlist'], args.outputfile,
-                    mcsysthistlist=indict['mcsysthistlist'],
-                    datasysthistlist=indict['datasysthistlist'],
+                    mcsysthistlist=[simsyst], datasysthistlist=[datasyst],
                     xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle, title=args.title,
                     colorlist=colorlist,
                     logy=args.logy, drawrange=normrange,

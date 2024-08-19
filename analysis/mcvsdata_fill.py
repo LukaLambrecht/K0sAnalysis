@@ -145,13 +145,13 @@ if __name__=='__main__':
     # input: - single input file (+ tree name within that file)
     #        - variable (name in the tree + binning)
     # output: histogram in the form of two numpy arrays
-    #         holding the counts and corresponding errors 
+    #         holding the counts and corresponding statistical errors 
     #         of variable values in chosen binning,
     #         potentially after background subtraction if requested;
     #         the resulting arrays are two-dimensional if a secondary variable is provided.
     # note: the counts are normalized to the provided xsection and lumi
     #       (if isdata is False, else each value simply gets weight 1)
-    # note: if variable is None, return sum of weights and corresponding error
+    # note: if variable is None, return sum of weights and corresponding statistical error
 
     # open the file and read hcounter
     print('Now running on file {}...'.format(inputfile))
@@ -185,19 +185,35 @@ if __name__=='__main__':
       weights = weights * nentries_reweight
 
       # do reweighting
+      # (and get up- and down-weights for weight systematics)
+      updownweights = None
+      variations = None
       if not isdata:
+        updownweights = {}
+        variations = {}
         print('Doing pileup reweighting...')
         pileupreweighter = PileupReweighter(campaign, year)
         pileupreweighter.initsample(inputfile)
         ntrueint = tree['_nTrueInt'].array(library='np', entry_stop=nentries)
-        pileupreweight = pileupreweighter.getreweight(ntrueint)
-        weights = np.multiply(weights, pileupreweight)
+        pileupweight = pileupreweighter.weight(ntrueint)
+        pileupweight_up = np.multiply(weights, pileupreweighter.upweight(ntrueint))
+        pileupweight_down = np.multiply(weights, pileupreweighter.downweight(ntrueint))
+        weights = np.multiply(weights, pileupweight)
+        updownweights = {'pileup': (pileupweight_up, pileupweight_down)}
 
       # if no variable was specified, return sum of weights
+      # (and also the root-sum-square of the weights as statistical uncertainty,
+      # and the sum of weights of each systematic variation in a dict)
       if variable is None:
         sumweights = np.sum(weights)
-        error = np.sqrt(np.sum(np.power(weights, 2)))
-        return (sumweights, error)
+        staterror = np.sqrt(np.sum(np.power(weights, 2)))
+        if updownweights is not None:
+            for key,val in updownweights.items():
+                upsum = np.sum(val[0])
+                downsum = np.sum(val[1])
+                variations[key+'_up'] = upsum
+                variations[key+'_down'] = downsum
+        return (sumweights, staterror, variations)
 
       # get the variable and some masks
       varvalues = tree[variable['variable']].array(library='np', entry_stop=nentries)
@@ -230,9 +246,19 @@ if __name__=='__main__':
         counts = np.histogram2d(varvalues, yvarvalues,
                    bins=(variable['bins'], yvariable['bins']),
                    weights=weights)[0]
-        errors = np.sqrt(np.histogram2d(varvalues, yvarvalues,
-                   bins=(variable['bins'], yvariable['bins']), 
-                   weights=np.power(weights,2))[0])
+        staterrors = np.sqrt(np.histogram2d(varvalues, yvarvalues,
+                       bins=(variable['bins'], yvariable['bins']), 
+                       weights=np.power(weights,2))[0])
+        if updownweights is not None:
+            for key,val in updownweights.items():
+                upcounts = np.histogram2d(varvalues, yvarvalues,
+                             bins=(variable['bins'], yvariable['bins']),
+                             weights=val[0][totalmask])[0]
+                downcounts = np.histogram2d(varvalues, yvarvalues,
+                               bins=(variable['bins'], yvariable['bins']),
+                               weights=val[1][totalmask])[0]
+                variations[key+'_up'] = upcounts
+                variations[key+'_down'] = downcounts
 
       # do background subtraction
       if sidevariable is not None:
@@ -240,8 +266,14 @@ if __name__=='__main__':
         sidebandvalues = tree[sidevariable['variable']].array(library='np', entry_stop=nentries)
         # initialize final histograms
         counts = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
-        staterrors = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
-        systerrors = np.zeros((len(variable['bins'])-1, len(yvariable['bins'])-1))
+        staterrors = np.copy(counts)
+        if variations is None: variations = {} # (also allow bkg fit systematics for data)
+        variations['bkgfit_up'] = np.copy(counts)
+        variations['bkgfit_down'] = np.copy(counts)
+        if updownweights is not None:
+            for key in updownweights.keys():
+                variations[key+'_up'] = np.copy(counts)
+                variations[key+'_down'] = np.copy(counts)
         # loop over main variable bins and secondary variable bins
         for i, (low, high) in enumerate(zip(variable['bins'][:-1], variable['bins'][1:])):
           for j, (ylow, yhigh) in enumerate(zip(yvariable['bins'][:-1], yvariable['bins'][1:])):
@@ -274,22 +306,36 @@ if __name__=='__main__':
               plotdir=args.sideplotdir)
             counts[i,j] = npeak
             staterrors[i,j] = staterror
-            systerrors[i,j] = systerror
+            variations['bkgfit_up'][i,j] = npeak + systerror
+            variations['bkgfit_down'][i,j] = npeak - systerror
+            # do the same for weight systematics
+            if updownweights is not None:
+                for key,val in updownweights.items():
+                    (uppeak, _, _) = count_peak_unbinned(
+                      thissidebandvalues, val[0][mask],
+                      sidevariable, mode='hybrid')
+                    (downpeak, _, _) = count_peak_unbinned(
+                      thissidebandvalues, val[1][mask],
+                      sidevariable, mode='hybrid')
+                    variations[key+'_up'][i,j] = uppeak
+                    variations[key+'_down'][i,j] = downpeak
 
     # remove superfluous dimension for one-dimensional arrays
     if dim==1:
       counts = counts[:,0]
       staterrors = staterrors[:,0]
-      systerrors = systerrors[:,0]
+      if variations is not None:
+          for key,hist in variations.items():
+              variations[key] = hist[:,0]
 
     # return histogram with counts and corresponding errors
-    return (counts, staterrors, systerrors)
+    return (counts, staterrors, variations)
     
   # loop over input files and fill histograms
   for datadict in datain:
     print('Now running on data file {}...'.format(datadict['file']))
     lumi = datadict['luminosity']
-    counts, staterrors, systerrors = get_histogram(
+    counts, staterrors, variations = get_histogram(
       datadict['file'], args.treename,
       variable=variable,
       yvariable=yvariable,
@@ -299,12 +345,13 @@ if __name__=='__main__':
       nentries=args.nprocess)
     datadict['counts'] = counts
     datadict['staterrors'] = staterrors
-    datadict['systerrors'] = systerrors
+    datadict['variations'] = variations
   for simdict in simin:
     print('Now running on simulation file {}...'.format(simdict['file']))
     xsection = simdict['xsection']
     lumi = simdict['luminosity']
-    counts, staterrors, systerrors = get_histogram(simdict['file'], args.treename,
+    counts, staterrors, variations = get_histogram(
+      simdict['file'], args.treename,
       variable=variable,
       yvariable=yvariable,
       isdata=False, xsection=xsection, lumi=lumi,
@@ -314,16 +361,21 @@ if __name__=='__main__':
       year=simdict['year'], campaign=simdict['campaign'])
     simdict['counts'] = counts
     simdict['staterrors'] = staterrors
-    simdict['systerrors'] = systerrors
+    simdict['variations'] = variations
 
   # clip histograms to minimum zero
   for datadict in datain:
     datadict['counts'] = np.clip(datadict['counts'], 0, None)
     datadict['staterrors'] = np.clip(datadict['staterrors'], 0, None)
-    datadict['systerrors'] = np.clip(datadict['systerrors'], 0, None)
+    if datadict['variations'] is not None:
+        for key,val in datadict['variations'].items():
+            datadict['variations'][key] = np.clip(val, 0, None)
   for simdict in simin:
     simdict['counts'] = np.clip(simdict['counts'], 0, None)
-    simdict['systerrors'] = np.clip(simdict['systerrors'], 0, None)
+    simdict['staterrors'] = np.clip(simdict['staterrors'], 0, None)
+    if simdict['variations'] is not None:
+        for key,val in simdict['variations'].items():
+            simdict['variations'][key] = np.clip(val, 0, None)
 
   # now need to manage additional normalization of histograms.
   # for normmode=None and normmode='lumi', no additional steps are needed;
@@ -340,7 +392,9 @@ if __name__=='__main__':
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
       simdict['staterrors'] = simdict['staterrors']*scale
-      simdict['systerrors'] = simdict['systerrors']*scale
+      if simdict['variations'] is not None:
+          for key,val in simdict['variations']:
+              simdict['variations'][key] = val*scale
 
   # for normmode 'range', normalize sum of simulation to sum of data,
   # but the sum is calculated only for a given variable in given range
@@ -349,9 +403,9 @@ if __name__=='__main__':
     # calculate the sum of data counts in normalization range
     # (background subtracted)
     datasum = 0
-    datasyst2 = 0
+    datafitsyst2 = 0
     for datadict in datain:
-      counts, staterror, systerror = get_histogram(
+      counts, staterror, variations = get_histogram(
         datadict['file'], args.treename,
         variable=normvariable,
         isdata=True,
@@ -362,15 +416,15 @@ if __name__=='__main__':
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
       datasum += counts[0]
-      datasyst2 += systerror[0]**2
+      datafitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
     # calculate the sum of simulation counts in normalization range
     # (background subtracted)
     simsum = 0
-    simsyst2 = 0
+    simfitsyst2 = 0
     for simdict in simin:
       xsection = simdict['xsection']
       lumi = simdict['luminosity']
-      counts, staterror, systerror = get_histogram(
+      counts, staterror, variations = get_histogram(
         simdict['file'], args.treename,
         variable=normvariable,
         isdata=False, xsection=xsection, lumi=lumi,
@@ -382,20 +436,24 @@ if __name__=='__main__':
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
       simsum += counts[0]
-      simsyst2 += systerror[0]**2
+      simfitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
     # make the ratio to calculate the normalization factor
     # (and propagate corresponding uncertainty)
     scale = datasum / simsum
-    scalerelerr = np.sqrt(datasyst2/(datasum**2) + simsyst2/(simsum**2))
+    scalerelerr = np.sqrt(datafitsyst2/(datasum**2) + simfitsyst2/(simsum**2))
     # simple rescaling for nominal values
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
       simdict['staterrors'] = simdict['staterrors']*scale
-      simdict['systerrors'] = simdict['systerrors']*scale
+      for key,val in simdict['variations'].items():
+          simdict['variations'][key] = val*scale
     # adding the normalization uncertainty in quadrature
     # as systematic uncertainty to all bins
     normunc = simdict['counts'] * scalerelerr
-    simdict['systerrors'] = np.sqrt( np.power(simdict['systerrors'],2) + np.power(normunc,2) )
+    fitunc = simdict['variations']['bkgfit_up'] - simdict['counts']
+    fitunc = np.sqrt( np.power(fitunc,2) + np.power(normunc,2) )
+    simdict['variations']['bkgfit_up'] = simdict['counts'] + fitunc
+    simdict['variations']['bkgfit_down'] = simdict['counts'] - fitunc
 
   # for normmode 'eventyield', scale using event weights
   if args.normmode=='eventyield':
@@ -423,7 +481,9 @@ if __name__=='__main__':
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
       simdict['staterrors'] = simdict['staterrors']*scale
-      simdict['systerrors'] = simdict['systerrors']*scale
+      if simdict['variations'] is not None:
+          for key,val in simdict['variations']:
+              simdict['variations'][key] = val*scale
 
   # write histograms and meta-info to file
   # note: for now this is done with PyROOT instead of uproot
@@ -433,37 +493,46 @@ if __name__=='__main__':
   for ddict in simin + datain:
     counts = ddict['counts']
     staterrors = ddict['staterrors']
-    systerrors = ddict['systerrors']
+    variations = ddict['variations']
+    systhists = {}
     # conversion to ROOT.TH1
     if(len(counts.shape)==1):
-      hist = ROOT.TH1F(ddict['label'], ddict['label'], len(variable['bins'])-1,
+      hist = ROOT.TH1F(ddict['label']+'_nominal', ddict['label']+'_nominal',
+                         len(variable['bins'])-1,
                          array('f', variable['bins']))
-      systhist = ROOT.TH1F(ddict['label']+'_syst', ddict['label']+'_syst',
-                            len(variable['bins'])-1, array('f', variable['bins']))
-      for i, (count, staterror, systerror) in enumerate(zip(counts, staterrors, systerrors)):
+      for i, (count, staterror) in enumerate(zip(counts, staterrors)):
         hist.SetBinContent(i+1, count)
         hist.SetBinError(i+1, staterror)
-        systhist.SetBinContent(i+1, count)
-        systhist.SetBinError(i+1, systerror)
+      if variations is not None:
+        for key,systarray in variations.items():
+          systhist = ROOT.TH1F(ddict['label']+'_'+key, ddict['label']+'_'+'key',
+                         len(variable['bins'])-1,
+                         array('f', variable['bins']))
+          for i, val in enumerate(systarray): systhist.SetBinContent(i+1, val)
+          systhists[key] = systhist
     # converstion to ROOT.TH2
     elif(len(counts.shape)==2):
-      hist = ROOT.TH2F(ddict['label'], ddict['label'],
+      hist = ROOT.TH2F(ddict['label']+'_nominal', ddict['label']+'_nominal',
                          len(variable['bins'])-1, array('f', variable['bins']),
                          len(yvariable['bins'])-1, array('f', yvariable['bins']))
-      systhist = ROOT.TH2F(ddict['label']+'_syst', ddict['label']+'_syst',
-                             len(variable['bins'])-1, array('f', variable['bins']),
-                             len(yvariable['bins'])-1, array('f', yvariable['bins']))
       for i in range(counts.shape[0]):
         for j in range(counts.shape[1]):
           hist.SetBinContent(i+1, j+1, counts[i,j])
           hist.SetBinError(i+1, j+1, staterrors[i,j])
-          systhist.SetBinContent(i+1, j+1, counts[i,j])
-          systhist.SetBinError(i+1, j+1, systerrors[i,j])
+      if variations is not None:
+        for key,systarray in variations.items():
+          systhist = ROOT.TH2F(ddict['label']+'_'+key, ddict['label']+'_'+key,
+                         len(variable['bins'])-1, array('f', variable['bins']),
+                         len(yvariable['bins'])-1, array('f', yvariable['bins']))
+          for i in range(counts.shape[0]):
+            for j in range(counts.shape[1]):
+              systhist.SetBinContent(i+1, j+1, systarray[i,j])
+          systhists[key] = systhist
     else:
       msg = 'ERROR: shape of counts array could not be converted to TH1 or TH2.'
       raise Exception(msg)
     hist.Write(hist.GetName())
-    systhist.Write(systhist.GetName())
+    for systhist in systhists.values(): systhist.Write(systhist.GetName())
   # write variable
   varname_st = ROOT.TNamed('variable', variable['name'])
   varname_st.Write()
