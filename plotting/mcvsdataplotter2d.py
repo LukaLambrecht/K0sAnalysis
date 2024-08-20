@@ -261,12 +261,15 @@ def plotmcvsdata2d( mchist, datahist, outfile,
             for j in range(nybins):
                 ycenter = (ybins[j+1]+ybins[j])/2.
                 valstr = '{0:.2f}'.format(vals[i][j])
-                statstr = r'#pm' + '{0:.2f} (stat)'.format(stat[i][j])
-                syststr = r'#pm' + '{0:.2f} (syst)'.format(syst[i][j]) if systratio is not None else ''
+                statstr = r'#pm' + '{0:.2f}'.format(stat[i][j])
+                syststr = r'#pm' + '{0:.2f}'.format(syst[i][j]) if systratio is not None else ''
                 txt = '#splitline{'+valstr+'}{#splitline{'+statstr+'}{'+syststr+'}}'
                 tvals.DrawLatex(xcenter, ycenter, txt)
 
     # Write extra info
+    fmtstr = 'Format:   #splitline{nominal}{#splitline{#pm stat. unc.}{#pm syst. unc.}}'
+    if extrainfos is None: extrainfos = [fmtstr]
+    else: extrainfos.append(fmtstr)
     if extrainfos is not None:
         tinfo = ROOT.TLatex()
         tinfo.SetTextFont(10*infofont+3)
