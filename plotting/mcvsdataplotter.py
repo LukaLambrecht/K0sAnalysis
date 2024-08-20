@@ -159,8 +159,13 @@ def get_total(histdict):
             thisvars.append(maxvar)
         thissystematic = ht.rootsumsquare(thisvars)
         for i in range(0, thisnominal.GetNbinsX()+2):
-            thissystematic.SetBinError(i, thissystematic.GetBinContent(i))
-            thissystematic.SetBinContent(i, thisnominal.GetBinContent(i))
+            if isinstance(thisnominal, ROOT.TH2):
+                for j in range(0, thisnominal.GetNbinsY()+2):
+                    thissystematic.SetBinError(i, j, thissystematic.GetBinContent(i,j))
+                    thissystematic.SetBinContent(i, j, thisnominal.GetBinContent(i,j))
+            else:
+                thissystematic.SetBinError(i, thissystematic.GetBinContent(i))
+                thissystematic.SetBinContent(i, thisnominal.GetBinContent(i))
         nominal.Add(thisnominal)
         systematic.Add(thissystematic)
     return (nominal, systematic)

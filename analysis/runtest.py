@@ -6,7 +6,8 @@ if __name__=='__main__':
 
     filedir = '/pnfs/iihe/cms/store/user/llambrec/k0sanalysisdata/ulfiles/selected/'
     version = 'run2ul'
-    config = 'config_ksvars_test.py'
+    #config = 'config_ksvars_test.py' # for 1D
+    config = 'config_ks2dvars_test.py' # for 2D
     outputdir = 'output_test'
     eras = '2018'
     runmode = 'local'

@@ -158,6 +158,7 @@ def tgraphtohist( graph ):
 def binperbinmaxvar( histlist, nominalhist ):
     ### get the bin-per-bin maximum variation (in absolute value) of histograms in histlist 
     ### wrt nominalhist.
+    if isinstance(nominalhist, ROOT.TH2): return binperbinmaxvar2d(histlist, nominalhist)
     maxhist = nominalhist.Clone()
     maxhist.Reset()
     nbins = maxhist.GetNbinsX()
@@ -168,6 +169,21 @@ def binperbinmaxvar( histlist, nominalhist ):
             varvals[j] = abs(histlist[j].GetBinContent(i)-nomval)
         maxhist.SetBinContent(i,np.amax(varvals))
     return maxhist
+
+def binperbinmaxvar2d( histlist, nominalhist ):
+    ### same as binperbinmaxvar, but for 2D histograms
+    maxhist = nominalhist.Clone()
+    maxhist.Reset()
+    nxbins = maxhist.GetNbinsX()
+    nybins = maxhist.GetNbinsY()
+    for i in range(0, nxbins+2):
+        for j in range(0, nybins+2):
+            nomval = nominalhist.GetBinContent(i,j)
+            varvals = np.zeros(len(histlist))
+            for k in range(len(histlist)):
+                varvals[k] = abs(histlist[k].GetBinContent(i,j)-nomval)
+            maxhist.SetBinContent(i, j, np.amax(varvals))
+    return maxhist
     
 def rootsumsquare( histlist ):
     ### return a histogram that is the root-sum-square of all histograms in histlist.
@@ -175,20 +191,40 @@ def rootsumsquare( histlist ):
     if( len(histlist)<1 ):
         print('### ERROR ###: at least one histogram required for rootsumsquare')
         return None
+    if isinstance(histlist[0], ROOT.TH2): return rootsumsquare2d(histlist)
     res = histlist[0].Clone()
     res.Reset()
     nbins = res.GetNbinsX()
     bincontents = np.zeros(nbins+2)
     for hist in histlist:
         if( hist.GetNbinsX()!=nbins ):
-            print('### ERROR ###: histograms are not compatible for summing in quadrature')
-            return None
+            raise Exception('ERROR: histograms are not compatible for summing in quadrature')
         thisbincontents = np.zeros(nbins+2)
         for i in range(0,nbins+2): thisbincontents[i] = hist.GetBinContent(i)
         bincontents += np.power(thisbincontents,2)
     bincontents = np.sqrt(bincontents)
     for i in range(0,nbins+2):
         res.SetBinContent(i,bincontents[i])
+    return res
+
+def rootsumsquare2d( histlist ):
+    res = histlist[0].Clone()
+    res.Reset()
+    nxbins = res.GetNbinsX()
+    nybins = res.GetNbinsY()
+    bincontents = np.zeros((nxbins+2, nybins+2))
+    for hist in histlist:
+        if( hist.GetNbinsX()!=nxbins or hist.GetNbinsY()!=nybins ):
+            raise Exception('ERROR: histograms are not compatible for summing in quadrature')
+        thisbincontents = np.zeros((nxbins+2, nybins+2))
+        for i in range(0, nxbins+2):
+            for j in range(0, nybins+2):
+                thisbincontents[i,j] = hist.GetBinContent(i,j)
+        bincontents += np.power(thisbincontents, 2)
+    bincontents = np.sqrt(bincontents)
+    for i in range(0, nxbins+2):
+        for j in range(0, nybins+2):
+            res.SetBinContent(i, j, bincontents[i,j])
     return res
 
 ### printing ###

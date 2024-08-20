@@ -12,10 +12,11 @@ from array import array
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 import plotting.plottools as pt
 import tools.histtools as ht
-from mcvsdataplotter import loadobjects
+from mcvsdataplotter import loadobjects, get_total
 
 
-def plotmcvsdata2d( mchistlist, datahistlist, outfile,
+def plotmcvsdata2d( mchist, datahist, outfile,
+                    simsyst=None, datasyst=None,
                     xaxtitle=None, yaxtitle=None, title=None,
                     xaxtitleoffset=None, yaxtitleoffset=None,
                     axtitlesize=None, titlesize=None,
@@ -55,10 +56,10 @@ def plotmcvsdata2d( mchistlist, datahistlist, outfile,
     if infotop is None: infotop = 1-p1topmargin-0.1
 
     ### get bins and related properties
-    nxbins = mchistlist[0].GetNbinsX()
-    xbins = mchistlist[0].GetXaxis().GetXbins()
-    nybins = mchistlist[0].GetNbinsY()
-    ybins = mchistlist[0].GetYaxis().GetXbins()
+    nxbins = mchist.GetNbinsX()
+    xbins = mchist.GetXaxis().GetXbins()
+    nybins = mchist.GetNbinsY()
+    ybins = mchist.GetYaxis().GetXbins()
 
     ### Create pad and containers summed histograms
     pad1.cd()
@@ -67,51 +68,52 @@ def plotmcvsdata2d( mchistlist, datahistlist, outfile,
     pad1.SetTopMargin(p1topmargin)
     pad1.SetRightMargin(p1rightmargin)
     pad1.SetTicks(1,1)
-    mchistsum = mchistlist[0].Clone()
-    mchistsum.Reset()
-    mchistsum.SetStats(False)
-
-    ### Add MC histograms
-    for i,hist in enumerate(mchistlist):
-        mchistsum.Add(hist)
 
     ### Add data histograms
-    if(len(datahistlist)>0):
-        hist0 = datahistlist[0]
-        for i,hist in enumerate(datahistlist[1:]):
-            hist0.Add(hist)
-    else:
-        hist0 = mchistlist[0].Clone()
-        hist0.Reset()
-    hist0.SetStats(False)
-    hist0.SetTitle("")
+    if datahist is None:
+        datahist = mchist.Clone()
+        datahist.Reset()
+    datahist.SetStats(False)
+    datahist.SetTitle("")
 
     ### create ratio histogram and get arrays of values and errors
-    histratio = hist0.Clone()
+    histratio = datahist.Clone()
     histratio.SetName('histratio')
     histratio.SetTitle('data to simulation ratio')
-    histratio.Divide(mchistsum)
+    histratio.Divide(mchist)
+    systratio = None
+    if( simsyst is not None or datasyst is not None ):
+        if simsyst is None: simsyst = mchist.Clone()
+        if datasyst is None: datasyst = datahist.Clone()
+        systratio = datasyst.Clone()
+        systratio.SetName('systratio')
+        systratio.Divide(simsyst)
     # note: default error calculation of Divide is simple relative quadratic addition.
     #       this can be modified in the manual calculation below if required.
     vals = []
-    ers = []
+    stat = []
+    syst = []
     for i in range(nxbins):
         vals.append([])
-        ers.append([])
+        stat.append([])
+        syst.append([])
         for j in range(nybins):
-            ndata = hist0.GetBinContent(i+1,j+1)
-            nmc = mchistsum.GetBinContent(i+1,j+1)
-            edata = hist0.GetBinError(i+1,j+1)
-            emc = mchistsum.GetBinError(i+1,j+1)
+            ndata = datahist.GetBinContent(i+1,j+1)
+            nmc = mchist.GetBinContent(i+1,j+1)
+            statdata = datahist.GetBinError(i+1,j+1)
+            statmc = mchist.GetBinError(i+1,j+1)
             if ndata<1 or nmc<1e-12:
                 vals[i].append(0.)
-                ers[i].append(0.)
+                stat[i].append(0.)
+                syst[i].append(0.)
                 histratio.SetBinContent(i+1,j+1,0.)
                 histratio.SetBinError(i+1,j+1,0.)
             # option 1: take default Divide behaviour
             else:
                 vals[i].append(histratio.GetBinContent(i+1,j+1))
-                ers[i].append(histratio.GetBinError(i+1,j+1))
+                stat[i].append(histratio.GetBinError(i+1,j+1))
+                if systratio is not None: syst[i].append(systratio.GetBinError(i+1,j+1))
+                else: syst[i].append(0.)
             # option 2: modify default Divide behaviour
             '''else:
                 val = ndata/nmc
@@ -133,9 +135,11 @@ def plotmcvsdata2d( mchistlist, datahistlist, outfile,
     if outrootfile is not None:
         f = ROOT.TFile.Open(outrootfile,'recreate')
         histratio.Write()
+        if systratio is not None: systratio.Write()
         f.Close()
 
     ### optional: redefine histogram as category histogram
+    # to do: extend to systematic ratio (but not used for now)
     if binmode=='category':
         xbinsnew = array('f',range(len(xbins)))
         ybinsnew = array('f',range(len(ybins)))
@@ -186,7 +190,7 @@ def plotmcvsdata2d( mchistlist, datahistlist, outfile,
     if binmode=='equal':
         origxax = histratio.GetXaxis()
         origyax = histratio.GetYaxis()
-        histratio,xbins,ybins = ht.make_equal_width_2d(histratio)
+        histratio, xbins, ybins = ht.make_equal_width_2d(histratio)
         if drawbox is not None:
             drawbox[0] = ht.transform_to_equal_width(drawbox[0],origxax)
             drawbox[2] = ht.transform_to_equal_width(drawbox[2],origxax)
@@ -194,8 +198,8 @@ def plotmcvsdata2d( mchistlist, datahistlist, outfile,
             drawbox[3] = ht.transform_to_equal_width(drawbox[3],origyax)
 
     ### get min and max
-    xlow = mchistlist[0].GetXaxis().GetXmin()
-    xhigh = mchistlist[0].GetXaxis().GetXmax()
+    xlow = mchist.GetXaxis().GetXmin()
+    xhigh = mchist.GetXaxis().GetXmax()
     ylow = histratio.GetYaxis().GetXmin()
     yhigh = histratio.GetYaxis().GetXmax()
 
@@ -257,8 +261,10 @@ def plotmcvsdata2d( mchistlist, datahistlist, outfile,
             for j in range(nybins):
                 ycenter = (ybins[j+1]+ybins[j])/2.
                 valstr = '{0:.2f}'.format(vals[i][j])
-                erstr = '{0:.2f}'.format(ers[i][j])
-                tvals.DrawLatex(xcenter,ycenter,'#splitline{'+valstr+'}{'+r'#pm'+erstr+'}')
+                statstr = r'#pm' + '{0:.2f} (stat)'.format(stat[i][j])
+                syststr = r'#pm' + '{0:.2f} (syst)'.format(syst[i][j]) if systratio is not None else ''
+                txt = '#splitline{'+valstr+'}{#splitline{'+statstr+'}{'+syststr+'}}'
+                tvals.DrawLatex(xcenter, ycenter, txt)
 
     # Write extra info
     if extrainfos is not None:
@@ -304,7 +310,12 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     # load objects from input file
-    indict = loadobjects(args.histfile, histdim=2)
+    indict = loadobjects(args.histfile)
+
+    # calculate total systematic error band on simulation
+    # (and potentially on data, e.g. background fit uncertainties)
+    (simhist, simsyst) = get_total(indict['mchists'])
+    (datahist, datasyst) = get_total(indict['datahists'])
 
     # configure other parameters based on input
     xvarname = indict['xvarname']
@@ -369,7 +380,8 @@ if __name__=='__main__':
       else:
         extrainfos = args.extrainfos.split(',')
 
-    plotmcvsdata2d( indict['mchistlist'], indict['datahistlist'], args.outputfile,
+    plotmcvsdata2d( simhist, datahist, args.outputfile,
+                    simsyst=simsyst, datasyst=datasyst,
                     xaxtitle=args.xaxtitle, yaxtitle=args.yaxtitle, title=args.title,
                     lumistr=lumistr, extracmstext=extracmstext, 
                     binmode='equal', outrootfile=args.outrootfile,

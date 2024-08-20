@@ -83,12 +83,12 @@ if __name__=='__main__':
     if args.dopreul:
       cmd = 'python3 mcvsdata_submit.py -i {}'.format(preuldir)
       cmd += ' -o output_{}_ks2dvars_preul'.format(args.datetag)
-      cmd += ' -v run2preul -c config_ks2dvars.py --runmode condor'
+      cmd += ' -v run2preul -c config_ks2dvars_minimal.py --runmode condor'
       cmds.append(cmd)
     if args.doul:
       cmd = 'python3 mcvsdata_submit.py -i {}'.format(uldir)
       cmd += ' -o output_{}_ks2dvars_ul'.format(args.datetag)
-      cmd += ' -v run2ul -c config_ks2dvars.py --runmode condor'
+      cmd += ' -v run2ul -c config_ks2dvars_minimal.py --runmode condor'
       cmds.append(cmd)
 
   # run all commands
