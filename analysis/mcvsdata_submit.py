@@ -28,6 +28,7 @@ if __name__=='__main__':
     parser.add_argument(      '--dodetector', default=False,        action='store_true')
     parser.add_argument(      '--runmode',    default='local',      choices=['local', 'condor'])
     parser.add_argument(      '--outrootfile',default=None)
+    parser.add_argument(      '--fitstrategy', default='legacy',    choices=['legacy', 'adaptive'])
     args = parser.parse_args()
 
     # manage input arguments to get files
@@ -55,7 +56,7 @@ if __name__=='__main__':
             includelist     = ([
                             ## Run2022 
                             #'2022',
-                            #'2022preEE',
+                            '2022preEE',
                             #'2022postEE',
                             #'2022combined',
                             ## Run2023
@@ -66,9 +67,9 @@ if __name__=='__main__':
                             ## Run2024 
                             #'2024',
                             ## Run2025 
-                            '2025',
+                            #'2025',
                             ## Run-3 
-                            'run3'
+                            #'run3'
                         ])
     elif 'perera' in includelist:
         if args.version=='run2preul':
@@ -108,13 +109,13 @@ if __name__=='__main__':
                             ## Run2023postBPix
                             #'2023postBPixD',
                             ## Run2024 
-                            #'2024C',
-                            #'2024D',
-                            #'2024E',
-                            #'2024F',
-                            #'2024G',
-                            #'2024H',
-                            #'2024I',
+                            '2024C',
+                            '2024D',
+                            '2024E',
+                            '2024F',
+                            '2024G',
+                            '2024H',
+                            '2024I',
                             ## Run2025 
                             '2025B',
                             '2025C',
@@ -260,6 +261,7 @@ if __name__=='__main__':
                         cmd += ' -v {}'.format(varjson)
                         cmd += ' -o {}'.format(histfile)
                         if args.nprocess>0:                     cmd += ' -n {}'.format(args.nprocess)
+                        cmd += ' --fitstrategy {}'.format(args.fitstrategy)
                         # add args for normalization
                         if norm['type'] is not None:            cmd += ' --normmode {}'.format(norm['type'])
                         if norm['type']=='range':               cmd += ' --normvariable {}'.format(normvarjson)

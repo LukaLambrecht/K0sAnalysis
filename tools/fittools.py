@@ -19,7 +19,7 @@ def poly(x, par, degree=0):
     return res
 
 #def poly_fit(hist, fitrange, initialguesses, optionstring="WLQ0"):
-def poly_fit(hist, fitrange, initialguesses, optionstring="RMSE0"):
+def poly_fit(hist, fitrange, initialguesses, optionstring="RMSE0", funcname="fitfunc"):
     # args: - histogram to be fitted on
     #        - tuple or list representing range to take into account for fit
     #        - (ordered) list of initial parameter guesses
@@ -30,7 +30,7 @@ def poly_fit(hist, fitrange, initialguesses, optionstring="RMSE0"):
     
     degree = len(initialguesses)-1
     fitobj = partial(poly, degree=degree)
-    fitfunc = ROOT.TF1("fitfunc", fitobj, fitrange[0], fitrange[1], len(initialguesses))
+    fitfunc = ROOT.TF1(funcname, fitobj, fitrange[0], fitrange[1], len(initialguesses))
     for i,val in enumerate(initialguesses):
         fitfunc.SetParameter(i,val)
     fitresult = hist.Fit(fitfunc, optionstring)
@@ -85,7 +85,7 @@ def poly_plus_gauss(x, par, degree=-1):
     arg1 = (x[0]-par[0])/par[2]
     return res + par[1]*np.exp(-0.5*arg1*arg1)
 
-def poly_plus_gauss_fit(hist, fitrange, initialguesses, optionstring="RMSE0"):
+def poly_plus_gauss_fit(hist, fitrange, initialguesses, optionstring="RMSE0", funcname="fitfunc"):
     # args: - histogram to be fitted on
     #        - tuple or list representing range to take into account for fit
     #        - (ordered) list of initial parameter guesses
@@ -96,7 +96,7 @@ def poly_plus_gauss_fit(hist, fitrange, initialguesses, optionstring="RMSE0"):
     degree                  = len(initialguesses)-4
     # (note: use -4 since len=3 implies no polynomial, i.e. should be set to -1)
     fitobj                  = partial(poly_plus_gauss, degree=degree)
-    fitfunc                 = ROOT.TF1("fitfunc", fitobj, fitrange[0], fitrange[1], len(initialguesses))
+    fitfunc                 = ROOT.TF1(funcname, fitobj, fitrange[0], fitrange[1], len(initialguesses))
     for i,val in enumerate(initialguesses):
         fitfunc.SetParameter(i,val)
         fitfunc.SetParError(i,0)                                # Set initial error to zero (before fit)
@@ -104,7 +104,7 @@ def poly_plus_gauss_fit(hist, fitrange, initialguesses, optionstring="RMSE0"):
     fitfunc.SetParLimits(1, 0.,     initialguesses[1]*100)      # Set minimal Amplitude to zero
     fitfunc.SetParLimits(2, 2e-3,   0.03)                       # Set (non-zero) mimimal sigma value
     
-    fitresult               = hist.Fit("fitfunc", optionstring)
+    fitresult               = hist.Fit(fitfunc, optionstring)
     paramdict               = collections.OrderedDict()
     paramdict['#mu']        = float(    fitfunc.GetParameter(0))
     paramdict['A']          = float(    fitfunc.GetParameter(1))
@@ -134,7 +134,7 @@ def poly_plus_doublegauss(x, par, degree=-1):
     return res + par[1]*np.exp(-0.5*arg1*arg1) + par[3]*np.exp(-0.5*arg2*arg2)
 
 #def poly_plus_doublegauss_fit(hist, fitrange, initialguesses, optionstring="WLQSE0"):
-def poly_plus_doublegauss_fit(hist, fitrange, initialguesses, optionstring="RMSE0"):
+def poly_plus_doublegauss_fit(hist, fitrange, initialguesses, optionstring="RMSE0", funcname="fitfunc"):
     # args: - histogram to be fitted on
     #        - tuple or list representing rang:we to take into account for fit
     #        - (ordered) list of initial parameter guesses
@@ -144,7 +144,7 @@ def poly_plus_doublegauss_fit(hist, fitrange, initialguesses, optionstring="RMSE
     degree                      = len(initialguesses)-6
     # (note: use -6 since len=5 implies no polynomial, i.e. should be set to -1)
     fitobj                      = partial(poly_plus_doublegauss, degree=degree)
-    fitfunc                     = ROOT.TF1("fitfunc", fitobj, fitrange[0], fitrange[1], len(initialguesses))
+    fitfunc                     = ROOT.TF1(funcname, fitobj, fitrange[0], fitrange[1], len(initialguesses))
     
     for i,val in enumerate(initialguesses):
         fitfunc.SetParameter(i,val)
@@ -155,7 +155,7 @@ def poly_plus_doublegauss_fit(hist, fitrange, initialguesses, optionstring="RMSE
     fitfunc.SetParLimits(3, 0.,     initialguesses[3]*100)      # Set minimal Amplitude to zero
     fitfunc.SetParLimits(4, 2e-3,   0.03)                       # Set (non-zero) mimimal sigma value
     
-    fitresult                   = hist.Fit("fitfunc", optionstring)
+    fitresult                   = hist.Fit(fitfunc, optionstring)
     paramdict                   = collections.OrderedDict()
     paramdict[r'#mu']           = float(    fitfunc.GetParameter(0))
     paramdict[r'A_{1}']         = float(    fitfunc.GetParameter(1))

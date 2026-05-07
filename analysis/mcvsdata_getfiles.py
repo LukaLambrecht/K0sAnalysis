@@ -143,11 +143,11 @@ def getfiles_run3( filedir, includelist ):
     filename                    = 'selected.root'
 
     def get_mc_split_info(era):
-        # Use disjoint 2024-MC event subsets for 2024 (even) and 2025 (odd).
+        # Use disjoint 2024-MC subsets for 2024 (even entries) and 2025 (odd entries).
         if era.startswith('2024'):
-            return {'splitparity': 'even', 'splitbranch': '_event'}
+            return {'splitparity': 'even'}
         if era.startswith('2025'):
-            return {'splitparity': 'odd', 'splitbranch': '_event'}
+            return {'splitparity': 'odd'}
         return {}
 
     # loop over eras

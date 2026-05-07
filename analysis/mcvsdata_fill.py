@@ -46,6 +46,8 @@ if __name__=='__main__':
     parser.add_argument(        '--eventtreename',                                          default=None)
     # arguments for secondary binning
     parser.add_argument(        '--yvariable',                      type=os.path.abspath,   default=None) 
+    parser.add_argument(        '--fitstrategy',                                        default='legacy',
+                                choices=['legacy', 'adaptive'])
     args = parser.parse_args()
 
     # ------------------------------------------------------------------------
@@ -166,7 +168,6 @@ if __name__=='__main__':
                     lumi            = 1, 
                     weightvarname   = '_weight',
                     splitparity     = None,
-                    splitbranch     = '_event',
                     hcountername    = 'hCounter',
                     sidevariable    = None,
                     label           = None,
@@ -200,27 +201,20 @@ if __name__=='__main__':
             msg   +=  ' of which {} will be read (using reweighting factor {}).'.format(  nentries, nentries_reweight)
             print(msg)
 
-            # Optional MC split: select only even/odd event numbers.
+            # Optional MC split: select even/odd read entries.
             splitmask = None
             if (not isdata) and (splitparity in ['even', 'odd']):
-                branch_to_use = splitbranch
-                if branch_to_use not in tree.keys() and splitbranch == '_event' and 'event' in tree.keys():
-                    branch_to_use = 'event'
-                if branch_to_use not in tree.keys():
-                    msg = 'ERROR: requested MC split on branch {}, but it is not in tree {}. Available branches include: {}'.format(
-                        splitbranch, treename, list(tree.keys())[:20])
-                    raise Exception(msg)
-                eventvalues = tree[branch_to_use].array(library='np', entry_stop=nentries)
-                paritymod = np.mod(eventvalues.astype(np.int64), 2)
+                entryindices = np.arange(nentries, dtype=np.int64)
+                paritymod = np.mod(entryindices, 2)
                 if splitparity == 'even':
                     splitmask = (paritymod == 0)
                 else:
                     splitmask = (paritymod == 1)
                 nsel = int(np.count_nonzero(splitmask))
-                print('Applying MC split {} on branch {}: selected {}/{} entries.'.format(
-                    splitparity, branch_to_use, nsel, nentries))
+                print('Applying MC split {} on entry order: selected {}/{} entries.'.format(
+                    splitparity, nsel, nentries))
                 if nsel == 0:
-                    msg = 'ERROR: MC split {} on branch {} selected 0 events.'.format(splitparity, branch_to_use)
+                    msg = 'ERROR: MC split {} on entry order selected 0 events.'.format(splitparity)
                     raise Exception(msg)
 
             # get weights
@@ -249,6 +243,8 @@ if __name__=='__main__':
                 pileupreweighter    = PileupReweighter(campaign, year_pu)
                 pileupreweighter.initsample(inputfile)
                 ntrueint            = tree['_nTrueInt'].array(library='np', entry_stop=nentries)
+                if splitmask is not None:
+                    ntrueint        = ntrueint[splitmask]
                 pileupreweight      = pileupreweighter.getreweight(ntrueint)
                 weights             = np.multiply(weights, pileupreweight)
 
@@ -352,7 +348,8 @@ if __name__=='__main__':
                                             lumi            = lumi,
                                             extrainfo       = extrainfo,
                                             histname        = histname,
-                                            plotdir         = args.sideplotdir
+                                                                                        plotdir         = args.sideplotdir,
+                                                                                        fit_strategy    = args.fitstrategy
                                           )
                 
                         counts[i,j]             = npeak
@@ -393,7 +390,6 @@ if __name__=='__main__':
                                                 lumi            = lumi,
                                                 sidevariable    = sidevariable,
                                       splitparity     = simdict.get('splitparity', None),
-                                      splitbranch     = simdict.get('splitbranch', '_event'),
                                                 label           = datadict['label'].strip(' .'),
                                                 nentries        = args.nprocess
                                     )
@@ -505,7 +501,6 @@ if __name__=='__main__':
                             xsection    =xsection, 
                             lumi        =lumi,
                             splitparity =simdict.get('splitparity', None),
-                            splitbranch =simdict.get('splitbranch', '_event'),
                             label       =simdict['label'].strip(' .')+'_normrange',
                             sidevariable=sidevariable,
                             nentries    =args.nprocess,
@@ -562,7 +557,6 @@ if __name__=='__main__':
                                 xsection    =xsection, 
                                 lumi        =lumi,
                                 splitparity =simdict.get('splitparity', None),
-                                splitbranch =simdict.get('splitbranch', '_event'),
                                 nentries    =args.nprocess,
                                 year        =simdict['year'], 
                                 campaign    =simdict['campaign']
@@ -659,6 +653,9 @@ if __name__=='__main__':
     # write tree name
     treename_st       = ROOT.TNamed('treename', str(args.treename))
     treename_st.Write()
+    # write fit strategy
+    fitstrategy_st    = ROOT.TNamed('fitstrategy', str(args.fitstrategy))
+    fitstrategy_st.Write()
     f.Close()
 
     if sidevariable is not None and len(counts.shape)==2:
@@ -738,6 +735,8 @@ if __name__=='__main__':
         # write tree name
         treename_st       = ROOT.TNamed('treename', str(args.treename))
         treename_st.Write()
+        fitstrategy_st    = ROOT.TNamed('fitstrategy', str(args.fitstrategy))
+        fitstrategy_st.Write()
         f2.Close()
         
     sys.stderr.write('###done###\n')
