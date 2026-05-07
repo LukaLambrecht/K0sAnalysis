@@ -226,7 +226,9 @@ if __name__=='__main__':
                     # Keep MC normalization correct for the selected split subset.
                     sumweights      = np.sum(rawweights)
                 weights             = rawweights / sumweights * xsection * lumi
-            weights               = weights * nentries_reweight
+            
+            if splitmask is None:
+                weights               = weights * nentries_reweight
 
             # do reweighting
             if not isdata:
