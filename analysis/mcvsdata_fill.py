@@ -201,46 +201,71 @@ if __name__=='__main__':
             msg   +=  ' of which {} will be read (using reweighting factor {}).'.format(  nentries, nentries_reweight)
             print(msg)
 
-            # Optional MC split: select even/odd read entries.
+            # Optional MC split: select even/odd by hash on event variables (uncorrelated with entry order).
             splitmask = None
             if (not isdata) and (splitparity in ['even', 'odd']):
-                entryindices = np.arange(nentries, dtype=np.int64)
-                paritymod = np.mod(entryindices, 2)
-                if splitparity == 'even':
-                    splitmask = (paritymod == 0)
+                # Use hash-based split: hash event number and run to get a deterministic but entry-order-independent split
+                # Try to find event number / run number in the file
+                event_nb = None
+                run_nb = None
+                for candidate_field in ['_eventNb', '_eventNum', '_eventID', 'event']:
+                    if candidate_field in tree.keys():
+                        event_nb = tree[candidate_field].array(library='np', entry_stop=nentries)
+                        break
+                
+                for candidate_field in ['_runNb', '_runNum', 'run']:
+                    if candidate_field in tree.keys():
+                        run_nb = tree[candidate_field].array(library='np', entry_stop=nentries)
+                        break
+                
+                if event_nb is not None:
+                    # Hash using event number (and run number if available for more entropy)
+                    if run_nb is not None:
+                        hash_input = event_nb.astype(np.int64) * 10007 + run_nb.astype(np.int64)
+                    else:
+                        hash_input = event_nb.astype(np.int64)
+                    
+                    # Compute parity from hash (independent of entry order)
+                    event_hash = np.mod(np.abs(hash_input), 2)
+                    if splitparity == 'even':
+                        splitmask = (event_hash == 0)
+                    else:
+                        splitmask = (event_hash == 1)
+                    nsel = int(np.count_nonzero(splitmask))
+                    print('Applying MC split {} via hash on event/run number: selected {}/{} entries.'.format(
+                        splitparity, nsel, nentries))
+                    if nsel == 0:
+                        msg = 'ERROR: MC split {} via hash selected 0 events.'.format(splitparity)
+                        raise Exception(msg)
                 else:
-                    splitmask = (paritymod == 1)
-                nsel = int(np.count_nonzero(splitmask))
-                print('Applying MC split {} on entry order: selected {}/{} entries.'.format(
-                    splitparity, nsel, nentries))
-                if nsel == 0:
-                    msg = 'ERROR: MC split {} on entry order selected 0 events.'.format(splitparity)
-                    raise Exception(msg)
+                    # Fallback to entry-index parity if no event number found
+                    print('WARNING: No event number field found for hash-based split, falling back to entry-index parity.')
+                    entryindices = np.arange(nentries, dtype=np.int64)
+                    paritymod = np.mod(entryindices, 2)
+                    if splitparity == 'even':
+                        splitmask = (paritymod == 0)
+                    else:
+                        splitmask = (paritymod == 1)
+                    nsel = int(np.count_nonzero(splitmask))
+                    print('Applying MC split {} on entry order: selected {}/{} entries.'.format(
+                        splitparity, nsel, nentries))
 
             # get weights
-            if isdata: weights    = np.ones(nentries)
+            if isdata:
+                weights    = np.ones(nentries)
             else:
                 rawweights          = tree[weightvarname].array(library='np', entry_stop=nentries)
                 if splitmask is not None:
                     rawweights      = rawweights[splitmask]
-                    # Keep MC normalization correct for the selected split subset.
-                    sumweights      = np.sum(rawweights)
-                weights             = rawweights / sumweights * xsection * lumi
-            
-            if splitmask is None:
-                weights               = weights * nentries_reweight
 
-            # do reweighting
-            if not isdata:
-                print('Doing pileup reweighting...')
-               
-                #in case of per-era processing (need more elegant solution, but should work)
+                # do pileup reweighting first, so normalization uses post-pileup weights
+                # in case of per-era processing (need more elegant solution, but should work)
                 if year in ['2022postEEE', '2022postEEF', '2022postEEG']:
                     year_pu         = '2022postEE'
                 elif '2022' in year:
-                    year_pu             = year.rstrip('BCD') # Watch out, does noy work for anything but 2022preEE
+                    year_pu             = year.rstrip('BCD')
                 else:
-                    year_pu             = year.rstrip('BCDEFGHI') # Watch out, does noy work for anything but 2022preEE
+                    year_pu             = year.rstrip('BCDEFGHI')
 
                 pileupreweighter    = PileupReweighter(campaign, year_pu)
                 pileupreweighter.initsample(inputfile)
@@ -248,7 +273,25 @@ if __name__=='__main__':
                 if splitmask is not None:
                     ntrueint        = ntrueint[splitmask]
                 pileupreweight      = pileupreweighter.getreweight(ntrueint)
-                weights             = np.multiply(weights, pileupreweight)
+
+                # apply pileup weights to rawweights before normalizing to xsection*lumi
+                adjusted_weights    = np.multiply(rawweights, pileupreweight)
+                sum_adjusted        = np.sum(adjusted_weights)
+                if sum_adjusted == 0:
+                    msg = 'ERROR: sum of adjusted (raw * pileup) weights is zero for file {}'.format(inputfile)
+                    raise Exception(msg)
+                weights             = adjusted_weights / sum_adjusted * xsection * lumi
+
+            if splitmask is None:
+                weights               = weights * nentries_reweight
+                # diagnostic: print sums to verify normalization after reweighting
+                rawsum = np.sum(rawweights) if 'rawweights' in locals() else None
+                try:
+                    wsum = np.sum(weights)
+                except:
+                    wsum = None
+                print('SUMWEIGHTS_DEBUG file={} split={} xsec={} lumi={} rawsum={} sum(weights)={}'.format(
+                    inputfile, splitparity, xsection, lumi, rawsum, wsum))
 
             # if no variable was specified, return sum of weights
             if variable is None:
@@ -340,20 +383,19 @@ if __name__=='__main__':
                         histname                = '{}_bin{}'.format(label, i)
                         if dim==2: histname     += '_ybin{}'.format(j)
                 
-                        (npeak, nerror, conf, conf_error)   = count_peak_unbinned(
-                        #(npeak, nerror)   = count_peak_unbinned(
-                                            thissidebandvalues,
-                                            thisweights,
-                                            sidevariable,
-                                            mode            = 'hybrid',
-                                            label           = histlabel,
-                                            lumi            = lumi,
-                                            extrainfo       = extrainfo,
-                                            histname        = histname,
-                                                                                        plotdir         = args.sideplotdir,
-                                                                                        fit_strategy    = args.fitstrategy
-                                          )
-                
+                        print('SIDEBAND_DEBUG file={} label={} bin={} sum_thisweights={} nevents={}'.format(inputfile, label, i, np.sum(thisweights), len(thisweights)))
+                        (npeak, nerror, conf, conf_error) = count_peak_unbinned(
+                            thissidebandvalues,
+                            thisweights,
+                            sidevariable,
+                            mode            = 'hybrid',
+                            label           = histlabel,
+                            lumi            = lumi,
+                            extrainfo       = extrainfo,
+                            histname        = histname,
+                            plotdir         = args.sideplotdir,
+                            fit_strategy    = args.fitstrategy
+                        )
                         counts[i,j]             = npeak
                         errors[i,j]             = nerror
                         confidence[i,j]         = conf
@@ -380,6 +422,7 @@ if __name__=='__main__':
     # loop over input files and fill histograms
     # ------------------------------------------------------------------------
     # Data files
+    print('===== STARTING MAIN LOOP: Reading DATA files =====')
     for datadict in datain:
         print('Now running on data file {}...'.format(datadict['file']))
         lumi                        = datadict['luminosity']
@@ -391,7 +434,6 @@ if __name__=='__main__':
                                                 isdata          = True, 
                                                 lumi            = lumi,
                                                 sidevariable    = sidevariable,
-                                      splitparity     = simdict.get('splitparity', None),
                                                 label           = datadict['label'].strip(' .'),
                                                 nentries        = args.nprocess
                                     )
@@ -413,6 +455,7 @@ if __name__=='__main__':
                                       isdata          = False, 
                                       xsection        = xsection, 
                                       lumi            = lumi,
+                                      splitparity     = simdict.get('splitparity', None),
                                       sidevariable    = sidevariable,
                                       label           = simdict['label'].strip(' .'),
                                       nentries        = args.nprocess,
@@ -465,12 +508,15 @@ if __name__=='__main__':
             simdict['conf_errors']= simdict['conf_errors']*scale
 
     # ------------------------------------------------------------------------
+    # ------------------------------------------------------------------------
     # for normmode 'range', normalize sum of simulation to sum of data,
     # but the sum is calculated only for a given variable in given range
     if args.normmode=='range':
+        print('===== STARTING RANGE NORMALIZATION BLOCK =====')
         print('Normalizing simulation yield to data yield in range...')
     
         # Get Data count
+        print('===== Reading DATA for range normalization =====')
         datasum     = 0
         for datadict in datain:
             counts, _, confs, c_ = get_histogram(
@@ -486,7 +532,8 @@ if __name__=='__main__':
             if len(counts)!=1:
                 msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
                 raise Exception(msg)
-      
+
+            print('NORMRANGE_DEBUG data {} nevents_in_normbin={}'.format(datadict['label'].strip(' .'), counts[0]))
             datasum  += counts[0]
     
         # Get Simulation count
@@ -494,6 +541,25 @@ if __name__=='__main__':
         for simdict in simin:
             xsection     = simdict['xsection']
             lumi         = simdict['luminosity']
+            splitparity  = simdict.get('splitparity', None)
+            
+            print('NORMRANGE_DEBUG_PRE simdict keys={} splitparity_value={}'.format(list(simdict.keys()), splitparity))
+            
+            # Also compute file-level sum for diagnostic comparison
+            file_total, _, _, _ = get_histogram(
+                            simdict['file'], 
+                            args.treename,
+                            variable    = None,  # This returns sum(weights) for entire file
+                            isdata      = False,
+                            xsection    = xsection,
+                            lumi        = lumi,
+                            splitparity = splitparity,
+                            label       = simdict['label'].strip(' .')+'_filetotal',
+                            nentries    = args.nprocess,
+                            year        = simdict['year'],
+                            campaign    = simdict['campaign']
+                        )
+            
             counts, _, confs, c_ = get_histogram(
             #counts, _   = get_histogram(
                             simdict['file'], 
@@ -502,7 +568,7 @@ if __name__=='__main__':
                             isdata      =False, 
                             xsection    =xsection, 
                             lumi        =lumi,
-                            splitparity =simdict.get('splitparity', None),
+                            splitparity = splitparity,
                             label       =simdict['label'].strip(' .')+'_normrange',
                             sidevariable=sidevariable,
                             nentries    =args.nprocess,
@@ -512,11 +578,14 @@ if __name__=='__main__':
             if len(counts)!=1:
                 msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
                 raise Exception(msg)
-      
+
+            print('NORMRANGE_DEBUG sim {} split={} nevents_in_normbin={} file_total_weight={} fraction={:.6f}'.format(
+                simdict['label'].strip(' .'), splitparity, counts[0], file_total, counts[0]/file_total if file_total > 0 else 0))
             simsum  += counts[0]
     
         # Compare data vs. sim
         scale   = datasum / simsum
+        print('NORMRANGE_DEBUG datasum={} simsum={} scale={:.6g}'.format(datasum, simsum, scale))
     
         # Scale simulation to sum of data
         for simdict in simin:
@@ -543,7 +612,8 @@ if __name__=='__main__':
                                 isdata    =True, 
                                 nentries  =args.nprocess
                             )
-       
+
+            print('Eventyield data {} sumweights = {}'.format(datadict['label'].strip(' .'), sumweights))
             datasum  += sumweights
     
         # Get Simulation count
@@ -563,7 +633,8 @@ if __name__=='__main__':
                                 year        =simdict['year'], 
                                 campaign    =simdict['campaign']
                             )
-      
+
+            print('Eventyield sim {} split={} sumweights = {}'.format(simdict['label'].strip(' .'), simdict.get('splitparity', None), sumweights))
             simsum  += sumweights
     
         # Compare data vs. sim

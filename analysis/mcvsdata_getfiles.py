@@ -143,11 +143,14 @@ def getfiles_run3( filedir, includelist ):
     filename                    = 'selected.root'
 
     def get_mc_split_info(era):
-        # Use disjoint 2024-MC subsets for 2024 (even entries) and 2025 (odd entries).
+        # Use hash-based split of 2024-MC subsets for 2024 and 2025.
+        # Hash-based split is independent of entry order, avoiding kinematic biases.
+        # For 2024 data: use even hash parity
+        # For 2025 data: use odd hash parity
         if era.startswith('2024'):
-            return {'splitparity': 'even'}
+            return {'splitmethod': 'hash', 'splitparity': 'even'}
         if era.startswith('2025'):
-            return {'splitparity': 'odd'}
+            return {'splitmethod': 'hash', 'splitparity': 'odd'}
         return {}
 
     # loop over eras

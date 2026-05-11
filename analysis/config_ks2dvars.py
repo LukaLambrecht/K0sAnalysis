@@ -38,9 +38,9 @@ config = ({
                 },
                 'bins': {
 	               'defaultbins':{ 'xbins':[0., 0.5, 1.5, 4.0, 20.],
-			          'ybins':[0.,5., 10., 20.] },
+                                'ybins':[-3.,-1.5, 0., 1.5, 3.] },
                    'finexbins':{ 'xbins':[0.,0.5,1.,1.5,2.,5.,10., 20.],
-                                'ybins':[0.,5.,10., 20., 50.] },
+                                'ybins':[-3.,-2.,-1., 0., 1., 2., 3.] },
                 },
                 'normalization': {
 	          'normrange':{ 'type':'range', 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
@@ -60,10 +60,11 @@ config = ({
                                   'sidebins': np.linspace(0.44, 0.56, num=31, endpoint=True)}
                 },
                 'bins': {
-	               'defaultbins':{ 'xbins':[0., 0.5, 1.5, 4.0, 20.],
-			          'ybins':[0.,5., 10., 20.] },
+	                'defaultbins':{ 
+                        'xbins':[0., 0.5, 1.5, 4.0, 20.],
+			                  'ybins':[-2.5,-1.6, 0., 1.6, 2.5] },
                    'finexbins':{ 'xbins':[0.,0.5,1.,1.5,2.,5.,10., 20.],
-                                'ybins':[0.,5.,10., 20., 50.] },
+			                      'ybins':[-2.5,-1.6, 0., 1.6, 2.5] },
                 },
                 'normalization': {
 	          'normrange':{ 'type':'range', 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
@@ -105,9 +106,9 @@ config = ({
                 },
                 'bins': {
 	              'defaultbins':{ 'xbins':[1., 20., 50., 100.,500.],
-                                'ybins':[0.,5.,10., 20.] },
+			                  'ybins':[-2.5,-1.6, 0., 1.6, 2.5] },
                   'finexbins':{ 'xbins':[0., 15., 50., 100., 200., 300., 400., 500., 600., 800.,1500.],
-                                'ybins':[0.,5.,10., 20., 50., 500.] },
+			                  'ybins':[-2.5,-1.6, 0., 1.6, 2.5] },
                 },
                 'normalization': {
                   'normrange':{ 'type':'range', 'info': 'Normalized for #Delta_{2D} < 0.5 cm',
@@ -127,9 +128,9 @@ config = ({
                 },
                 'bins': {
 	              'defaultbins':{ 'xbins':[1., 20., 50., 100.,500.],
-                                'ybins':[0.,5.,10., 20.] },
+                                'ybins':[-3.,-1.5, 0., 1.5, 3.] },
                   'finexbins':{ 'xbins':[0., 15., 50., 100., 200., 300., 400., 500., 600., 800.,1500.],
-                                'ybins':[0.,5.,10., 20., 50., 500.] },
+                                'ybins':[-3.,-2.,-1., 0., 1., 2., 3.] },
                 },
                 'normalization': {
                   'normrange':{ 'type':'range', 'info': 'Normalized for #Delta_{2D} < 0.5 cm',

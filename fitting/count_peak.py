@@ -693,6 +693,14 @@ def count_peak_unbinned(values, weights, variable, mode='subtract',
       hist.SetBinContent(   i+1, count)
       hist.SetBinError(     i+1, error)
 
+    # diagnostic: compare numpy counts and ROOT histogram
+    try:
+        heff = hist.GetEffectiveEntries()
+    except Exception:
+        heff = None
+    print('COUNT_PEAK_UNBINNED_DEBUG histname={} np_sum_counts={} hist.Integral={} hist.GetEffectiveEntries={}'.format(
+        histname, np.sum(counts), hist.Integral(), heff))
+
     # make directory to store plots
     singleGaussdir = None
     if plotdir is not None:
