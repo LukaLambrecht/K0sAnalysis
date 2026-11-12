@@ -284,14 +284,8 @@ if __name__=='__main__':
 
             if splitmask is None:
                 weights               = weights * nentries_reweight
-                # diagnostic: print sums to verify normalization after reweighting
-                rawsum = np.sum(rawweights) if 'rawweights' in locals() else None
-                try:
-                    wsum = np.sum(weights)
-                except:
-                    wsum = None
-                print('SUMWEIGHTS_DEBUG file={} split={} xsec={} lumi={} rawsum={} sum(weights)={}'.format(
-                    inputfile, splitparity, xsection, lumi, rawsum, wsum))
+            
+
 
             # if no variable was specified, return sum of weights
             if variable is None:
@@ -383,7 +377,6 @@ if __name__=='__main__':
                         histname                = '{}_bin{}'.format(label, i)
                         if dim==2: histname     += '_ybin{}'.format(j)
                 
-                        print('SIDEBAND_DEBUG file={} label={} bin={} sum_thisweights={} nevents={}'.format(inputfile, label, i, np.sum(thisweights), len(thisweights)))
                         (npeak, nerror, conf, conf_error) = count_peak_unbinned(
                             thissidebandvalues,
                             thisweights,
@@ -512,11 +505,9 @@ if __name__=='__main__':
     # for normmode 'range', normalize sum of simulation to sum of data,
     # but the sum is calculated only for a given variable in given range
     if args.normmode=='range':
-        print('===== STARTING RANGE NORMALIZATION BLOCK =====')
         print('Normalizing simulation yield to data yield in range...')
     
         # Get Data count
-        print('===== Reading DATA for range normalization =====')
         datasum     = 0
         for datadict in datain:
             counts, _, confs, c_ = get_histogram(
@@ -533,7 +524,7 @@ if __name__=='__main__':
                 msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
                 raise Exception(msg)
 
-            print('NORMRANGE_DEBUG data {} nevents_in_normbin={}'.format(datadict['label'].strip(' .'), counts[0]))
+
             datasum  += counts[0]
     
         # Get Simulation count
@@ -543,7 +534,7 @@ if __name__=='__main__':
             lumi         = simdict['luminosity']
             splitparity  = simdict.get('splitparity', None)
             
-            print('NORMRANGE_DEBUG_PRE simdict keys={} splitparity_value={}'.format(list(simdict.keys()), splitparity))
+
             
             # Also compute file-level sum for diagnostic comparison
             file_total, _, _, _ = get_histogram(
@@ -579,13 +570,11 @@ if __name__=='__main__':
                 msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
                 raise Exception(msg)
 
-            print('NORMRANGE_DEBUG sim {} split={} nevents_in_normbin={} file_total_weight={} fraction={:.6f}'.format(
-                simdict['label'].strip(' .'), splitparity, counts[0], file_total, counts[0]/file_total if file_total > 0 else 0))
             simsum  += counts[0]
     
         # Compare data vs. sim
         scale   = datasum / simsum
-        print('NORMRANGE_DEBUG datasum={} simsum={} scale={:.6g}'.format(datasum, simsum, scale))
+
     
         # Scale simulation to sum of data
         for simdict in simin:
