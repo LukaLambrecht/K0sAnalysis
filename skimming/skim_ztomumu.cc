@@ -50,19 +50,22 @@ double bTagThreshold(   const std::string&  campaign,
 	    if(     year=="2022")          return 0.0583;
 	    else if(year=="2022EE")        return 0.0614;
 	    else if(year=="2023")          return 0.0479;
-	    else if(year=="2023BPiX")      return 0.048;
+	    else if(year=="2023BPix")      return 0.048;
 	    else if(year=="2024")          return 0.048; //SF campaign not finalised, so using 2023 SFs
 	    else if(year=="2025")          return 0.048;
         //else if(year=="2024")          return 0.0246;
 	    //else if(year=="2025")          return 0.0246; // SF not yet available for 2025???
     }
-    else
-    {
-	    std::string msg                 = "ERROR in bTagThreshold:"; 
-        msg                             += " campaign '" + campaign + "' or year '" + year + "' not recognized.";
-        throw std::runtime_error(msg);
-    }
-    return 0.; // for syntax
+    // unknown campaign, or unknown year within a known campaign:
+    // fail loudly instead of silently returning a threshold of 0 (which would tag every jet)
+    std::string msg                     = "ERROR in bTagThreshold:";
+    msg                                 += " campaign '" + campaign + "' or year '" + year + "' not recognized.";
+    throw std::runtime_error(msg);
+}
+
+bool containsAny(const std::string& s, const std::vector<std::string>& patterns){
+    for(const auto& p : patterns) if(s.find(p) != std::string::npos) return true;
+    return false;
 }
 
 std::pair<std::string, std::string> getYearFromFileName(const std::string& fileName){
@@ -105,36 +108,34 @@ std::pair<std::string, std::string> getYearFromFileName(const std::string& fileN
     {	
         return std::make_pair("run2preul",  "2018"); 
     }
-    // Run-3: ReReco campaign
-    else if( fileName.find( "Run2022")                          != std::string::npos 
-	|| fileName.find(       "Run3Winter22")                     != std::string::npos )      //TODO: is this correct! (and/or needed?)
-    {	
-        return std::make_pair("run3",       "2022"); 
+    // Run-3
+    // note: the more specific sub-campaigns (2022EE, 2023BPix) must be checked
+    //       before their parent year, since e.g. "Run3Summer22EE" contains "Run3Summer22".
+    //       Data is matched on the era in the dataset name (Run2022E/F/G = postEE, Run2023D = postBPix),
+    //       simulation on the MC campaign name in the dataset path.
+    else if( containsAny(fileName, {"Run2022E", "Run2022F", "Run2022G", "Run3Summer22EE", "Run3Winter22EE"}) )
+    {
+        return std::make_pair("run3",       "2022EE");
     }
-    else if( fileName.find( "Run2022EE")                        != std::string::npos 
-	|| fileName.find(       "Run3Winter22EE")                   != std::string::npos )      //TODO: is this correct! (and/or needed?)
-    {	
-        return std::make_pair("run3",       "2022EE"); 
+    else if( containsAny(fileName, {"Run2022", "Run3Summer22", "Run3Winter22"}) )
+    {
+        return std::make_pair("run3",       "2022");
     }
-    else if( fileName.find( "Run2023")                          != std::string::npos 
-	|| fileName.find(       "Run3Winter23")                     != std::string::npos )      //TODO: is this correct! (and/or needed?)
-    {	
-        return std::make_pair("run3",       "2023"); 
+    else if( containsAny(fileName, {"Run2023D", "Run3Summer23BPix", "Run3Winter23BPix"}) )
+    {
+        return std::make_pair("run3",       "2023BPix");
     }
-    else if( fileName.find( "Run2023BPix")                      != std::string::npos 
-	|| fileName.find(       "Run3Winter23BPix")                 != std::string::npos )      //TODO: is this correct! (and/or needed?)
-    {	
-        return std::make_pair("run3",       "2023BPix"); 
+    else if( containsAny(fileName, {"Run2023", "Run3Summer23", "Run3Winter23"}) )
+    {
+        return std::make_pair("run3",       "2023");
     }
-    else if( fileName.find( "Run2024")                          != std::string::npos 
-	|| fileName.find(       "Run3Winter24")                     != std::string::npos )      //TODO: is this correct! (and/or needed?)
-    {	
-        return std::make_pair("run3",       "2024"); 
+    else if( containsAny(fileName, {"Run2024", "RunIII2024Summer24", "Run3Summer24", "Run3Winter24"}) )
+    {
+        return std::make_pair("run3",       "2024");
     }
-    else if( fileName.find( "Run2025")                          != std::string::npos 
-	|| fileName.find(       "Run3Winter25")                     != std::string::npos )      //TODO: is this correct! (and/or needed?)
-    {	
-        return std::make_pair("run3",       "2025"); 
+    else if( containsAny(fileName, {"Run2025", "RunIII2025", "Run3Summer25", "Run3Winter25"}) )
+    {
+        return std::make_pair("run3",       "2025");
     }
     else{
 	    std::string msg     = "ERROR: year could not be extracted from filename";
@@ -190,6 +191,9 @@ void skimFile(const std::string&        inputFilePath,
     inputTreePtr->SetBranchStatus(      "_tau*",            0);
     inputTreePtr->SetBranchStatus(      "_ph*",             0);
     inputTreePtr->SetBranchStatus(      "_jet*",            0);
+    // note: every branch read in the event loop below must be (re-)enabled here,
+    //       since GetEntry does not fill disabled branches (their buffers keep stale values).
+    inputTreePtr->SetBranchStatus(      "_jetPt",           1);
     inputTreePtr->SetBranchStatus(      "_jetEta",          1);
     inputTreePtr->SetBranchStatus(      "_jetPhi",          1);
     //inputTreePtr->SetBranchStatus(    "_jetDeepCsv_b",    1);
